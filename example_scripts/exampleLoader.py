@@ -1,8 +1,8 @@
 from pathlib import Path
 import numpy as np
 from matplotlib import pyplot as plt
-from PtyLab.ExperimentalData.ExperimentalData import ExperimentalData
-from PtyLab.io import readExample
+from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
+from PtyLabX.io import readExample
 
 
 # This script loads an example dataset.

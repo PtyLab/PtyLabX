@@ -1,13 +1,13 @@
 import matplotlib
 
 matplotlib.use("tkagg")
-import PtyLab
-from PtyLab.io import getExampleDataFolder
-from PtyLab import Params
-from PtyLab import Monitor
-from PtyLab import Reconstruction
-from PtyLab import ExperimentalData
-from PtyLab import Engines
+import PtyLabX
+from PtyLabX.io import getExampleDataFolder
+from PtyLabX import Params
+from PtyLabX import Monitor
+from PtyLabX import Reconstruction
+from PtyLabX import ExperimentalData
+from PtyLabX import Engines
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -23,7 +23,7 @@ change data visualization and initialization options manually for now
 fileName = "simu.hdf5"  # simu.hdf5 or Lenspaper.hdf5
 filePath = getExampleDataFolder() / fileName
 
-exampleData, reconstruction, params, monitor, ePIE_engine = PtyLab.easyInitialize(filePath, operationMode='CPM')
+exampleData, reconstruction, params, monitor, ePIE_engine = PtyLabX.easyInitialize(filePath, operationMode='CPM')
 # initialize again reconstruction and engine with the wrong encoder data
 
 # perturb encoder positions

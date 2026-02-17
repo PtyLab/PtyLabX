@@ -2,10 +2,10 @@
 # The data are stored in example_data/simu.hdf5
 
 import numpy as np
-from PtyLab.utils.utils import circ, gaussian2D, cart2pol, fft2c
-from PtyLab.utils.scanGrids import GenerateNonUniformFermat
-from PtyLab.Operators.Operators import aspw
-from PtyLab.utils.visualisation import hsvplot, show3Dslider
+from PtyLabX.utils.utils import circ, gaussian2D, cart2pol, fft2c
+from PtyLabX.utils.scanGrids import GenerateNonUniformFermat
+from PtyLabX.Operators.Operators import aspw
+from PtyLabX.utils.visualisation import hsvplot, show3Dslider
 import matplotlib.pylab as plt
 from scipy.signal import convolve2d
 import os
@@ -13,7 +13,7 @@ import h5py
 
 # turn this off not to export the data at the end
 export_data = True
-from PtyLab.io import getExampleDataFolder
+from PtyLabX.io import getExampleDataFolder
 
 fileName = "simu"
 

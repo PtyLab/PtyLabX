@@ -1,10 +1,10 @@
 import numpy as np
-from PtyLab.utils.utils import circ, gaussian2D, cart2pol, fft2c
-from PtyLab.utils.scanGrids import GenerateNonUniformFermat
-from PtyLab.Operators.Operators import aspw
-from PtyLab.Operators.Operators import fresnelPropagator
-from PtyLab.Operators.Operators import scaledASP
-from PtyLab.utils.visualisation import hsvplot, show3Dslider
+from PtyLabX.utils.utils import circ, gaussian2D, cart2pol, fft2c
+from PtyLabX.utils.scanGrids import GenerateNonUniformFermat
+from PtyLabX.Operators.Operators import aspw
+from PtyLabX.Operators.Operators import fresnelPropagator
+from PtyLabX.Operators.Operators import scaledASP
+from PtyLabX.utils.visualisation import hsvplot, show3Dslider
 import matplotlib.pylab as plt
 from numpy import float128
 from scipy.ndimage import gaussian_filter
@@ -12,18 +12,18 @@ from scipy.signal import convolve2d
 from scipy.misc import ascent
 import os
 import h5py
-from PtyLab import ExperimentalData
-from PtyLab import Reconstruction
-from PtyLab import Monitor
-from PtyLab import Params
-from PtyLab import Engines
+from PtyLabX import ExperimentalData
+from PtyLabX import Reconstruction
+from PtyLabX import Monitor
+from PtyLabX import Params
+from PtyLabX import Engines
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 
 # Turn this off not to export the data at the end
 export_data = False
-from PtyLab.io import getExampleDataFolder
+from PtyLabX.io import getExampleDataFolder
 
 fileName = "simu"
 

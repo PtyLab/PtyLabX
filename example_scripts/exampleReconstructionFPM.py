@@ -8,9 +8,9 @@ try:
     matplotlib.use("tkagg")
 except:
     pass
-import PtyLab
-from PtyLab.io import getExampleDataFolder
-from PtyLab import Engines
+import PtyLabX
+from PtyLabX.io import getExampleDataFolder
+from PtyLabX import Engines
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -24,7 +24,7 @@ change data visualization and initialization options manually for now
 fileName = "LungCarcinomaFPM.hdf5"  # simu.hdf5 or Lenspaper.hdf5
 filePath = getExampleDataFolder() / fileName
 
-exampleData, reconstruction, params, monitor, engine, calib = PtyLab.easyInitialize(
+exampleData, reconstruction, params, monitor, engine, calib = PtyLabX.easyInitialize(
     filePath, operationMode="FPM"
 )
 

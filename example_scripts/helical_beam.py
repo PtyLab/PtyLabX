@@ -2,15 +2,15 @@ from pathlib import Path
 import pathlib
 import matplotlib
 
-from PtyLab.io.readExample import examplePath
+from PtyLabX.io.readExample import examplePath
 
 try:
     matplotlib.use("tkagg") # this is for people using pycharm pro
 except:
     pass
-import PtyLab
-from PtyLab import Reconstruction
-from PtyLab import Engines
+import PtyLabX
+from PtyLabX import Reconstruction
+from PtyLabX import Engines
 import numpy as np
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -27,14 +27,14 @@ change data visualization and initialization options manually for now
 
 fileName = "example:helicalbeam"  # simu.hdf5 or Lenspaper.hdf5
 # check if the file exists, download it otherwise
-from PtyLab.utils.downloader import download_with_progress
+from PtyLabX.utils.downloader import download_with_progress
 
 fileName = examplePath(fileName)
 if not pathlib.Path(fileName).exists():
     print('Downloading dataset...')
     download_with_progress('https://figshare.com/ndownloader/files/38419391', filename=fileName)
 
-experimentalData, reconstruction, params, monitor, ePIE_engine = PtyLab.easyInitialize(
+experimentalData, reconstruction, params, monitor, ePIE_engine = PtyLabX.easyInitialize(
         fileName, operationMode="CPM"
     )
 
@@ -68,9 +68,6 @@ params.orthogonalizationSwitch = True
 params.orthogonalizationFrequency = 10
 params.intensityConstraint = "standard"
 
-# optional - use tensorboard monitor instead. To see the results, open tensorboard in the directory ./logs_tensorboard
-# from PtyLab.Monitor.TensorboardMonitor import TensorboardMonitor
-# monitor = TensorboardMonitor('./logs')
 
 # now, all our experimental data is loaded into experimental_data and we don't have to worry about it anymore.
 # now create an object to hold everything we're eventually interested in
@@ -140,7 +137,7 @@ params.comStabilizationSwitch = False
 mPIE.reconstruct(experimentalData, reconstruction)
 
 # # to check - I don't have enough memory on my laptop
-# from PtyLab.Engines import OPR_TV
+# from PtyLabX.Engines import OPR_TV
 #
 # OPR = OPR_TV(reconstruction, experimentalData, params, monitor)
 # OPR.numIterations = 1000

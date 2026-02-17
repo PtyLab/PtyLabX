@@ -7,16 +7,16 @@ Please download the file OPR_dp_processed.hdf5 from https://figshare.com/search?
 import matplotlib
 matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
-import PtyLab 
-from PtyLab.io import getExampleDataFolder
-from PtyLab import Engines
+import PtyLabX 
+from PtyLabX.io import getExampleDataFolder
+from PtyLabX import Engines
 import logging
 logging.basicConfig(level=logging.INFO)
 import numpy as np
 
 # Location of the preprocessed data file
 filePath = '../example_data/OPR_dp_processed.hdf5'
-experimentalData, reconstruction, params, monitor, ePIE_engine = PtyLab.easyInitialize(filePath, operationMode='CPM')
+experimentalData, reconstruction, params, monitor, ePIE_engine = PtyLabX.easyInitialize(filePath, operationMode='CPM')
 
 # First set the experimental geometry
 # The orientation accounts for the direction of the sample postitioners and 

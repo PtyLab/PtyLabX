@@ -2,13 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 from numpy import vectorize
-from PtyLab.utils.scanGrids import (
+from PtyLabX.utils.scanGrids import (
     GenerateRasterGrid,
     GenerateConcentricGrid,
     GenerateNonUniformFermat,
     GenerateFermatSpiral,
 )
-from PtyLab.utils.scanGrids import tsp_ga, generateTXT
+from PtyLabX.utils.scanGrids import tsp_ga, generateTXT
 
 
 ## generate(non - optimal) grid

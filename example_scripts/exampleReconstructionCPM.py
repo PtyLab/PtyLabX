@@ -6,10 +6,10 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 matplotlib.use("qt5agg")
-import PtyLab
-from PtyLab import Engines
-from PtyLab.Engines.BaseEngine import smooth_amplitude
-from PtyLab.io import getExampleDataFolder
+import PtyLabX
+from PtyLabX import Engines
+from PtyLabX.Engines.BaseEngine import smooth_amplitude
+from PtyLabX.io import getExampleDataFolder
 
 logging.basicConfig(level=logging.INFO)
 import argparse
@@ -19,7 +19,7 @@ import numpy as np
 """ 
 Ptychographic dataset reconstruction example.
 
-This is the file that you can start from to learn PtyLab.py, and that you can copy and adopt to your own needs.
+This is the file that you can start from to learn PtyLabX.py, and that you can copy and adopt to your own needs.
 
 For beginner programmers: 
 
@@ -48,16 +48,9 @@ fileName = args.file
 gpu_switch = args.gpu
 
 # load the experimental data
-experimentalData, reconstruction, params, monitor, ePIE_engine = PtyLab.easyInitialize(
+experimentalData, reconstruction, params, monitor, ePIE_engine = PtyLabX.easyInitialize(
     fileName, operationMode="CPM"
 )
-
-# optional - use tensorboard monitor instead. To see the results, open tensorboard in the directory ./logs_tensorboard
-tensorboard_monitor = False
-if tensorboard_monitor:
-    from PtyLab.Monitor.TensorboardMonitor import TensorboardMonitor
-
-    monitor = TensorboardMonitor()
 
 
 # turn these two lines on to see the autofocusing in action

@@ -1,7 +1,7 @@
-from PtyLab.utils.utils import circ, gaussian2D, cart2pol
-from PtyLab.utils.scanGrids import GenerateNonUniformFermat
-from PtyLab.Operators.Operators import aspw
-from PtyLab.utils.visualisation import hsvplot, show3Dslider
+from PtyLabX.utils.utils import circ, gaussian2D, cart2pol
+from PtyLabX.utils.scanGrids import GenerateNonUniformFermat
+from PtyLabX.Operators.Operators import aspw
+from PtyLabX.utils.visualisation import hsvplot, show3Dslider
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
