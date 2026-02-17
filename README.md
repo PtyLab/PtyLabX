@@ -1,53 +1,56 @@
-# PtyLab.py
-![Python 3.9+](https://img.shields.io/badge/python-3.9+-green.svg)
+# PtyLab with JAX
+
+![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)
+
+This is a clone of [PtyLab.py](https://github.com/PtyLab/PtyLab.py) that has the JAX backend. The library is refactored accordingly and enhanced with various features from JAX. 
 
 PtyLab is an inverse modeling toolbox for Conventional (CP) and Fourier (FP) ptychography in a unified framework. For more information please check the [paper](https://opg.optica.org/oe/fulltext.cfm?uri=oe-31-9-13763&id=529026).
 
 ## Getting started
 
-The simplest way to get started is to check the below demo in Google Colab.
-
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/PtyLab/PtyLab.py/blob/main/demo.ipynb)
-![demo](assets/recon.gif)
-
-To explore more use cases of PtyLab, check the [example_scripts](example_scripts) and [jupyter_tutorials](jupyter_tutorials) directories. However, please install the package first as described in the below sections.
+To explore use cases of PtyLab, check the [example_scripts](example_scripts) and [jupyter_tutorials](jupyter_tutorials) directories. However, please install the package first as described in the below sections.
 
 ## Installation
 
-To install the package from source,
+This project uses [uv](https://docs.astral.sh/uv/) for package management.
+
+### From source (pip)
 
 ```bash
-pip install git+https://github.com/PtyLab/PtyLab.py.git
+pip install git+https://github.com/ShantanuKodgirwar/PtyLabX.git
 ```
 
-This package uses `cupy` to utilize GPU for faster reconstruction. Please check their [instructions](https://docs.cupy.dev/en/stable/install.html) for installing this dependency.
+### With GPU support (CUDA 12)
+
+```bash
+pip install "ptylabx[cuda12] @ git+https://github.com/ShantanuKodgirwar/PtyLabX.git"
+```
 
 ### Development
- 
-Please clone this repository and navigate to the root folder
+
+Clone the repository and install with uv:
+
 ```bash
-git clone git@github.com:PtyLab/PtyLab.py.git
-cd PtyLab.py
+git clone https://github.com/ShantanuKodgirwar/PtyLabX.git
+cd PtyLabX
+uv sync
 ```
 
-Inside a virtual environment (preferably with conda), please install `ptylab` and its dependencies from the pinned versions specified under `requirements.txt`:
+To install with GPU support and dev dependencies:
+
 ```bash
-conda create --name ptylab_venv python=3.11.5 # or python version satisfying ">=3.9, <3.12"
-conda activate ptylab_venv
-pip install -e . -r requirements.txt
+uv sync --extra cuda12,dev
 ```
-
-To use the GPU, `cupy` can be additionally installed in this environment.
-
+For testing, whether GPU is being used
 ```bash
-conda install -c conda-forge cupy
+uv run python -m pytest tests/test_jax_device.py -v -s
 ```
 
 If you would like to contribute to this package, especially if it involves modifying dependencies, please checkout the [`CONTRIBUTING.md`](CONTRIBUTING.md) file.
 
 ## Citation
 
-If you use this package in your work, cite us as below. 
+If you use this package in your work, cite us as below.
 
 ```tex
 @article{Loetgering:23,
@@ -63,4 +66,3 @@ If you use this package in your work, cite us as below.
         doi = {10.1364/OE.485370},
 }
 ```
-

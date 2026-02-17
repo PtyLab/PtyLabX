@@ -5,7 +5,6 @@ description = "A cross-platform, open-source inverse modeling toolbox for conven
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
-    { name = "Lars Loetgering", email = "lars.loetgering@fulbrightmail.org" },
     { name = "PtyLab Team" },
 ]
 dependencies = [
@@ -25,7 +24,7 @@ dependencies = [
 
 [project.optional-dependencies]
 cuda12 = ["jax[cuda12]"]
-dev = ["ruff", "ipykernel", "pre-commit"]
+dev = ["ruff", "ipykernel", "ipython"]
 
 [build-system]
 requires = ["hatchling"]
@@ -36,3 +35,8 @@ packages = ["PtyLabX"]
 
 [tool.ruff]
 line-length = 120
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
