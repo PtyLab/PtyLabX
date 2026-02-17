@@ -4,6 +4,7 @@
 *__pycache__*
 *.vscode
 *.venv
-logs_tensorboard
 *.hdf5
+# uv.lock
 .DS_Store
+.claude
