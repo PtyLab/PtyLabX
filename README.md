@@ -2,7 +2,7 @@
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)
 
-This is a clone of [PtyLab.py](https://github.com/PtyLab/PtyLab.py) that has the JAX backend. The library is refactored accordingly and enhanced with various features from JAX. 
+This is the experimental clone of [PtyLab.py](https://github.com/PtyLab/PtyLab.py) that is refactored to have a JAX backend. This is mainly done for adding new models flexibly and use the automatic differentiation feature.
 
 PtyLab is an inverse modeling toolbox for Conventional (CP) and Fourier (FP) ptychography in a unified framework. For more information please check the [paper](https://opg.optica.org/oe/fulltext.cfm?uri=oe-31-9-13763&id=529026).
 
@@ -23,16 +23,18 @@ pip install git+https://github.com/ShantanuKodgirwar/PtyLabX.git
 ### With GPU support (CUDA 12)
 
 ```bash
-pip install "ptylabx[cuda12] @ git+https://github.com/ShantanuKodgirwar/PtyLabX.git"
+pip install "ptylabx[cuda12]@git+https://github.com/ShantanuKodgirwar/PtyLabX.git"
 ```
 
 ### Development
 
-Clone the repository and install with uv:
+Clone the repository and install with uv in a virtual environment:
 
 ```bash
 git clone https://github.com/ShantanuKodgirwar/PtyLabX.git
 cd PtyLabX
+uv venv ptylabx-venv
+source ptylabx-venv/bin/activate
 uv sync
 ```
 
@@ -41,7 +43,8 @@ To install with GPU support and dev dependencies:
 ```bash
 uv sync --extra cuda12,dev
 ```
-For testing, whether GPU is being used
+For testing whether GPU is being used correctly
+
 ```bash
 uv run python -m pytest tests/test_jax_device.py -v -s
 ```
