@@ -540,14 +540,14 @@ class BaseEngine(object):
         Computes the fourier transform of the exit surface wave.
         :return:
         """
-        self.reconstruction.ESW = FT2(
+        self.reconstruction.ESW = fft2c(
             self.reconstruction.esw, self.params.fftshiftSwitch
         )
 
     def ifft2s(self):
         """Inverse FFT"""
         # find out if this should be performed on the GPU
-        self.reconstruction.eswUpdate = IFT(
+        self.reconstruction.eswUpdate = ifft2c(
             self.reconstruction.ESW, self.params.fftshiftSwitch
         )
 

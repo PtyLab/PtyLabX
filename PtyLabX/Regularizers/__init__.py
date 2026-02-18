@@ -133,7 +133,7 @@ def metric_at(
             )
 
     if savemem:
-        # SY and sx are extracting after propagation, sy1 and sx1 are extracting before
+        # sy and sx are extracting after propagation, sy1 and sx1 are extracting before
         sy, sx = slice(None, None), slice(None, None)
         sy1, sx1 = ss
     else:

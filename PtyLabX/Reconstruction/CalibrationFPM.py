@@ -2,27 +2,15 @@ from copy import deepcopy
 
 import numpy as np
 from matplotlib import pyplot as plt
-from skimage.filters import gaussian
+from scipy.ndimage import map_coordinates
+from skimage.filters import gaussian, window
 from skimage.measure import ransac
 from skimage.transform import AffineTransform, EuclideanTransform, SimilarityTransform, matrix_transform
-
-try:
-    from sklearn.cluster import KMeans
-except ImportError:
-    print(" Could not load sklearn, will not be able to run Fourier Ptychography Calibration")
-from scipy.ndimage import map_coordinates
-
-try:
-    from skimage.filters import window
-except:
-    print("Wrong skimage version installed")
-import traceback
-
-import matplotlib.animation as animation
+from sklearn.cluster import KMeans
 
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.utils import fft2c, ifft2c
+from PtyLabX.utils.utils import ifft2c
 
 
 class IlluminationCalibration:
@@ -371,7 +359,7 @@ class IlluminationCalibration:
         # plt.imshow(errorCandidates)
         # plt.pause(1)
 
-        errorCandidates = np.argwhere(errorCandidates == True)
+        errorCandidates = np.argwhere(errorCandidates)
         return errorCandidates
 
     def findCalibratedRadius(self, ptychogram, FT_ptychogram, initialPositions):
@@ -578,7 +566,7 @@ class IlluminationCalibration:
                         repeat_counter += 1
                     else:
                         converged = True
-            except:  # Exception:
+            except Exception:
                 # traceback.print_exc()
                 failed_position_calib.append(idx)
 

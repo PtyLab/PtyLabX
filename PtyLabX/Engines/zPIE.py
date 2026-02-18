@@ -48,11 +48,10 @@ class zPIE(BaseEngine):
         self.focusObject = True
         self.zMomentun = 0
 
-    def show_defocus(self, viewer=None, scanrange_times_dof=1000, N_points=10):
+    def show_defocus(self, scanrange_times_dof=1000, N_points=10):
+        from PtyLabX.utils.visualisation import plot_defocus_stack
+
         z = np.linspace(-1, 1, N_points) * scanrange_times_dof * self.reconstruction.DoF
-
-        from PtyLabX.Operators.Operators import aspw
-
         reconstruction = self.reconstruction
         defocii = np.abs(
             np.array(
@@ -68,19 +67,8 @@ class zPIE(BaseEngine):
             )
             ** 2
         )
-
-        if viewer is None:
-            # currently a hacky way for this, these napari implementations must
-            # later be moved to an optional sub-package.
-            try:
-                import napari
-
-                viewer = napari.Viewer()
-            except ImportError:
-                msg = "Install napari to access this `NapariMonitor` implementation"
-                raise ImportError(msg)
-
-        viewer.add_image(defocii)
+        plot_defocus_stack(defocii, z)
+        plt.show()
 
     def reconstruct(self, experimentalData=None, reconstruction=None):
         self.changeExperimentalData(experimentalData)
@@ -303,21 +291,5 @@ class zPIE(BaseEngine):
     def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
         return epie_probe_update(self.reconstruction.probe, objectPatch, DELTA, self.betaProbe)
 
-    # def display_focus_bokeh(self):
-    #     # first, make a document
-    #     from bokeh.plotting import figure, output_file, save
-    #     from bokeh.io import hplot
-    #     from pathlib import Path
-    #
-    #     folder = Path('plots/zPIE.html')
-    #     output_file(folder)
-    #     s1, s2 = self.reconstruction.make_alignment_plot(False)
-    #     s3 = figure(width=250, height=250, title='TV per focus')
-    #
-    #
-    #     s3.xaxix.axis_label = 'Distance [um]'
-    #     s3.yaxix.axis_label = 'TV'
-    #     s3.line(self.dz*1e6, self.merit, )
-    #     pass
     #
     #

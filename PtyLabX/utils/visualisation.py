@@ -1,15 +1,13 @@
 # This file contains utilities required for Monitor
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
 import math
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.colors import LinearSegmentedColormap
 
-try:
-    import pyqtgraph as pg
-except ModuleNotFoundError:
-    print("Pyqtgraph not available")
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
+import pyqtgraph as pg
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.widgets import Slider
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 def hsv2rgb(hsv: np.ndarray) -> np.ndarray:
@@ -48,7 +46,7 @@ def complex2rgb(u, amplitudeScalingFactor=1, center_phase=False):
     u = np.asarray(u)
     if center_phase:
         N = u.shape[-1]
-        phexp = np.sum(u[...,N//3:2*N//3,N//3:2*N//3], axis=(-2,-1))
+        phexp = np.sum(u[..., N // 3 : 2 * N // 3, N // 3 : 2 * N // 3], axis=(-2, -1))
         u = u * phexp.conj() / (abs(phexp) + 1e-9)
     h = np.angle(u)
     h = (h + np.pi) / (2 * np.pi)
@@ -60,7 +58,7 @@ def complex2rgb(u, amplitudeScalingFactor=1, center_phase=False):
         ASF = v.mean() + 2 * np.std(v)
         ASF = ASF / v.max()
     elif amplitudeScalingFactor is None:
-        ASF = 1./v.max()
+        ASF = 1.0 / v.max()
         amplitudeScalingFactor = ASF
     else:
         ASF = amplitudeScalingFactor
@@ -136,17 +134,13 @@ def modeTile(P, normalize=True):
         if s > np.sqrt(S):
             P = np.pad(P, ((0, s**2 - S), (0, 0), (0, 0)), "constant")
         P = P[: s**2, ...]
-        P = P.reshape((s, s) + P.shape[1:]).transpose(
-            (1, 2, 0, 3) + tuple(range(4, P.ndim + 1))
-        )
+        P = P.reshape((s, s) + P.shape[1:]).transpose((1, 2, 0, 3) + tuple(range(4, P.ndim + 1)))
         P = P.reshape((s * P.shape[1], s * P.shape[3]) + P.shape[4:])
     elif P.ndim == 4 and P.shape[0] > 1:
         if normalize:
             maxs = np.max(abs(P), axis=(-1, -2)) + 1e-6
             P = (P.T / maxs.T).T
-        P = np.swapaxes(P, 1, 2).reshape(
-            P.shape[0] * P.shape[2], P.shape[1] * P.shape[3]
-        )
+        P = np.swapaxes(P, 1, 2).reshape(P.shape[0] * P.shape[2], P.shape[1] * P.shape[3])
     else:
         P = np.squeeze(P)
     return P
@@ -165,9 +159,7 @@ def hsvplot(u, ax=None, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1)
     complexPlot(rgb, ax, pixelSize, axisUnit)
 
 
-def hsvmodeplot(
-    P, ax=None, normalize=True, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1
-):
+def hsvmodeplot(P, ax=None, normalize=True, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1):
     """
     Place multi complex images in a square grid and use hsvplot to display
     :param P: A complex np.ndarray
@@ -186,9 +178,7 @@ def hsvmodeplot(
     )
 
 
-def absplot(
-    u, ax=None, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1, cmap="gray"
-):
+def absplot(u, ax=None, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1, cmap="gray"):
     U = np.abs(np.asarray(u))
     if not ax:
         fig, ax = plt.subplots()
@@ -214,14 +204,10 @@ def absplot(
         cax=cax,
         ticks=[0, amplitudeScalingFactor / 2, amplitudeScalingFactor],
     )
-    cbar.ax.set_yticklabels(
-        ["0", str(amplitudeScalingFactor / 2), str(amplitudeScalingFactor)]
-    )
+    cbar.ax.set_yticklabels(["0", str(amplitudeScalingFactor / 2), str(amplitudeScalingFactor)])
 
 
-def absmodeplot(
-    P, ax=None, normalize=True, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1
-):
+def absmodeplot(P, ax=None, normalize=True, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1):
     Q = modeTile(abs(P), normalize=normalize)
     absplot(Q, ax=ax, pixelSize=pixelSize, axisUnit=axisUnit)
 
@@ -274,3 +260,116 @@ def show3Dslider(A, colormap="diffraction"):
     imv.setColorMap(pg.ColorMap(pos=positions, color=colors))
     imv.show()
     app.exec_()
+
+
+def plot_alignment(reconstruction, saveit=False):
+    """
+    Plot position alignment (before vs after correction) and optional history metrics.
+
+    :param reconstruction: Reconstruction object with positions, positions0, and optionally
+                           zHistory, TV_history, merit, dz attributes.
+    :param saveit: If True, save the figure to plots/alignment.png.
+    :return: matplotlib Figure
+    """
+    import time
+    from pathlib import Path
+
+    p_new = np.asarray(reconstruction.positions).T
+    p_old = np.asarray(reconstruction.positions0).T
+
+    n_plots = 1
+    if hasattr(reconstruction, "zHistory"):
+        n_plots += 1
+    if hasattr(reconstruction, "TV_history") and len(reconstruction.TV_history) >= 1:
+        n_plots += 1
+    if hasattr(reconstruction, "merit"):
+        n_plots += 1
+
+    fig, axes = plt.subplots(1, n_plots, figsize=(5 * n_plots, 5))
+    if n_plots == 1:
+        axes = [axes]
+
+    ax_idx = 0
+
+    # Alignment scatter
+    ax = axes[ax_idx]
+    ax_idx += 1
+    ax.scatter(p_old[0], p_old[1], c="yellow", marker="s", s=25, label="original", edgecolors="gray")
+    ax.scatter(p_new[0], p_new[1], c="red", marker="o", s=25, label="new")
+    ax.set_aspect("equal")
+    ax.set_xlabel("Position x [um]")
+    ax.set_ylabel("Position y [um]")
+    ax.set_title(f"alignment (updated {time.strftime('%Y-%m-%d %H:%M:%S')})")
+    ax.legend()
+
+    if hasattr(reconstruction, "zHistory"):
+        ax = axes[ax_idx]
+        ax_idx += 1
+        z_hist = np.asarray(reconstruction.zHistory)
+        ax.plot(np.arange(len(z_hist)), z_hist * 1e3)
+        ax.set_xlabel("Iteration #")
+        ax.set_ylabel("Position [mm]")
+        ax.set_title("focus history")
+
+    if hasattr(reconstruction, "TV_history") and len(reconstruction.TV_history) >= 1:
+        ax = axes[ax_idx]
+        ax_idx += 1
+        tv = np.asarray(reconstruction.TV_history)
+        ax.scatter(np.arange(len(tv)), tv, s=25)
+        ax.set_xlabel("Iteration")
+        ax.set_ylabel("TV score")
+        ax.set_title("TV history")
+
+    if hasattr(reconstruction, "merit"):
+        ax = axes[ax_idx]
+        dz = np.asarray(reconstruction.dz)
+        merit = np.asarray(reconstruction.merit)
+        ax.scatter(dz * 1e3, merit, s=25, label="original")
+        ax.scatter(-dz * 1e3, merit, s=25, c="red", marker="s", label="mirrored")
+        ax.set_xlabel("Defocus [mm]")
+        ax.set_ylabel("Score [a.u.]")
+        ax.set_title("merit TV")
+        ax.legend()
+
+    fig.tight_layout()
+
+    if saveit:
+        output = Path("plots/alignment.png")
+        output.parent.mkdir(exist_ok=True)
+        fig.savefig(output)
+
+    return fig
+
+
+def plot_defocus_stack(defocii, z_values):
+    """
+    Browse a stack of defocus images interactively using a matplotlib slider.
+
+    :param defocii: numpy array of shape (N, H, W)
+    :param z_values: 1D array of z positions (in metres) for each frame
+    :return: matplotlib Figure
+    """
+
+    defocii = np.asarray(defocii)
+    z_values = np.asarray(z_values)
+    N = defocii.shape[0]
+
+    fig, ax = plt.subplots()
+    plt.subplots_adjust(bottom=0.15)
+
+    im = ax.imshow(defocii[0], cmap="gray")
+    ax.set_title(f"z = {z_values[0] * 1e3:.3f} mm")
+    ax.axis("off")
+
+    ax_slider = plt.axes([0.15, 0.04, 0.7, 0.04])
+    slider = Slider(ax_slider, "Frame", 0, N - 1, valinit=0, valstep=1)
+
+    def update(val):
+        idx = int(slider.val)
+        im.set_data(defocii[idx])
+        im.set_clim(defocii[idx].min(), defocii[idx].max())
+        ax.set_title(f"z = {z_values[idx] * 1e3:.3f} mm")
+        fig.canvas.draw_idle()
+
+    slider.on_changed(update)
+    return fig

@@ -1,9 +1,5 @@
 import numpy as np
 
-try:
-    import pyqtgraph as pg
-except ImportError:
-    print("Cannot use pyqtgraph")
 import logging
 
 import matplotlib.pyplot as plt

@@ -1,24 +1,24 @@
-import time
-import numpy as np
-from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
-from copy import copy
 import logging
+import time
+from copy import copy
+
 import h5py
+import numpy as np
+
+from PtyLabX import Params
+from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
 
 # logging.basicConfig(level=logging.DEBUG)
-from PtyLabX.Regularizers import metric_at, TV
-
+from PtyLabX.Regularizers import TV, metric_at
 from PtyLabX.utils.initializationFunctions import initialProbeOrObject
-from PtyLabX import Params
+from PtyLabX.utils.visualisation import plot_alignment
 
 
 def calculate_pixel_positions(encoder_corrected, dxo, No, Np, asint):
     """
     Calculate the pixel positions.
     """
-    positions = np.round(
-        encoder_corrected / dxo
-    )  # encoder is in m, positions0 and positions are in pixels
+    positions = np.round(encoder_corrected / dxo)  # encoder is in m, positions0 and positions are in pixels
     positions = positions + No // 2 - Np // 2
     if asint:
         positions = positions.astype(int)
@@ -128,9 +128,9 @@ class Reconstruction(object):
             self.logger.debug(f"Changing sample-detector distance to {new_value}")
             self.dxp = self.wavelength * self._zo / self.Ld
         elif self.data.operationMode == "FPM":
-             self.logger.debug(f"Changing illumination-to-sample distance to {new_value}")
-             self.zled = self._zo
-             
+            self.logger.debug(f"Changing illumination-to-sample distance to {new_value}")
+            self.zled = self._zo
+
     def computeParameters(self):
         """
         compute parameters that can be altered by the user later.
@@ -158,22 +158,14 @@ class Reconstruction(object):
             # then estimate the NA from the pupil diameter in the Fourier plane
             if isinstance(self.NA, type(None)):
                 self.data.entrancePupilDiameter = self.Lp / 2
-                self.NA = (
-                    self.data.entrancePupilDiameter
-                    * self.wavelength
-                    / (2 * self.dxp**2 * self.Np)
-                )
+                self.NA = self.data.entrancePupilDiameter * self.wavelength / (2 * self.dxp**2 * self.Np)
             else:
                 # compute the pupil radius in the Fourier plane
-                self.data.entrancePupilDiameter = (
-                    2 * self.dxp**2 * self.Np * self.NA / self.wavelength
-                )
+                self.data.entrancePupilDiameter = 2 * self.dxp**2 * self.Np * self.NA / self.wavelength
 
         # set object pixel numbers
-        if not hasattr(self, 'No'):
-            self.No = (
-                self.Np * 2**2
-            )  # unimportant but leave it here as it's required for self.positions
+        if not hasattr(self, "No"):
+            self.No = self.Np * 2**2  # unimportant but leave it here as it's required for self.positions
             # we need space for the probe as well, on both sides that would be half the probe
             range_pixels = np.max(self.positions, axis=0) - np.min(self.positions, axis=0)
             # print(range_pixels)
@@ -183,100 +175,7 @@ class Reconstruction(object):
             self.No = np.max([self.Np, range_pixels])
 
     def make_alignment_plot(self, saveit=False):
-        import time
-
-        t0 = time.time()
-        p_new = self.positions.T
-        p_old = self.positions0.T
-
-        from bokeh.plotting import figure, output_file, save
-        from bokeh.layouts import row
-
-        from pathlib import Path
-
-        if saveit:
-            output = Path("plots/alignment.html")
-            output.parent.mkdir(exist_ok=True)
-            # set output to static HTML file
-
-            output_file(filename=output, title="Static HTML file", mode="inline")
-
-        # create a new plot with a specific size
-        p = figure(
-            sizing_mode="stretch_width",
-            max_width=500,
-            height=500,
-            title=f'alignment (updated {time.strftime("%Y%h%d, %H:%M:%S")})',
-        )
-        p.match_aspect = True
-        square = p.square(
-            p_old[0], p_old[1], fill_color="yellow", size=5, legend_label="original"
-        )
-        # add a circle renderer for the new points
-        circle = p.circle(
-            p_new[0], p_new[1], fill_color="red", size=5, legend_label="new"
-        )
-
-        p.xaxis.axis_label = "Position x [um]"
-        p.yaxis.axis_label = "Position y [um]"
-
-        p2 = None
-        p3 = None
-        p4 = None
-
-        figsize = 500  # px
-
-        if hasattr(self, "zHistory"):  # display the plot of the defocus
-            p2 = figure(
-                sizing_mode="stretch_width",
-                max_width=figsize,
-                height=figsize,
-                title="focus history",
-            )
-            p2.circle(np.arange(len(self.zHistory)), np.array(self.zHistory) * 1e3)
-            p2.xaxis.axis_label = "Iteration #"
-            p2.yaxis.axis_label = "Position [mm]"
-            # p = vplot(p, p2)
-
-        if hasattr(self, "merit"):  # display the merit as well for defocii
-            p3 = figure(
-                sizing_mode="stretch_width",
-                max_width=figsize,
-                height=figsize,
-                title="merit TV",
-            )
-            p3.circle(self.dz * 1e3, np.array(self.merit), legend_label="original")
-            p3.square(
-                -self.dz * 1e3,
-                np.array(self.merit),
-                legend_label="mirrored",
-                color="red",
-            )
-            p3.xaxis.axis_label = "Defocus [mm]"
-            p3.yaxis.axis_label = "Score [a.u.]"
-            # p = vplot(p, p3)
-        if hasattr(self, "TV_history"):
-            if len(self.TV_history) >= 1:
-                p4 = figure(
-                    sizing_mode="stretch_width",
-                    max_width=figsize,
-                    height=figsize,
-                    title="TV history",
-                )
-                p4.square(np.arange(len(self.TV_history)), self.TV_history)
-                p4.xaxis.axis_label = "Iteration"
-                p4.yaxis.axis_label = "TV score"
-        # only add the plots that are available
-        p_list = filter(lambda x: x is not None, [p, p2, p4, p3])
-        p = row(*p_list)
-
-        if saveit:
-            save(
-                p,
-            )
-        t1 = time.time()
-        print(f"Alignment display took {t1-t0} secs")
-        return p
+        return plot_alignment(self, saveit=saveit)
 
     def initializeSettings(self):
         """
@@ -346,19 +245,21 @@ class Reconstruction(object):
             self.No,
             self.No,
         )
-        if self.initialObject == 'recon':
+        if self.initialObject == "recon":
             # Load the object from an existing reconstruction
-            self.initialGuessObject = self.loadResults(self.initialProbe_filename, datatype='object')
+            self.initialGuessObject = self.loadResults(self.initialProbe_filename, datatype="object")
         else:
-            self.initialGuessObject = initialProbeOrObject(self.shape_O, self.initialObject, self, self.logger).astype(np.complex64)
+            self.initialGuessObject = initialProbeOrObject(self.shape_O, self.initialObject, self, self.logger).astype(
+                np.complex64
+            )
 
         # self.initialGuessObject *= 1e-2
 
     @staticmethod
-    def loadResults(fileName, datatype='probe'):
-        '''
+    def loadResults(fileName, datatype="probe"):
+        """
         Loads data from a ptylab reconstruction file.
-        '''
+        """
         with h5py.File(fileName) as archive:
             data = np.copy(np.array(archive[datatype]))
         return data
@@ -366,9 +267,7 @@ class Reconstruction(object):
     def initializeProbe(self, force=False):
         if self.data.entrancePupilDiameter is None:
             # if it is not set, set it to something reasonable
-            self.logger.warning(
-                "entrancePupilDiameter not set. Setting to one third of the FoV of the probe."
-            )
+            self.logger.warning("entrancePupilDiameter not set. Setting to one third of the FoV of the probe.")
             self.data.entrancePupilDiameter = self.Lp / 3
         self.logger.info("Initial probe set to %s", self.initialProbe)
         self.shape_P = (
@@ -380,16 +279,14 @@ class Reconstruction(object):
             int(self.Np),
         )
 
-        if self.initialProbe == 'recon':
-            self.initialGuessProbe = self.loadResults(self.initialProbe_filename, datatype='probe')
+        if self.initialProbe == "recon":
+            self.initialGuessProbe = self.loadResults(self.initialProbe_filename, datatype="probe")
         else:
             if force:
                 self.initialGuessProbe = None
             # if force:
             #     self.initialProbe = "circ"
-            self.initialGuessProbe = initialProbeOrObject(
-                self.shape_P, self.initialProbe, self
-            ).astype(np.complex64)
+            self.initialGuessProbe = initialProbeOrObject(self.shape_P, self.initialProbe, self).astype(np.complex64)
 
     # initialize momentum, called in specific engines with momentum accelaration
     def initializeObjectMomentum(self):
@@ -425,7 +322,7 @@ class Reconstruction(object):
                 self.object = obj
             else:
                 raise RuntimeError(
-                    f'Shape of saved probe cannot be extended to shape of required probe. File: {archive["object"].shape}. Need: {self.shape_O}'
+                    f"Shape of saved probe cannot be extended to shape of required probe. File: {archive['object'].shape}. Need: {self.shape_O}"
                 )
 
     def load_probe(self, filename, expand_npsm=False, center_phase=False):
@@ -445,36 +342,33 @@ class Reconstruction(object):
             probe = np.array(archive["probe"])
             N_probe_read = probe.shape[-1]
             # roughly extract the center
-            ss = slice(np.clip(N_probe_read//2-self.Np//2, 0, None), np.clip(N_probe_read//2-self.Np//2+int(self.Np), 0, N_probe_read))
-            probe = probe[
-                : self.nlambda,
-                :1,
-                : self.npsm,
-                : self.nslice,
-                ss,ss
-            ]
+            ss = slice(
+                np.clip(N_probe_read // 2 - self.Np // 2, 0, None),
+                np.clip(N_probe_read // 2 - self.Np // 2 + int(self.Np), 0, N_probe_read),
+            )
+            probe = probe[: self.nlambda, :1, : self.npsm, : self.nslice, ss, ss]
             if np.all(np.array(probe.shape) == np.array(self.shape_P)):
                 self.probe = probe
             else:
                 raise RuntimeError(
-                    f'Shape of saved probe cannot be extended to shape of required probe. File: {archive["probe"].shape}. Need: {self.shape_P}'
+                    f"Shape of saved probe cannot be extended to shape of required probe. File: {archive['probe'].shape}. Need: {self.shape_P}"
                 )
         if center_phase:
             self._center_probe_angle()
 
     def _center_probe_angle(self):
-        """ Center the angle of propagation for the probe. """
-        from skimage.registration import phase_cross_correlation
+        """Center the angle of propagation for the probe."""
         from scipy.ndimage import fourier_shift
+        from skimage.registration import phase_cross_correlation
+
         p0 = np.squeeze(self.probe)[0]
-        shift = phase_cross_correlation(p0, 0 * p0 + 1, normalization=None, space='fourier')[0]
+        shift = phase_cross_correlation(p0, 0 * p0 + 1, normalization=None, space="fourier")[0]
         phexp = np.fft.fftshift(fourier_shift(0 * p0 + 1j, -shift / 2))
         self.probe *= phexp
 
     def load(self, filename):
         """Load the results given by saveResults."""
         with h5py.File(filename, "r") as archive:
-
             self.probe = np.array(archive["probe"])
             self.object = np.array(archive["object"])
             self.error = np.array(archive["error"])
@@ -505,9 +399,7 @@ class Reconstruction(object):
 
         allowed_save_types = ["all", "object", "probe", "probe_stack"]
         if type not in allowed_save_types:
-            raise NotImplementedError(
-                f"Only {allowed_save_types} are allowed keywords for type"
-            )
+            raise NotImplementedError(f"Only {allowed_save_types} are allowed keywords for type")
         if not squeeze:
             squeezefun = lambda x: x
         else:
@@ -523,9 +415,9 @@ class Reconstruction(object):
                     hf.create_dataset("dxp", data=self.dxp, dtype="f")
                     hf.create_dataset("purityProbe", data=self.purityProbe, dtype="f")
                     hf.create_dataset("purityObject", data=self.purityObject, dtype="f")
-                    hf.create_dataset('I object', data=abs(self.object), dtype='f')
-                    hf.create_dataset('I probe', data=abs(self.probe), dtype='f')
-                    hf.create_dataset('encoder_corrected', data=self.encoder_corrected)
+                    hf.create_dataset("I object", data=abs(self.object), dtype="f")
+                    hf.create_dataset("I probe", data=abs(self.probe), dtype="f")
+                    hf.create_dataset("encoder_corrected", data=self.encoder_corrected)
 
                     if hasattr(self, "theta"):
                         if self.theta != None:
@@ -541,17 +433,13 @@ class Reconstruction(object):
                 hf.create_dataset("dxp", data=self.dxp, dtype="f")
         elif type == "probe":
             with h5py.File(fileName, "w") as hf:
-                hf.create_dataset(
-                    "probe", data=squeezefun(self.probe), dtype="complex64"
-                )
+                hf.create_dataset("probe", data=squeezefun(self.probe), dtype="complex64")
         elif type == "object":
             with h5py.File(fileName, "w") as hf:
-                hf.create_dataset(
-                    "object", data=squeezefun(self.object), dtype="complex64"
-                )
+                hf.create_dataset("object", data=squeezefun(self.object), dtype="complex64")
         elif type == "probe_stack":
-            hf = h5py.File(fileName + '_probe_stack.hdf5', 'w')
-            hf.create_dataset('probe_stack', data=np.asarray(self.probe_stack), dtype='complex64')
+            hf = h5py.File(fileName + "_probe_stack.hdf5", "w")
+            hf.create_dataset("probe_stack", data=np.asarray(self.probe_stack), dtype="complex64")
         print("The reconstruction results (%s) have been saved" % type)
 
     # detector coordinates
@@ -600,9 +488,7 @@ class Reconstruction(object):
         try:
             return np.linspace(-self.Np / 2, self.Np / 2, int(self.Np)) * self.dxp
         except AttributeError as e:
-            raise AttributeError(
-                e, 'probe pixel number "Np" and/or probe sampling "dxp" not defined yet'
-            )
+            raise AttributeError(e, 'probe pixel number "Np" and/or probe sampling "dxp" not defined yet')
 
     @property
     def Xp(self):
@@ -634,9 +520,7 @@ class Reconstruction(object):
         try:
             return np.linspace(-self.No / 2, self.No / 2, np.int(self.No)) * self.dxo
         except AttributeError as e:
-            raise AttributeError(
-                e, 'object pixel number "No" and/or pixel size "dxo" not defined yet'
-            )
+            raise AttributeError(e, 'object pixel number "No" and/or pixel size "dxo" not defined yet')
 
     @property
     def Xo(self):
@@ -670,11 +554,9 @@ class Reconstruction(object):
             positions = np.round(
                 conv
                 * self.encoder_corrected
-                / np.sqrt(
-                    self.encoder_corrected[:, 0] ** 2
-                    + self.encoder_corrected[:, 1] ** 2
-                    + self.zled**2
-                )[..., None]
+                / np.sqrt(self.encoder_corrected[:, 0] ** 2 + self.encoder_corrected[:, 1] ** 2 + self.zled**2)[
+                    ..., None
+                ]
             )
 
             try:
@@ -684,9 +566,7 @@ class Reconstruction(object):
 
             return positions.astype(int)
         else:
-            return calculate_pixel_positions(
-                self.encoder_corrected, self.dxo, self.No, self.Np, asint=True
-            )
+            return calculate_pixel_positions(self.encoder_corrected, self.dxo, self.No, self.Np, asint=True)
 
     # system property list
     @property
@@ -703,30 +583,30 @@ class Reconstruction(object):
         return DoF
 
     def describe_reconstruction(self):
-        minmax_tv = ''
+        minmax_tv = ""
         try:
-            minmax_tv = f'(min: {self.params.TV_autofocus_min_z*1e3}, max: {self.params.TV_autofocus_max_z*1e3}.)'
-        except TypeError: # one of them is none
+            minmax_tv = f"(min: {self.params.TV_autofocus_min_z * 1e3}, max: {self.params.TV_autofocus_max_z * 1e3}.)"
+        except TypeError:  # one of them is none
             pass
         info = f"""
         Experimental data:
         - Number of ptychograms: {self.data.ptychogram.shape}
         - Number of pixels ptychogram: {self.data.Nd}
-        - Ptychogram size: {self.data.Ld*1e3} mm
-        - Pixel pitch: {self.data.dxd*1e6} um
-        - Scan size: {1e3*(self.data.encoder.max(axis=0) - self.data.encoder.min(axis=0))} mm 
+        - Ptychogram size: {self.data.Ld * 1e3} mm
+        - Pixel pitch: {self.data.dxd * 1e6} um
+        - Scan size: {1e3 * (self.data.encoder.max(axis=0) - self.data.encoder.min(axis=0))} mm 
         
         Reconstruction:
         - number of pixels: {self.No}
-        - Pixel pitch: {self.dxo*1e6} um
-        - Field of view: {self.Lo*1e3} mm
-        - Scan size in pixels: {self.positions.max(axis=0)- self.positions.min(axis=0)}
+        - Pixel pitch: {self.dxo * 1e6} um
+        - Field of view: {self.Lo * 1e3} mm
+        - Scan size in pixels: {self.positions.max(axis=0) - self.positions.min(axis=0)}
         - Propagation distance: {self.zo * 1e3} mm {minmax_tv}
-        - Probe FoV: {self.Lp*1e3} mm
+        - Probe FoV: {self.Lp * 1e3} mm
         
         Derived parameters:
         - NA detector: {self.NAd}
-        - DOF: {self.DoF*1e6} um
+        - DOF: {self.DoF * 1e6} um
         
         """
         self.logger.info(info)
@@ -750,7 +630,6 @@ class Reconstruction(object):
         raise NotImplementedError("Q2 is no longer available")
 
     def TV_autofocus(self, params: Params, loop):
-
         """Perform an autofocusing step based on optimizing the total variation.
 
         If not required, returns none. Otherwise, returns the value of the TV at the current z0."""
@@ -826,14 +705,18 @@ class Reconstruction(object):
         self.zo -= delta_z
         end_time = time.time()
         self.logger.info(
-            f"TV autofocus took {end_time-start_time} seconds, and moved focus by {-delta_z*1e6} micron"
+            f"TV autofocus took {end_time - start_time} seconds, and moved focus by {-delta_z * 1e6} micron"
         )
-        indices = [nplanes//2, np.argmax(merit)]
+        indices = [nplanes // 2, np.argmax(merit)]
         OEs = OEs[indices]
-        phexp = OEs.sum((-2,-1), keepdims=True).conj()
+        phexp = OEs.sum((-2, -1), keepdims=True).conj()
         phexp = phexp / abs(phexp)
         OEs *= phexp
-        return merit[nplanes//2] / float(np.asarray(abs(self.object[..., sy, sx]).mean())), np.hstack(OEs), (scores, self.zo)
+        return (
+            merit[nplanes // 2] / float(np.asarray(abs(self.object[..., sy, sx]).mean())),
+            np.hstack(OEs),
+            (scores, self.zo),
+        )
 
     def reset_TV_autofocus(self):
         """Reset the settings of TV autofocus. Can be useful to reset the memory effect if the steps are getting really large."""
