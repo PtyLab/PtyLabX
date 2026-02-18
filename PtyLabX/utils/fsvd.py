@@ -1,19 +1,17 @@
 """=============================================================================
 Randomized SVD. See Halko, Martinsson, Tropp's 2011 SIAM paper:
 
-This file has been adopted to fit in PtyLab by making it GPU-aware by Dirk Boonzajer
-
 "Finding structure with randomness: Probabilistic algorithms for constructing
 approximate matrix decompositions"
 ============================================================================="""
 
-import numpy as np
-from PtyLabX.utils.gpuUtils import getArrayModule, isGpuArray
+import jax
+import jax.numpy as jnp
 
 # ------------------------------------------------------------------------------
 
 def rsvd(A, rank, n_oversamples=None, n_subspace_iters=None,
-         return_range=False):
+         return_range=False, rng_key=None):
     """Randomized SVD (p. 227 of Halko et al).
 
     :param A:                (m x n) matrix.
@@ -21,9 +19,9 @@ def rsvd(A, rank, n_oversamples=None, n_subspace_iters=None,
     :param n_oversamples:    Oversampling parameter for Gaussian random samples.
     :param n_subspace_iters: Number of power iterations.
     :param return_range:     If `True`, return basis for approximate range of A.
+    :param rng_key:          JAX PRNG key. If None, uses key(0).
     :return:                 U, S, and Vt as in truncated SVD.
     """
-    xp = getArrayModule(A)
     if n_oversamples is None:
         # This is the default used in the paper.
         n_samples = 2 * rank
@@ -31,11 +29,11 @@ def rsvd(A, rank, n_oversamples=None, n_subspace_iters=None,
         n_samples = rank + n_oversamples
 
     # Stage A.
-    Q = find_range(A, n_samples, n_subspace_iters)
+    Q = find_range(A, n_samples, n_subspace_iters, rng_key=rng_key)
 
     # Stage B.
     B = Q.T.conj() @ A
-    U_tilde, S, Vt = xp.linalg.svd(B, full_matrices=False)
+    U_tilde, S, Vt = jnp.linalg.svd(B, full_matrices=False)
     U = Q @ U_tilde
 
     # Truncate.
@@ -48,7 +46,7 @@ def rsvd(A, rank, n_oversamples=None, n_subspace_iters=None,
 
 # ------------------------------------------------------------------------------
 
-def find_range(A, n_samples, n_subspace_iters=None):
+def find_range(A, n_samples, n_subspace_iters=None, rng_key=None):
     """Algorithm 4.1: Randomized range finder (p. 240 of Halko et al).
 
     Given a matrix A and a number of samples, computes an orthonormal matrix
@@ -57,14 +55,16 @@ def find_range(A, n_samples, n_subspace_iters=None):
     :param A:                (m x n) matrix.
     :param n_samples:        Number of Gaussian random samples.
     :param n_subspace_iters: Number of subspace iterations.
+    :param rng_key:          JAX PRNG key. If None, uses key(0).
     :return:                 Orthonormal basis for approximate range of A.
     """
-    xp = getArrayModule(A)
+    if rng_key is None:
+        rng_key = jax.random.PRNGKey(0)
     m, n = A.shape
-    O = 1j*xp.random.normal(0,1.0, size=(n, n_samples))
-    O +=xp.random.normal(0,1.0, size=(n, n_samples))
-    O = O.astype(xp.complex64)
-    #O = xp.random.randn(n, n_samples) + 1j * xp.random.randn(n, n_samples)
+    key1, key2 = jax.random.split(rng_key)
+    O = 1j * jax.random.normal(key1, shape=(n, n_samples))
+    O = O + jax.random.normal(key2, shape=(n, n_samples))
+    O = O.astype(jnp.complex64)
     Y = A @ O
 
     if n_subspace_iters:
@@ -100,6 +100,5 @@ def ortho_basis(M):
     :param M: (m x n) matrix.
     :return:  An orthonormal basis for M.
     """
-    xp = getArrayModule(M)
-    Q, _ = xp.linalg.qr(M)
+    Q, _ = jnp.linalg.qr(M)
     return Q

@@ -1,13 +1,9 @@
 from scipy import ndimage
 
-from PtyLabX.utils.gpuUtils import getArrayModule
 import logging
 
-try:
-    import cupy as cp
-except ImportError:
-    import numpy as cp
 import numpy as np
+import jax.numpy as jnp
 
 
 class OPRP_storage:
@@ -23,41 +19,39 @@ class OPRP_storage:
                 delattr(self, name)
 
     def push(self, probe, index, N_positions):
-        self.xp = getArrayModule(probe)
-
-        probe = probe * self.xp.exp(-1j * self.xp.angle(probe.sum()))
+        probe = probe * jnp.exp(-1j * jnp.angle(probe.sum()))
 
         if not hasattr(self, "probes"):
             self._prepare_probes(probe, N_positions)
             # if it's the first one, make it small so the updates are relatively important
             probe_norm = probe.reshape(self.new_probe_shape)
-            probe_norm = probe_norm / self.xp.linalg.norm(probe_norm)
+            probe_norm = probe_norm / jnp.linalg.norm(probe_norm)
             self.push(probe_norm.reshape(self.original_probe_shape), index, N_positions)
             return
 
         if self.correct_position:
             probe = self.center_probe(probe, index)
 
-        self.probes[index] = probe.reshape(self.new_probe_shape)
-        self.probe_indices[index] = True
+        self.probes = self.probes.at[index].set(probe.reshape(self.new_probe_shape))
+        self.probe_indices = self.probe_indices.at[index].set(True)
 
     def tsvd(self):
         self.logger.info("Running TSVD")
-        if not np.all(self.probe_indices == True):
-            indices = self.xp.argwhere(self.probe_indices)
+        if not np.all(np.asarray(self.probe_indices)):
+            indices = jnp.argwhere(self.probe_indices)
             probes = self.probes[indices]
         else:
             probes = self.probes
-        average_power = self.xp.mean(self.xp.abs(probes**2))
-        probe_power = self.xp.mean(self.xp.abs(probes**2), axis=-1, keepdims=True)
-        probes *= self.xp.mean(average_power / (probe_power + 1e-6))
+        average_power = jnp.mean(jnp.abs(probes**2))
+        probe_power = jnp.mean(jnp.abs(probes**2), axis=-1, keepdims=True)
+        probes = probes * jnp.mean(average_power / (probe_power + 1e-6))
 
-        A, s, At = self.xp.linalg.svd(probes, full_matrices=False)
+        A, s, At = jnp.linalg.svd(probes, full_matrices=False)
         N = self.N_probes
         # calculate effective rank
-        pk = s / self.xp.linalg.norm(s.flatten(), ord=1)
-        H = -self.xp.sum(pk * self.xp.log(pk))
-        eRank = self.xp.exp(H)
+        pk = s / jnp.linalg.norm(s.flatten(), ord=1)
+        H = -jnp.sum(pk * jnp.log(pk))
+        eRank = jnp.exp(H)
 
         self.A = A[:, :N]
         self.s = s[:N]
@@ -90,11 +84,9 @@ class OPRP_storage:
             # Aka set self.A to [1, 0, 0,... 0]
             # we didn't measure it, return the first mode multiplied with the average power
             A = self.A[0].copy()
-            A[1:] = 0
-            A[0] = 1.0 * self.xp.sign(self.A[0, 0])
-        probe = np.matmul(A, self.s[..., None] * self.At)
-        # probe = (A * self.s) @ self.At
-        # print(probe.shape)
+            A = A.at[1:].set(0)
+            A = A.at[0].set(1.0 * jnp.sign(self.A[0, 0]))
+        probe = jnp.matmul(A, self.s[..., None] * self.At)
         # move it back
         probe = probe.reshape(self.original_probe_shape)
         if self.correct_position:
@@ -104,7 +96,7 @@ class OPRP_storage:
 
     def center_probe(self, probe, index):
         dpos = (
-            np.array(ndimage.center_of_mass(abs(probe**2)))
+            np.array(ndimage.center_of_mass(np.asarray(abs(probe**2))))
             - np.array(probe.shape) / 2
         )
         dpos = np.clip(dpos, -2.5, 2.5)
@@ -112,30 +104,26 @@ class OPRP_storage:
         # move it
         for dim, shift in enumerate(self.center_mass[index]):
             if self.original_probe_shape[dim] != 1:
-                shift = np.round(shift).astype(int)
-                probe = self.xp.roll(probe, shift=-shift, axis=dim)
+                shift = int(np.round(shift))
+                probe = jnp.roll(probe, shift=-shift, axis=dim)
         return probe
 
     def uncenter_probe(self, probe, index):
         probe = probe.reshape(self.original_probe_shape)
         for dim, shift in enumerate(self.center_mass[index]):
             if self.original_probe_shape[dim] != 1:
-                shift = np.round(shift).astype(int)
-                probe = self.xp.roll(probe, shift=shift, axis=dim)
+                shift = int(np.round(shift))
+                probe = jnp.roll(probe, shift=shift, axis=dim)
         return probe
 
     def _prepare_probes(self, single_probe, N_positions):
         self.original_probe_shape = single_probe.shape
-        probe_shape = np.array(single_probe.shape)
-        # probe_shape[-2] = single_probe.shape[-1] * single_probe.shape[-2]
-        # probe_shape = probe_shape[:-1]
-        self.new_probe_shape = np.array([np.product(single_probe.shape)])
-        # self.new_probe_shape = probe_shape
+        self.new_probe_shape = np.array([np.prod(np.array(single_probe.shape))])
         self.N_positions = N_positions
-        self.probes = self.xp.zeros(
-            (self.N_positions, *self.new_probe_shape), dtype=np.complex64
+        self.probes = jnp.zeros(
+            (self.N_positions, *self.new_probe_shape), dtype=jnp.complex64
         )
-        self.probe_indices = self.xp.zeros(self.N_positions, dtype=np.bool)
+        self.probe_indices = jnp.zeros(self.N_positions, dtype=jnp.bool_)
 
         if self.correct_position:
             shape = (self.N_positions, len(self.original_probe_shape))
@@ -146,6 +134,6 @@ class OPRP_storage:
 
         for i in range(self.N_positions):
             probe = self.get(i)
-            cmass = np.array(ndimage.center_of_mass(abs(probe) ** 2))
+            cmass = np.array(ndimage.center_of_mass(np.asarray(abs(probe) ** 2)))
 
             print(i, cmass - np.array(probe.shape) / 2 + 1)

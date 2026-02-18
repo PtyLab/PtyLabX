@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+import jax.numpy as jnp
 import numpy as np
 
 from PtyLabX import Params, Reconstruction
@@ -10,14 +11,7 @@ from PtyLabX.Operators.propagator_utils import (
     gaussian2D,
     iterate_6d_fields,
 )
-from PtyLabX.utils.gpuUtils import getArrayModule
 from PtyLabX.utils.utils import fft2c, ifft2c
-
-try:
-    import cupy as cp  # type: ignore
-
-except ImportError:
-    pass
 
 CACHE_SIZE = 5
 
@@ -36,8 +30,6 @@ def _to_tuple(theta):
 
 
 def _pad_field(fields, pad_factor: int):
-    xp = getArrayModule(fields)
-
     rows, cols = fields.shape[-2:]
     rows_padded, cols_padded = pad_factor * rows, pad_factor * cols
     pad_rows = (rows_padded - rows) // 2
@@ -50,15 +42,13 @@ def _pad_field(fields, pad_factor: int):
         (pad_rows, pad_rows),
         (pad_cols, pad_cols),
     )
-    fields_padded = xp.pad(fields, pad_width, "constant")
+    fields_padded = jnp.pad(fields, pad_width, "constant")
     return fields_padded
 
 
 def _unpad_field(fields_padded, pad_factor: int):
-    xp = getArrayModule(fields_padded)
-
     rows_padded, cols_padded = fields_padded.shape[-2:]
-    rows_unpadded, cols_unpadded = xp.array(fields_padded.shape[-2:]) // pad_factor
+    rows_unpadded, cols_unpadded = jnp.array(fields_padded.shape[-2:]) // pad_factor
     start_h, start_w = (
         (rows_padded - rows_unpadded) // 2,
         (cols_padded - cols_unpadded) // 2,
@@ -72,7 +62,7 @@ def _unpad_field(fields_padded, pad_factor: int):
     return fields_unpadded
 
 
-def __sas_transfer_function(wavelength, Lp, Np, theta, z1, z2, on_gpu):
+def __sas_transfer_function(wavelength, Lp, Np, theta, z1, z2):
     """Precompensation transfer function for scalable off-axis transfer function.
 
     Parameters
@@ -89,27 +79,22 @@ def __sas_transfer_function(wavelength, Lp, Np, theta, z1, z2, on_gpu):
         propagation distance (ASPW)
     z2 : float
         propagation distance (Fresnel) - relaxing sampling requirements.
-    on_gpu : bool
-        checks if the array is on GPU or not.
 
     Returns
     -------
-    xp.ndarray
+    jnp.ndarray
         precompensated transfer function `H_precomp`
     """
 
-    # cp/np array
-    xp = cp if on_gpu else np
-
     # Fourier grid
     df = 1 / Lp
-    f = xp.linspace(-Np / 2, Np / 2, int(Np)) * df
-    Fx, Fy = xp.meshgrid(f, f)
+    f = jnp.linspace(-Np / 2, Np / 2, int(Np)) * df
+    Fx, Fy = jnp.meshgrid(f, f)
 
     # off-axis sines and tangents (theta in degrees)
     theta_x, theta_y = theta
-    sx, sy = xp.sin(xp.radians(theta_x)), xp.sin(xp.radians(theta_y))
-    tx, ty = xp.tan(xp.radians(theta_x)), xp.tan(xp.radians(theta_y))
+    sx, sy = jnp.sin(jnp.radians(theta_x)), jnp.sin(jnp.radians(theta_y))
+    tx, ty = jnp.tan(jnp.radians(theta_x)), jnp.tan(jnp.radians(theta_y))
 
     # transfer function
     # eq. 12 includes chi parameter under square root
@@ -118,7 +103,7 @@ def __sas_transfer_function(wavelength, Lp, Np, theta, z1, z2, on_gpu):
         - (Fx + (sx / wavelength)) ** 2
         - (Fy + (sy / wavelength)) ** 2
     )
-    sqrt_chi = xp.sqrt(xp.maximum(0, chi))
+    sqrt_chi = jnp.sqrt(jnp.maximum(0, chi))
 
     def _create_bandpass_filter(smooth_filter=True, eps=1e-10):
         """Creating a bandpass filter"""
@@ -133,15 +118,15 @@ def __sas_transfer_function(wavelength, Lp, Np, theta, z1, z2, on_gpu):
 
         # Fourier Bandpass filter (W is a mask below)
         sampling_rate = 2
-        W_mask = xp.logical_and(
-            df <= xp.abs(1 / (sampling_rate * Omegax + eps)),
-            df <= xp.abs(1 / (sampling_rate * Omegay + eps)),
+        W_mask = jnp.logical_and(
+            df <= jnp.abs(1 / (sampling_rate * Omegax + eps)),
+            df <= jnp.abs(1 / (sampling_rate * Omegay + eps)),
         )
 
         # smooth the bandpass filter corners with a Gaussian kernel
         if smooth_filter:
-            kernel_gauss = gaussian2D(8, 2, on_gpu)
-            bandpass_filter = convolve2d(W_mask, kernel_gauss, on_gpu, mode="same")
+            kernel_gauss = gaussian2D(8, 2)
+            bandpass_filter = convolve2d(W_mask, kernel_gauss, mode="same")
         else:
             bandpass_filter = W_mask
 
@@ -151,19 +136,19 @@ def __sas_transfer_function(wavelength, Lp, Np, theta, z1, z2, on_gpu):
 
     # implements the angular spectrum transfer function (see eq. 23, part of the precompensation factor)
     # zo is z1 in the document.
-    H_AS = complexexp(2 * xp.pi * z1 * sqrt_chi)
+    H_AS = complexexp(2 * jnp.pi * z1 * sqrt_chi)
 
     # Fresnel transfer function
     H_Fr = complexexp(
-        -xp.pi * z2 / wavelength * ((wavelength * Fx) ** 2 + (wavelength * Fy) ** 2)
+        -jnp.pi * z2 / wavelength * ((wavelength * Fx) ** 2 + (wavelength * Fy) ** 2)
     )
 
     # off-axis consideration of the transfer function
-    H_offaxis = complexexp(2 * xp.pi * z1 * (tx * Fx + ty * Fy))
+    H_offaxis = complexexp(2 * jnp.pi * z1 * (tx * Fx + ty * Fy))
 
     # precompensation with bandpass filter
     bandpass_filter = _create_bandpass_filter(smooth_filter=True, eps=1e-10)
-    H_precomp = H_AS * xp.conj(H_Fr) * H_offaxis * bandpass_filter
+    H_precomp = H_AS * jnp.conj(H_Fr) * H_offaxis * bandpass_filter
 
     return H_precomp
 
@@ -198,13 +183,9 @@ def __make_transferfunction_sas(
 
     Returns
     -------
-    np.ndarray or cp.ndarray
+    jnp.ndarray
         The calculated transfer function with shape (nlambda, nosm, npsm, nslice, Np, Np).
     """
-
-    # on GPU or not
-    on_gpu = params.gpuSwitch
-    xp = cp if on_gpu else np
 
     # off axis theta tuple in degrees
     theta = _to_tuple(
@@ -230,14 +211,16 @@ def __make_transferfunction_sas(
         )
 
     # transfer function over the entire 6D field (nlambda, nosm, npsm, nslice, Np, Np)
-    transfer_function = xp.zeros(
+    transfer_function = jnp.zeros(
         (nlambda, nosm, npsm, nslice, Np, Np),
         dtype="complex64",
     )
     for inds in iterate_6d_fields(transfer_function):
         i_nlambda, j_nosm, k_npsm, l_nslice = inds
-        transfer_function[i_nlambda, j_nosm, k_npsm, l_nslice] = (
-            __sas_transfer_function(wavelength, Lp, Np, theta, z1, z2, on_gpu)
+        transfer_function = transfer_function.at[
+            i_nlambda, j_nosm, k_npsm, l_nslice
+        ].set(
+            __sas_transfer_function(wavelength, Lp, Np, theta, z1, z2)
         )
 
     return transfer_function
@@ -251,8 +234,6 @@ def _interface_sas(
     with_quad_phase_Q2: bool = False,
 ):
     """Just an interface for the actual forward and backward off-axis sas propagator"""
-
-    xp = getArrayModule(fields)
 
     # ideally pad factor of 2 is supported as per the SAS publication, however can be modified by user.
     pad_factor = (
@@ -274,13 +255,13 @@ def _interface_sas(
         reconstruction.theta if hasattr(reconstruction, "theta") else None
     )
     theta_x, theta_y = theta
-    sx, sy = xp.sin(xp.radians(theta_x)), xp.sin(xp.radians(theta_y))
+    sx, sy = jnp.sin(jnp.radians(theta_x)), jnp.sin(jnp.radians(theta_y))
 
     # prefactor_z for relaxing sampling, defaults to 1 / sqrt(1-sx**2-sy**2)
     prefactor_z = (
         reconstruction.prefactor_z
         if hasattr(reconstruction, "prefactor_z")
-        else 1 / xp.sqrt(1 - sx**2 - sy**2)
+        else 1 / jnp.sqrt(1 - sx**2 - sy**2)
     )
 
     # z2 virtual distance (Fresnel) for relaxing sampling requirements
@@ -299,9 +280,9 @@ def _interface_sas(
 
     # quadratic phase Q2 (currently zo, but this can be z2 and z1 separated)
     dxp = float(reconstruction.dxp)
-    
+
     quad_phase_Q1 = __make_quad_phase(
-        z2, wavelength, Np, dxp, params.gpuSwitch
+        z2, wavelength, Np, dxp
     )
 
     # precompensated transfer function
@@ -310,11 +291,11 @@ def _interface_sas(
     if with_quad_phase_Q2:
         # quadratic phase Q2 (mostly okay to ignore it!)
         dxq = wavelength * z1 / Lp
-        k = 2 * xp.pi / wavelength
-        x_q = xp.linspace(-Np / 2, Np / 2, int(Np)) * dxq
-        Xq, Yq = xp.meshgrid(x_q, x_q)
+        k = 2 * jnp.pi / wavelength
+        x_q = jnp.linspace(-Np / 2, Np / 2, int(Np)) * dxq
+        Xq, Yq = jnp.meshgrid(x_q, x_q)
 
-        quad_phase_Q2 = xp.exp(1j * k * z1) * xp.exp(
+        quad_phase_Q2 = jnp.exp(1j * k * z1) * jnp.exp(
             1.0j * k / (2 * z1) * (Xq**2 + Yq**2)
         )
 
@@ -323,7 +304,7 @@ def _interface_sas(
         "H_precomp": H_precomp,
         "quad_phase_Q1": quad_phase_Q1,
         "quad_phase_Q2": (
-            quad_phase_Q2 if with_quad_phase_Q2 else xp.ones_like(fields_padded)
+            quad_phase_Q2 if with_quad_phase_Q2 else jnp.ones_like(fields_padded)
         ),
         "pad_factor": pad_factor,
     }
@@ -344,7 +325,7 @@ def propagate_sas(
 
     Parameters
     ----------
-    fields: xp.ndarray
+    fields: jnp.ndarray
         Field to propagate
     params: Params
         Instance of the Params class
@@ -397,7 +378,7 @@ def propagate_sas_inv(
 
     Parameters
     ----------
-    fields: xp.ndarray
+    fields: jnp.ndarray
         Field to propagate
     params: Params
         Instance of the Params class
@@ -413,7 +394,6 @@ def propagate_sas_inv(
     reconstruction.esw, propagated field:
         Exit surface wave and the propagated field
     """
-    xp = getArrayModule(fields)
 
     interfaced_dict = _interface_sas(
         fields,
@@ -430,9 +410,9 @@ def propagate_sas_inv(
     pad_factor = interfaced_dict["pad_factor"]
 
     # conjugates for the backward direction
-    Q1_conj = xp.conj(quad_phase_Q1)
-    Q2_conj = xp.conj(quad_phase_Q2)
-    H_precomp_conj = xp.conj(H_precomp)
+    Q1_conj = jnp.conj(quad_phase_Q1)
+    Q2_conj = jnp.conj(quad_phase_Q2)
+    H_precomp_conj = jnp.conj(H_precomp)
 
     # backward field propagation
     psi_precomp = H_precomp_conj * fft2c(Q1_conj * ifft2c(Q2_conj * fields_padded))

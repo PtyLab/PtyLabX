@@ -1,13 +1,7 @@
 import numpy as np
+import jax.numpy as jnp
 from matplotlib import pyplot as plt
 
-try:
-    import cupy as cp
-except ImportError:
-    # print('Cupy not available, will not be able to run GPU based computation')
-    # Still define the name, we'll take care of it later but in this way it's still possible
-    # to see that gPIE exists for example.
-    cp = None
 
 import logging
 import sys
@@ -21,7 +15,6 @@ from PtyLabX.Params.Params import Params
 
 # fracPy imports
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.gpuUtils import getArrayModule
 from PtyLabX.utils.utils import fft2c, ifft2c
 
 
@@ -78,8 +71,8 @@ class ePIE_mw(BaseEngine):
                 # difference term
                 DELTA = self.reconstruction.eswUpdate - self.reconstruction.esw
 
-                self.reconstruction.object[..., sy, sx] = self.objectPatchUpdate(
-                    objectPatch, DELTA
+                self.reconstruction.object = self.reconstruction.object.at[..., sy, sx].set(
+                    self.objectPatchUpdate(objectPatch, DELTA)
                 )
 
                 # probe update
@@ -95,10 +88,6 @@ class ePIE_mw(BaseEngine):
             # show reconstruction
             self.showReconstruction(loop)
 
-        if self.params.gpuFlag:
-            self.logger.info("switch to cpu")
-            self._move_data_to_cpu()
-            self.params.gpuFlag = 0
 
     def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
         """
@@ -107,13 +96,11 @@ class ePIE_mw(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
 
-        frac = self.reconstruction.probe.conj() / xp.max(
-            xp.sum(xp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
+        frac = self.reconstruction.probe.conj() / jnp.max(
+            jnp.sum(jnp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
         )
-        return objectPatch + self.betaObject * xp.sum(
+        return objectPatch + self.betaObject * jnp.sum(
             frac * DELTA, axis=(0, 2, 3), keepdims=True
         )
 
@@ -126,27 +113,25 @@ class ePIE_mw(BaseEngine):
         """
 
         def divergence(f):
-            xp = getArrayModule(f[0])
-            return xp.gradient(f[0], axis=(4, 5))[0] + xp.gradient(f[1], axis=(4, 5))[1]
+            return jnp.gradient(f[0], axis=(4, 5))[0] + jnp.gradient(f[1], axis=(4, 5))[1]
 
-        xp = getArrayModule(objectPatch)
-        frac = self.reconstruction.probe.conj() / xp.max(
-            xp.sum(xp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
+        frac = self.reconstruction.probe.conj() / jnp.max(
+            jnp.sum(jnp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
         )
 
         epsilon = 1e-2
-        gradient = xp.gradient(objectPatch, axis=(4, 5))
-        # norm = xp.abs(gradient[0] + gradient[1]) ** 2
+        gradient = jnp.gradient(objectPatch, axis=(4, 5))
+        # norm = jnp.abs(gradient[0] + gradient[1]) ** 2
         norm = (gradient[0] + gradient[1]) ** 2
         temp = [
-            gradient[0] / xp.sqrt(norm + epsilon),
-            gradient[1] / xp.sqrt(norm + epsilon),
+            gradient[0] / jnp.sqrt(norm + epsilon),
+            gradient[1] / jnp.sqrt(norm + epsilon),
         ]
         TV_update = divergence(temp)
         lam = 5e-4
         return (
             objectPatch
-            + self.betaObject * xp.sum(frac * DELTA, axis=(0, 2, 3), keepdims=True)
+            + self.betaObject * jnp.sum(frac * DELTA, axis=(0, 2, 3), keepdims=True)
             + lam * self.betaObject * TV_update
         )
 
@@ -157,16 +142,14 @@ class ePIE_mw(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
-        frac = objectPatch.conj() / xp.max(
-            xp.sum(xp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3))
+        frac = objectPatch.conj() / jnp.max(
+            jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3))
         ) # hier vielleicht noch einen Faktor einführen
-        r = self.reconstruction.probe + self.betaProbe * xp.sum(
+        r = self.reconstruction.probe + self.betaProbe * jnp.sum(
             frac * DELTA, axis=(1, 3), keepdims=True
         )
         '''
-        r = self.reconstruction.probe + self.betaProbe * xp.sum(
+        r = self.reconstruction.probe + self.betaProbe * jnp.sum(
             frac * DELTA, axis=(0, 1, 3), keepdims=True
         )
         '''
@@ -179,12 +162,10 @@ class ePIE_mw(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
-        # frac = objectPatch.conj() / xp.max(xp.sum(xp.abs(objectPatch) ** 2, axis=(0,1,2,3)))
-        self.reconstruction.probe += self.betaProbe * xp.sum(
+        # frac = objectPatch.conj() / jnp.max(jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0,1,2,3)))
+        self.reconstruction.probe += self.betaProbe * jnp.sum(
             objectPatch.conj()
-            / xp.max(xp.sum(xp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3)))
+            / jnp.max(jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3)))
             * DELTA,
             axis=(0, 1, 3),
             keepdims=True,

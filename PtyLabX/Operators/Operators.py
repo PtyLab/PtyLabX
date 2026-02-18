@@ -7,11 +7,7 @@ except ImportError:
 
 from functools import lru_cache
 
-try:
-    import cupy as cp  # type: ignore
-except ImportError:
-    pass
-    # print("Cupy not available, will not be able to run GPU based computation")
+import jax.numpy as jnp
 import numpy as np
 
 from PtyLabX import Params, Reconstruction
@@ -22,7 +18,6 @@ from PtyLabX.Operators.off_axis_sas import (
     propagate_sas_inv,
 )
 from PtyLabX.Operators.propagator_utils import complexexp
-from PtyLabX.utils.gpuUtils import getArrayModule, isGpuArray
 from PtyLabX.utils.utils import circ, fft2c, ifft2c
 
 # how many kernels are kept in memory for every type of propagator? Higher can be faster but comes
@@ -104,13 +99,11 @@ def propagate_fresnel(fields, params: Params, reconstruction: Reconstruction, z=
     """
     if z is None:
         z = reconstruction.zo
-    on_gpu = isGpuArray(fields)
     quadratic_phase = __make_quad_phase(
         z,
         reconstruction.wavelength,
         fields.shape[-1],
         reconstruction.dxp,
-        on_gpu=on_gpu,
     )
 
     eswUpdate = fft2c(fields * quadratic_phase, params.fftshiftSwitch)
@@ -150,7 +143,6 @@ def propagate_fresnel_inv(
         reconstruction.wavelength,
         reconstruction.Np,
         reconstruction.dxp,
-        on_gpu=isGpuArray(fields),
     ).conj()
 
     eswUpdate = ifft2c(fields, params.fftshiftSwitch) * quadratic_phase
@@ -197,7 +189,6 @@ def propagate_ASP(
         raise ValueError("For multi-wavelength, set polychromeASP instead of ASP")
     if z is None:
         z = reconstruction.zo
-    xp = getArrayModule(fields)
     transfer_function = __make_transferfunction_ASP(
         params.fftshiftSwitch,
         reconstruction.nosm,
@@ -207,10 +198,9 @@ def propagate_ASP(
         reconstruction.wavelength,
         reconstruction.Lp,
         reconstruction.nlambda,
-        isGpuArray(fields),
     )
     if fftflag:
-        transfer_function = xp.fft.ifftshift(transfer_function, axes=(-2, -1))
+        transfer_function = jnp.fft.ifftshift(transfer_function, axes=(-2, -1))
     if inverse:
         transfer_function = transfer_function.conj()
     result = ifft2c(
@@ -274,7 +264,6 @@ def propagate_twoStepPolychrome(
         tuple(reconstruction.spectralDensity),
         reconstruction.Lp,
         reconstruction.dxp,
-        params.gpuSwitch,
     )
     if inverse:
         result = ifft2c(
@@ -346,7 +335,6 @@ def propagate_scaledASP(
         reconstruction.wavelength,
         reconstruction.dxo,
         reconstruction.dxd,
-        params.gpuSwitch,
     )
     if inverse:
         Q1, Q2 = Q1.conj(), Q2.conj()
@@ -415,7 +403,6 @@ def propagate_scaledPolychromeASP(
         tuple(reconstruction.spectralDensity),
         reconstruction.dxo,
         reconstruction.dxd,
-        params.gpuSwitch,
     )
     if inverse:
         Q1, Q2 = Q1.conj(), Q2.conj()
@@ -495,7 +482,6 @@ def propagate_polychromeASP(
         reconstruction.Lp,
         reconstruction.nlambda,
         tuple(reconstruction.spectralDensity),
-        params.gpuSwitch,
     )
 
     if inverse:
@@ -526,7 +512,7 @@ def propagate_identity(
 
     """
     transfer_function = __make_quad_phase(
-        1e-3, 532e-9, reconstruction.Np, reconstruction.dxp, isGpuArray(fields)
+        1e-3, 532e-9, reconstruction.Np, reconstruction.dxp
     )
     transfer_function = transfer_function * 0 + 1
     return reconstruction.esw, fields * transfer_function
@@ -616,7 +602,6 @@ def aspw(u, z, wavelength, L, bandlimit=True, is_FT=True):
         float(wavelength),
         int(N),
         float(L),
-        on_gpu=isGpuArray(u),
         bandlimit=bandlimit,
     )
     if is_FT:
@@ -641,40 +626,40 @@ def scaledASP(u, z, wavelength, dx, dq, bandlimit=True, exactSolution=False):
     if only intensities matter, leave it out
     """
     # optical wavenumber
-    k = 2 * np.pi / wavelength
+    k = 2 * jnp.pi / wavelength
     # assume square grid
     N = u.shape[-1]
     # source plane coordinates
-    x1 = np.arange(-N // 2, N // 2) * dx
-    X1, Y1 = np.meshgrid(x1, x1)
+    x1 = jnp.arange(-N // 2, N // 2) * dx
+    X1, Y1 = jnp.meshgrid(x1, x1)
     r1sq = X1**2 + Y1**2
     # spatial frequencies(of source plane)
-    f = np.arange(-N // 2, N // 2) / (N * dx)
-    FX, FY = np.meshgrid(f, f)
+    f = jnp.arange(-N // 2, N // 2) / (N * dx)
+    FX, FY = jnp.meshgrid(f, f)
     fsq = FX**2 + FY**2
     # scaling parameter
     m = dq / dx
 
     # quadratic phase factors
-    Q1 = np.exp(1.0j * k / 2 * (1 - m) / z * r1sq)
-    Q2 = np.exp(-1.0j * np.pi**2 * 2 * z / m / k * fsq)
+    Q1 = jnp.exp(1.0j * k / 2 * (1 - m) / z * r1sq)
+    Q2 = jnp.exp(-1.0j * jnp.pi**2 * 2 * z / m / k * fsq)
 
     if bandlimit:
         if m != 1:
             r1sq_max = wavelength * z / (2 * dx * (1 - m))
-            Wr = np.array(circ(X1, Y1, 2 * r1sq_max))
+            Wr = jnp.asarray(circ(X1, Y1, 2 * r1sq_max))
             Q1 = Q1 * Wr
 
         fsq_max = m / (2 * z * wavelength * (1 / (N * dx)))
-        Wf = np.array(circ(FX, FY, 2 * fsq_max))
+        Wf = jnp.asarray(circ(FX, FY, 2 * fsq_max))
         Q2 = Q2 * Wf
 
     if exactSolution:  # if only intensities matter, leave it out
         # observation plane coordinates
-        x2 = np.arange(-N // 2, N // 2) * dq
-        X2, Y2 = np.meshgrid(x2, x2)
+        x2 = jnp.arange(-N // 2, N // 2) * dq
+        X2, Y2 = jnp.meshgrid(x2, x2)
         r2sq = X2**2 + Y2**2
-        Q3 = np.exp(1.0j * k / 2 * (m - 1) / (m * z) * r2sq)
+        Q3 = jnp.exp(1.0j * k / 2 * (m - 1) / (m * z) * r2sq)
         # compute the propagated field
         Uout = Q3 * ifft2c(Q2 * fft2c(Q1 * u))
         return Uout, Q1, Q2, Q3
@@ -696,24 +681,24 @@ def scaledASPinv(u, z, wavelength, dx, dq):
     if only intensities matter, leave it out
     """
     # optical wavenumber
-    k = 2 * np.pi / wavelength
+    k = 2 * jnp.pi / wavelength
     # assume square grid
     N = u.shape[-1]
     # source-plane coordinates
-    x1 = np.arange(-N / 2, N / 2) * dx
-    Y1, X1 = np.meshgrid(x1, x1)
-    r1sq = np.square(X1) + np.square(Y1)
+    x1 = jnp.arange(-N / 2, N / 2) * dx
+    Y1, X1 = jnp.meshgrid(x1, x1)
+    r1sq = X1**2 + Y1**2
     # spatial frequencies(of source plane)
-    f = np.arange(-N / 2, N / 2) / (N * dx)
-    FX, FY = np.meshgrid(f, f)
+    f = jnp.arange(-N / 2, N / 2) / (N * dx)
+    FX, FY = jnp.meshgrid(f, f)
     fsq = FX**2 + FY**2
     # scaling parameter
     m = dq / dx
 
     # quadratic phase factors
-    Q1 = np.exp(1j * k / 2 * (1 - m) / z * r1sq)
-    Q2 = np.exp(-1j * 2 * np.pi**2 * z / m / k * fsq)
-    Uout = np.conj(Q1) * ifft2c(np.conj(Q2) * fft2c(u))
+    Q1 = jnp.exp(1j * k / 2 * (1 - m) / z * r1sq)
+    Q2 = jnp.exp(-1j * 2 * jnp.pi**2 * z / m / k * fsq)
+    Uout = jnp.conj(Q1) * ifft2c(jnp.conj(Q2) * fft2c(u))
 
     # x2 = np.arange(-N / 2, N / 2) * dq
     # X2, Y2 = np.meshgrid(x2,x2)
@@ -734,23 +719,21 @@ def fresnelPropagator(u, z, wavelength, L):
     :param L: total size[m] of the source plane
     :return: propagated field
     """
-    xp = getArrayModule(u)
-
-    k = 2 * np.pi / wavelength
+    k = 2 * jnp.pi / wavelength
     # source coordinates, assuming square grid
     N = u.shape[-1]
     dx = L / N  # source-plane pixel size
-    x = xp.arange(-N // 2, N // 2) * dx
-    [Y, X] = xp.meshgrid(x, x)
+    x = jnp.arange(-N // 2, N // 2) * dx
+    [Y, X] = jnp.meshgrid(x, x)
 
     # observation coordinates
     dq = wavelength * z / L  # observation-plane pixel size
-    q = xp.arange(-N // 2, N // 2) * dq
-    [Qy, Qx] = xp.meshgrid(q, q)
+    q = jnp.arange(-N // 2, N // 2) * dq
+    [Qy, Qx] = jnp.meshgrid(q, q)
 
     # quadratic phase terms
-    Q1 = xp.exp(1j * k / (2 * z) * (X**2 + Y**2))  # quadratic phase inside the integral
-    Q2 = xp.exp(1j * k / (2 * z) * (Qx**2 + Qy**2))
+    Q1 = jnp.exp(1j * k / (2 * z) * (X**2 + Y**2))  # quadratic phase inside the integral
+    Q2 = jnp.exp(1j * k / (2 * z) * (Qx**2 + Qy**2))
 
     # pre-factor
     A = 1 / (1j * wavelength * z)
@@ -761,7 +744,7 @@ def fresnelPropagator(u, z, wavelength, L):
 
 
 @lru_cache(cache_size)
-def __aspw_transfer_function(z, wavelength, N, L, on_gpu=False, bandlimit=True):
+def __aspw_transfer_function(z, wavelength, N, L, bandlimit=True):
     """
     Angular spectrum optical transfer function. You likely don't need to use this directly.
 
@@ -779,8 +762,6 @@ def __aspw_transfer_function(z, wavelength, N, L, on_gpu=False, bandlimit=True):
         Number of pixels per side
     L: int
         Physical size
-    on_gpu: bool
-        If true, a cupy array is returned
     bandlimit: bool
         If the transfer function should be band-limited.
 
@@ -788,19 +769,14 @@ def __aspw_transfer_function(z, wavelength, N, L, on_gpu=False, bandlimit=True):
     -------
 
     """
-    if on_gpu:
-        xp = cp
-    else:
-        xp = np
-
     a_z = abs(z)
-    k = 2 * np.pi / wavelength
-    X = xp.arange(-N / 2, N / 2) / L
-    Fx, Fy = xp.meshgrid(X, X)
-    f_max = L / (wavelength * xp.sqrt(L**2 + 4 * a_z**2))
+    k = 2 * jnp.pi / wavelength
+    X = jnp.arange(-N / 2, N / 2) / L
+    Fx, Fy = jnp.meshgrid(X, X)
+    f_max = L / (wavelength * jnp.sqrt(L**2 + 4 * a_z**2))
     # note: see the paper above if you are not sure what this bandlimit has to do here
     # W = rect(Fx/(2*f_max)) .* rect(Fy/(2*f_max));
-    W = xp.array(circ(Fx, Fy, 2 * f_max))
+    W = jnp.array(circ(Fx, Fy, 2 * f_max))
     # note: accounts for circular symmetry of transfer function and imposes bandlimit to avoid sampling issues
     exponent = 1 - (Fx * wavelength) ** 2 - (Fy * wavelength) ** 2
     # take out stuff that cannot exist
@@ -808,8 +784,8 @@ def __aspw_transfer_function(z, wavelength, N, L, on_gpu=False, bandlimit=True):
     if not bandlimit:
         mask = 0 * mask + 1
     # put the out of range values to 0 so the square root can be taken
-    exponent = xp.clip(exponent, 0, xp.inf)
-    H = xp.array(mask * complexexp(k * a_z * xp.sqrt(exponent)))
+    exponent = jnp.clip(exponent, 0, jnp.inf)
+    H = jnp.array(mask * complexexp(k * a_z * jnp.sqrt(exponent)))
     if z < 0:
         H = H.conj()
     phase_exp = H * W
@@ -818,7 +794,7 @@ def __aspw_transfer_function(z, wavelength, N, L, on_gpu=False, bandlimit=True):
 
 @lru_cache(cache_size)
 def __make_transferfunction_ASP(
-    fftshiftSwitch, nosm, npsm, Np, zo, wavelength, Lp, nlambda, on_gpu
+    fftshiftSwitch, nosm, npsm, Np, zo, wavelength, Lp, nlambda
 ):
     if fftshiftSwitch:
         raise ValueError("ASP propagatorType works only with fftshiftSwitch = False!")
@@ -827,8 +803,7 @@ def __make_transferfunction_ASP(
             "For multi-wavelength, polychromeASP needs to be used instead of ASP"
         )
 
-    # dummy = np.ones((1, nosm, npsm, 1, Np, Np), dtype="complex64")
-    _transferFunction = np.array(
+    _transferFunction = jnp.array(
         [
             [
                 [
@@ -842,23 +817,17 @@ def __make_transferfunction_ASP(
             ]
             for nlambda in range(nlambda)
         ],
-        dtype=np.complex64,
+        dtype=jnp.complex64,
     )
 
-    if on_gpu:
-        return cp.array(_transferFunction)
-    else:
-        return _transferFunction
+    return _transferFunction
 
 
 def aspw_cached(u, z, wavelength, L):
     """Cached version of aspw."""
     transferFunction = __aspw_transfer_function(
-        z, wavelength, u.shape[-1], L, isGpuArray(u)
+        z, wavelength, u.shape[-1], L
     )
-    # __make_transferfunction_ASP(False, 1, 1, u.shape[-1],
-    #                                               z, wavelength, L, 1, isGpuArray(u))
-    # transferFunction = transferFunction[0,0,0,0]
     U = fft2c(u)
     u_prime = ifft2c(U * transferFunction)
     return u_prime
@@ -876,13 +845,11 @@ def __make_transferfunction_polychrome_ASP(
     Lp,
     nlambda,
     spectralDensity_as_tuple,
-    gpuSwitch,
-) -> np.ndarray:
+) -> jnp.ndarray:
     spectralDensity = np.array(spectralDensity_as_tuple)
     if fftshiftSwitch:
         raise ValueError("ASP propagatorType works only with fftshiftSwitch = False!")
-    dummy = np.ones((nlambda, nosm, npsm, 1, Np, Np), dtype="complex64")  # noqa: F841
-    transferFunction = np.array(
+    transferFunction = jnp.array(
         [
             [
                 [
@@ -892,7 +859,6 @@ def __make_transferfunction_polychrome_ASP(
                             spectralDensity[nlambda],
                             Np,
                             Lp,
-                            False,
                         )
                         for nslice in range(1)
                     ]
@@ -903,10 +869,7 @@ def __make_transferfunction_polychrome_ASP(
             for nlambda in range(nlambda)
         ]
     )
-    if gpuSwitch:
-        return cp.array(transferFunction, dtype=cp.complex64)
-    else:
-        return transferFunction
+    return transferFunction
 
 
 @lru_cache(cache_size)
@@ -921,7 +884,6 @@ def __make_transferfunction_scaledASP(
     wavelength,
     dxo,
     dxd,
-    gpuSwitch,
 ):
     if fftshiftSwitch:
         raise ValueError(
@@ -931,17 +893,17 @@ def __make_transferfunction_scaledASP(
         raise ValueError(
             "For multi-wavelength, scaledPolychromeASP needs to be used instead of scaledASP"
         )
-    dummy = np.ones((1, nosm, npsm, 1, Np, Np), dtype="complex64")
-    _Q1 = np.ones_like(dummy)
-    _Q2 = np.ones_like(dummy)
-    for nosm in range(nosm):
-        for npsm in range(npsm):
-            _, _Q1[0, nosm, npsm, 0, ...], _Q2[0, nosm, npsm, 0, ...] = scaledASP(
-                dummy[0, nosm, npsm, 0, :, :], zo, wavelength, dxo, dxd
+    dummy = jnp.ones((1, nosm, npsm, 1, Np, Np), dtype=jnp.complex64)
+    _Q1 = jnp.ones_like(dummy)
+    _Q2 = jnp.ones_like(dummy)
+    for i_nosm in range(nosm):
+        for i_npsm in range(npsm):
+            _, q1, q2 = scaledASP(
+                dummy[0, i_nosm, i_npsm, 0, :, :], zo, wavelength, dxo, dxd
             )
+            _Q1 = _Q1.at[0, i_nosm, i_npsm, 0, ...].set(q1)
+            _Q2 = _Q2.at[0, i_nosm, i_npsm, 0, ...].set(q2)
 
-    if gpuSwitch:
-        return cp.array(_Q1, dtype=np.complex64), cp.array(_Q2, dtype=np.complex64)
     return _Q1, _Q2
 
 
@@ -956,20 +918,15 @@ def __make_transferfunction_scaledPolychromeASP(
     spectralDensity_as_tuple,
     dxo,
     dxd,
-    on_gpu,
 ):
     spectralDensity = np.array(spectralDensity_as_tuple)
     if fftshiftSwitch:
         raise ValueError(
             "scaledPolychromeASP propagatorType works only with fftshiftSwitch = False!"
         )
-    if on_gpu:
-        xp = cp
-    else:
-        xp = np
-    dummy = xp.ones((nlambda, nosm, npsm, 1, Np, Np), dtype="complex64")
-    Q1 = xp.ones_like(dummy)
-    Q2 = xp.ones_like(dummy)
+    dummy = jnp.ones((nlambda, nosm, npsm, 1, Np, Np), dtype="complex64")
+    Q1 = jnp.ones_like(dummy)
+    Q2 = jnp.ones_like(dummy)
     for nlambda in range(nlambda):
         Q1_candidate, Q2_candidate = __make_transferfunction_scaledASP(
             None,
@@ -982,9 +939,9 @@ def __make_transferfunction_scaledPolychromeASP(
             spectralDensity[nlambda],
             dxo,
             dxd,
-            gpuSwitch=on_gpu,
         )
-        Q1[nlambda], Q2[nlambda] = Q1_candidate[0], Q2_candidate[0]
+        Q1 = Q1.at[nlambda].set(Q1_candidate[0])
+        Q2 = Q2.at[nlambda].set(Q2_candidate[0])
     return Q1, Q2
 
 
@@ -999,18 +956,13 @@ def __make_cache_twoStepPolychrome(
     spectralDensity_as_tuple,
     Lp,
     dxp,
-    on_gpu,
 ):
-    if on_gpu:
-        xp = cp
-    else:
-        xp = np
     spectralDensity = np.array(spectralDensity_as_tuple)
     if fftshiftSwitch:
         raise ValueError(
             "twoStepPolychrome propagatorType works only with fftshiftSwitch = False!"
         )
-    transferFunction = xp.array(
+    transferFunction = jnp.array(
         [
             [
                 [
@@ -1020,7 +972,6 @@ def __make_cache_twoStepPolychrome(
                             wavelength=spectralDensity[nlambda],
                             N=Np,
                             L=Lp,
-                            on_gpu=on_gpu,
                         )
                         for nslice in range(1)
                     ]
@@ -1031,9 +982,7 @@ def __make_cache_twoStepPolychrome(
             for nlambda in range(nlambda)
         ]
     )
-    if on_gpu:
-        transferFunction = cp.array(transferFunction)
-    quadraticPhase = __make_quad_phase(zo, spectralDensity[0], Np, dxp, on_gpu)
+    quadraticPhase = __make_quad_phase(zo, spectralDensity[0], Np, dxp)
     return transferFunction, quadraticPhase
 
 

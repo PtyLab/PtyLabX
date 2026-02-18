@@ -1,13 +1,7 @@
 import numpy as np
+import jax.numpy as jnp
 from matplotlib import pyplot as plt
 
-try:
-    import cupy as cp
-except ImportError:
-    # print('Cupy not available, will not be able to run GPU based computation')
-    # Still define the name, we'll take care of it later but in this way it's still possible
-    # to see that gPIE exists for example.
-    cp = None
 
 import logging
 import sys
@@ -21,7 +15,6 @@ from PtyLabX.Params.Params import Params
 
 # fracPy imports
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.gpuUtils import asNumpyArray, getArrayModule
 from PtyLabX.utils.utils import fft2c, ifft2c
 
 
@@ -98,12 +91,12 @@ class mPIE_tv(BaseEngine):
                 tv_freq = 1
                 if loop % tv_freq == 0:
                     # object update
-                    self.reconstruction.object[..., sy, sx] = self.objectPatchUpdate_TV(
-                        objectPatch, DELTA
+                    self.reconstruction.object = self.reconstruction.object.at[..., sy, sx].set(
+                        self.objectPatchUpdate_TV(objectPatch, DELTA)
                     )
                 else:
-                    self.reconstruction.object[..., sy, sx] = self.objectPatchUpdate(
-                        objectPatch, DELTA
+                    self.reconstruction.object = self.reconstruction.object.at[..., sy, sx].set(
+                        self.objectPatchUpdate(objectPatch, DELTA)
                     )
 
                 # probe update
@@ -123,10 +116,6 @@ class mPIE_tv(BaseEngine):
             # show reconstruction
             self.showReconstruction(loop)
 
-        if self.params.gpuFlag:
-            self.logger.info("switch to cpu")
-            self._move_data_to_cpu()
-            self.params.gpuFlag = 0
 
             # todo clearMemory implementation
 
@@ -167,10 +156,8 @@ class mPIE_tv(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
-        absP2 = xp.abs(self.reconstruction.probe) ** 2
-        Pmax = xp.max(xp.sum(absP2, axis=(0, 1, 2, 3)), axis=(-1, -2))
+        absP2 = jnp.abs(self.reconstruction.probe) ** 2
+        Pmax = jnp.max(jnp.sum(absP2, axis=(0, 1, 2, 3)), axis=(-1, -2))
         if self.experimentalData.operationMode == "FPM":
             frac = (
                 abs(self.reconstruction.probe)
@@ -182,7 +169,7 @@ class mPIE_tv(BaseEngine):
             frac = self.reconstruction.probe.conj() / (
                 self.alphaObject * Pmax + (1 - self.alphaObject) * absP2
             )
-        return objectPatch + self.betaObject * xp.sum(
+        return objectPatch + self.betaObject * jnp.sum(
             frac * DELTA, axis=2, keepdims=True
         )
 
@@ -195,21 +182,19 @@ class mPIE_tv(BaseEngine):
         """
 
         def divergence(f):
-            xp = getArrayModule(f[0])
-            return xp.gradient(f[0], axis=(4, 5))[0] + xp.gradient(f[1], axis=(4, 5))[1]
+            return jnp.gradient(f[0], axis=(4, 5))[0] + jnp.gradient(f[1], axis=(4, 5))[1]
 
-        xp = getArrayModule(objectPatch)
-        frac = self.reconstruction.probe.conj() / xp.max(
-            xp.sum(xp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
+        frac = self.reconstruction.probe.conj() / jnp.max(
+            jnp.sum(jnp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
         )
 
         epsilon = 1e-2
-        gradient = xp.gradient(objectPatch, axis=(4, 5))
-        # norm = xp.abs(gradient[0] + gradient[1]) ** 2
+        gradient = jnp.gradient(objectPatch, axis=(4, 5))
+        # norm = jnp.abs(gradient[0] + gradient[1]) ** 2
         norm = (gradient[0] + gradient[1]) ** 2
         temp = [
-            gradient[0] / xp.sqrt(norm + epsilon),
-            gradient[1] / xp.sqrt(norm + epsilon),
+            gradient[0] / jnp.sqrt(norm + epsilon),
+            gradient[1] / jnp.sqrt(norm + epsilon),
         ]
         TV_update = divergence(temp)
         """
@@ -222,7 +207,7 @@ class mPIE_tv(BaseEngine):
         lam = self.params.TV_lam
         return (
             objectPatch
-            + self.betaObject * xp.sum(frac * DELTA, axis=(0, 2, 3), keepdims=True)
+            + self.betaObject * jnp.sum(frac * DELTA, axis=(0, 2, 3), keepdims=True)
             + lam * self.betaObject * TV_update
         )
 
@@ -233,14 +218,12 @@ class mPIE_tv(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
-        absO2 = xp.abs(objectPatch) ** 2
-        Omax = xp.max(xp.sum(absO2, axis=(0, 1, 2, 3)), axis=(-1, -2))
+        absO2 = jnp.abs(objectPatch) ** 2
+        Omax = jnp.max(jnp.sum(absO2, axis=(0, 1, 2, 3)), axis=(-1, -2))
         frac = objectPatch.conj() / (
             self.alphaProbe * Omax + (1 - self.alphaProbe) * absO2
         )
-        r = self.reconstruction.probe + self.betaProbe * xp.sum(
+        r = self.reconstruction.probe + self.betaProbe * jnp.sum(
             frac * DELTA, axis=1, keepdims=True
         )
         return r

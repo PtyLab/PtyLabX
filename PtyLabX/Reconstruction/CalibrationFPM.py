@@ -561,8 +561,6 @@ class IlluminationCalibration:
             updated positions, without the rigid transformation applied.
 
         """
-        # from cupyx.scipy.ndimage import map_coordinates as map_coordinates_gpu
-
         self.initialize_error_search_space()
         calibrated_positions = initialPositions.copy()
         failed_position_calib = []

@@ -1,8 +1,8 @@
 import numpy as np
+import jax.numpy as jnp
 from typing import List, Union, Tuple
 
 from PtyLabX.Operators.Operators import aspw
-from PtyLabX.utils.gpuUtils import getArrayModule, isGpuArray, asNumpyArray
 from PtyLabX.utils.utils import fft2c
 
 
@@ -21,8 +21,7 @@ def std(field, aleph=1e-2):
     standard deviation of field as implemented in numpy
 
     """
-    xp = getArrayModule(field)
-    return asNumpyArray(xp.std(field))
+    return np.asarray(jnp.std(field))
 
 
 def min_std(*args, **kwargs):
@@ -62,14 +61,12 @@ def TV(field, aleph=1e-3):
         Total variation of the field.
     """
 
-    xp = getArrayModule(field)
-
-    grad_x = xp.roll(field, -1, axis=-1) - xp.roll(field, 1, axis=-1)
-    grad_y = xp.roll(field, -1, axis=-2) - xp.roll(field, 1, axis=-1)
-    value = xp.sum(
-        xp.sqrt(abs(grad_x * grad_x.conj()) + abs(grad_y * grad_y.conj()) + aleph)
+    grad_x = jnp.roll(field, -1, axis=-1) - jnp.roll(field, 1, axis=-1)
+    grad_y = jnp.roll(field, -1, axis=-2) - jnp.roll(field, 1, axis=-1)
+    value = jnp.sum(
+        jnp.sqrt(abs(grad_x * grad_x.conj()) + abs(grad_y * grad_y.conj()) + aleph)
     )
-    value = float(asNumpyArray(value))
+    value = float(np.asarray(value))
     return value
 
 
@@ -139,9 +136,7 @@ def metric_at(
         sy, sx = ss
         sy1, sx1 = slice(None, None), slice(None, None)
 
-    xp = getArrayModule(object_estimate)
-    if isGpuArray(dz):
-        dz = dz.get()
+    dz = np.asarray(dz)
 
     OE_ff = fft2c(object_estimate[...,sy1,sx1])
     if intensity_only:
@@ -154,7 +149,7 @@ def metric_at(
     for z in dz:
         OE = op(
             aspw(
-                xp.squeeze(OE_ff),
+                jnp.squeeze(OE_ff),
                 z=float(z),
                 wavelength=float(wavelength),
                 L=dx * object_estimate.shape[-1],
@@ -168,12 +163,17 @@ def metric_at(
             OE = OE / OE.mean()
 
         score = metric(OE)
-        OEs.append(asNumpyArray(OE))
+        OEs.append(np.asarray(OE))
         scores.append(score)
     if return_propagated:
         return np.array(scores), np.array(OEs)
     else:
         return np.array(scores)
+
+
+def _finite_diff_gradient(f, axis):
+    """Central finite difference approximation of gradient along a single axis."""
+    return (jnp.roll(f, -1, axis=axis) - jnp.roll(f, 1, axis=axis)) / 2
 
 
 def divergence(f):
@@ -188,20 +188,19 @@ def divergence(f):
     -------
 
     """
-    xp = getArrayModule(f[0])
-    return xp.gradient(f[0], axis=(4, 5))[0] + xp.gradient(f[1], axis=(4, 5))[1]
+    return _finite_diff_gradient(f[0], axis=4) + _finite_diff_gradient(f[1], axis=5)
 
 def divergence_new(f):
-    xp = getArrayModule(f[0])
-    grad_y = xp.gradient(f[0], axis=-2)
-    grad_x = xp.gradient(f[1], axis=-1)
+    grad_y = _finite_diff_gradient(f[0], axis=-2)
+    grad_x = _finite_diff_gradient(f[1], axis=-1)
     return grad_y + grad_x
 
 
 def grad_TV(field, epsilon=1e-2):
-    xp = getArrayModule(field)
-    gradient = xp.array(xp.gradient(field, axis=(-2,-1)))
-    norm = xp.sqrt(xp.sum(gradient, axis=0)**2+epsilon)
-    gradient /= norm
+    gradient_y = _finite_diff_gradient(field, axis=-2)
+    gradient_x = _finite_diff_gradient(field, axis=-1)
+    gradient = jnp.array([gradient_y, gradient_x])
+    norm = jnp.sqrt(jnp.sum(gradient, axis=0)**2+epsilon)
+    gradient = gradient / norm
     TV_update = divergence_new(gradient)
     return TV_update

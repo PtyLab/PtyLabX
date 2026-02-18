@@ -1,20 +1,13 @@
 import numpy as np
-from PtyLabX.utils.gpuUtils import (transfer_fields_to_cpu,
-                                   transfer_fields_to_gpu)
 
 try:
     import pyqtgraph as pg
 except ImportError:
     print("Cannot use pyqtgraph")
-# from pathlib import Path
 import logging
 
 import matplotlib.pyplot as plt
-# import tables
 from PtyLabX.io import readHdf5
-from PtyLabX.utils.gpuUtils import (getArrayModule, transfer_fields_to_cpu,
-                                   transfer_fields_to_gpu)
-# from PtyLabX.io import readExample
 from PtyLabX.utils.visualisation import setColorMap, show3Dslider
 
 
@@ -34,16 +27,6 @@ class ExperimentalData:
         self._setFields()
         if filename is not None:
             self.loadData(filename)
-
-        # which fields have to be transferred if GPU operation is required?
-        # not all of them are always used, but the class will determine by itself which ones are
-        # required
-        self.fields_to_transfer = [
-            "emptyBeam",
-            "ptychogram",
-            "ptychogramDownsampled",
-            "W",  # for aPIE
-        ]
 
     def _setFields(self):
         """
@@ -118,7 +101,6 @@ class ExperimentalData:
         # 3. 'requiredFields' will be the attributes that must be set
         attributesToSet = measurementDict.keys()
         # 4. set object attributes as the essential data fields
-        # self.logger.setLevel(logging.DEBUG)
         for a in attributesToSet:
             # make sure that property is not an attribtue
             attribute = str(a)
@@ -152,7 +134,6 @@ class ExperimentalData:
         startx += 1
 
         self.ptychogram = self.ptychogram[..., startx: startx + size, startx: startx + size]
-        # self._setData()
 
     def binData(self, binning):
         '''
@@ -212,7 +193,6 @@ class ExperimentalData:
         else:
             raise ValueError(f"Orientation {orientation} is not implemented")
         if force_contiguous:
-            # this almost always makes sense. It makes it easier to read chunks
             self.ptychogram = np.ascontiguousarray(self.ptychogram)
 
     def _setData(self):
@@ -237,34 +217,17 @@ class ExperimentalData:
         """
         show ptychogram.
         """
-        xp = getArrayModule(self.ptychogram)
         print(f"Min max ptychogram: {np.min(self.ptychogram)}, {self.ptychogram.max()}")
-        log_ptychogram = xp.log10(
-            xp.swapaxes(np.clip(self.ptychogram.astype(np.float32), 0, None), 1, 2) + 1
+        ptychogram_np = np.asarray(self.ptychogram)
+        log_ptychogram = np.log10(
+            np.swapaxes(np.clip(ptychogram_np.astype(np.float32), 0, None), 1, 2) + 1
         )
         print(f"Min max ptychogram: {np.min(log_ptychogram)}, {log_ptychogram.max()}")
         show3Dslider(log_ptychogram)
 
-    def _move_data_to_cpu(self):
-        """Move all required data to the CPU"""
-        transfer_fields_to_cpu(self, self.fields_to_transfer, self.logger)
-
-    def _move_data_to_gpu(self):
-        """Move all required fata to the GPU"""
-        transfer_fields_to_gpu(self, self.fields_to_transfer, self.logger)
-
-
     def relative_intensity(self, index):
         """
         Return the relative intensity of the ptychogram at index compared to the brightest one
-
-        Parameters
-        ----------
-        index
-
-        Returns
-        -------
-
         """
         if not hasattr(self, '_relative_intensity'):
             self._relative_intensity = self.ptychogram.mean((-2,-1))

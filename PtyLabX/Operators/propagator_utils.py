@@ -1,12 +1,5 @@
-from PtyLabX.utils.gpuUtils import getArrayModule
-
-try:
-    import cupy as cp
-except ImportError:
-    pass
-
+import jax.numpy as jnp
 import numpy as np
-from scipy import signal
 
 
 def complexexp(angle):
@@ -24,8 +17,7 @@ def complexexp(angle):
     cos(angle) + 1j * sin(angle)
 
     """
-    xp = getArrayModule(angle)
-    return xp.cos(angle) + 1j * xp.sin(angle)
+    return jnp.cos(angle) + 1j * jnp.sin(angle)
 
 
 def iterate_6d_fields(fields):
@@ -37,61 +29,45 @@ def iterate_6d_fields(fields):
         yield idx
 
 
-# creating a bandpass filter
-def convolve2d(in1, in2, on_gpu, mode="same"):
-    """Using the convolve2d function based on whether on GPU of not"""
-    if on_gpu:
-        return _fft_convolve2d(in1, in2, on_gpu, mode=mode)
-    else:
-        return signal.convolve2d(in1, in2, mode=mode)
+def convolve2d(in1, in2, mode="same"):
+    """2D convolution using FFT."""
+    return _fft_convolve2d(in1, in2, mode=mode)
 
 
-def gaussian2D(n, std, on_gpu):
+def gaussian2D(n, std):
     """Creates a 2D gaussian"""
-    xp = cp if on_gpu else np
-    # create the grid of (x,y) values
     n = (n - 1) // 2
-    x, y = xp.meshgrid(xp.arange(-n, n + 1), xp.arange(-n, n + 1))
-    # analytic function
-    h = xp.exp(-(x**2 + y**2) / (2 * std**2))
-    # truncate very small values to zero
-    mask = h < xp.finfo(float).eps * xp.max(h)
-    h *= 1 - mask
-    # normalize filter to unit L1 energy
-    sumh = xp.sum(h)
-    if sumh != 0:
-        h = h / sumh
+    x, y = jnp.meshgrid(jnp.arange(-n, n + 1), jnp.arange(-n, n + 1))
+    h = jnp.exp(-(x**2 + y**2) / (2 * std**2))
+    mask = h < jnp.finfo(float).eps * jnp.max(h)
+    h = h * (1 - mask)
+    sumh = jnp.sum(h)
+    h = jnp.where(sumh != 0, h / sumh, h)
     return h
 
 
-def _fft_convolve2d(x, y, on_gpu, mode="same"):
-    """
-    2D convolution using FFT, for CuPy arrays.
-    """
-    xp = cp if on_gpu else np
-
+def _fft_convolve2d(x, y, mode="same"):
+    """2D convolution using FFT."""
     s1 = x.shape
     s2 = y.shape
     size = s1[0] + s2[0] - 1, s1[1] + s2[1] - 1
-    fx = xp.fft.fft2(x, size)
-    fy = xp.fft.fft2(y, size)
-    result = xp.fft.ifft2(fx * fy)
+    fx = jnp.fft.fft2(x, size)
+    fy = jnp.fft.fft2(y, size)
+    result = jnp.fft.ifft2(fx * fy)
 
     if mode == "same":
-        return _centered(result, s1, on_gpu)
+        return _centered(result, s1)
     elif mode == "valid":
-        return _centered(result, (s1[0] - s2[0] + 1, s1[1] - s2[1] + 1), on_gpu)
+        return _centered(result, (s1[0] - s2[0] + 1, s1[1] - s2[1] + 1))
     else:  # 'full'
         return result
 
 
-def _centered(arr, newsize, on_gpu):
-    xp = cp if on_gpu else np
-
+def _centered(arr, newsize):
     # Return the center newsize portion of the array.
-    newsize = xp.asarray(newsize)
-    currsize = xp.array(arr.shape)
+    newsize = jnp.asarray(newsize)
+    currsize = jnp.array(arr.shape)
     startind = (currsize - newsize) // 2
     endind = startind + newsize
-    myslice = [slice(startind[k], endind[k]) for k in range(len(endind))]
+    myslice = [slice(int(startind[k]), int(endind[k])) for k in range(len(endind))]
     return arr[tuple(myslice)]

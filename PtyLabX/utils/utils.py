@@ -1,8 +1,5 @@
 import numpy as np
-from scipy import linalg
-import scipy.stats as st
-
-from PtyLabX.utils.gpuUtils import getArrayModule
+import jax.numpy as jnp
 
 
 def fft2c(field, fftshiftSwitch=False, *args, **kwargs):
@@ -13,33 +10,29 @@ def fft2c(field, fftshiftSwitch=False, *args, **kwargs):
     :param array:
     :return:
     """
-    xp = getArrayModule(field)
-
     if fftshiftSwitch:
-        return xp.fft.fft2(field, norm="ortho")
+        return jnp.fft.fft2(field, norm="ortho")
     else:
         axes = (-2, -1)
-        return xp.fft.fftshift(
-            xp.fft.fft2(xp.fft.ifftshift(field, axes=axes), norm="ortho"), axes=axes
+        return jnp.fft.fftshift(
+            jnp.fft.fft2(jnp.fft.ifftshift(field, axes=axes), norm="ortho"), axes=axes
         )
 
 
 def ifft2c(field, fftshiftSwitch=False):
     """
-    performs 2 - dimensional inverse Fourier transformation, where energy is preserved sum( abs(G)**2 ) == sum( abs(fft2c(g))**2 ) 
+    performs 2 - dimensional inverse Fourier transformation, where energy is preserved sum( abs(G)**2 ) == sum( abs(fft2c(g))**2 )
     if G is two - dimensional, fft2c(G) yields the 2D iDFT of G
     if G is multi - dimensional, fft2c(G) yields the 2D iDFT of G along the last two axes
     :param array:
     :return:
     """
-    xp = getArrayModule(field)
-
     if fftshiftSwitch:
-        return xp.fft.ifft2(field, norm="ortho")
+        return jnp.fft.ifft2(field, norm="ortho")
     else:
         axes = (-2, -1)
-        return xp.fft.fftshift(
-            xp.fft.ifft2(xp.fft.ifftshift(field, axes=axes), norm="ortho"), axes=axes
+        return jnp.fft.fftshift(
+            jnp.fft.ifft2(jnp.fft.ifftshift(field, axes=axes), norm="ortho"), axes=axes
         )
 
 
@@ -77,21 +70,21 @@ def posit(x):
 
 def fraccircshift(A, shiftsize):
     """
-    fraccircshift expands numpy.roll to fractional shifts values, using linear interpolation.
+    fraccircshift expands jnp.roll to fractional shifts values, using linear interpolation.
     :param A: ndarray
     :param shiftsize: shift size in each dimension of A, len(shiftsize)==A.ndim.
     """
-    integer = np.floor(shiftsize).astype(int)  # integer portions of shiftsize
+    integer = jnp.floor(shiftsize).astype(int)  # integer portions of shiftsize
     fraction = shiftsize - integer
     dim = len(shiftsize)
     # the dimensions are treated one after another
-    for n in np.arange(dim):
-        intn = integer[n]
+    for n in range(dim):
+        intn = int(integer[n])
         fran = fraction[n]
         shift1 = intn
         shift2 = intn + 1
         # linear interpolation
-        A = (1 - fran) * np.roll(A, shift1, axis=n) + fran * np.roll(A, shift2, axis=n)
+        A = (1 - fran) * jnp.roll(A, shift1, axis=n) + fran * jnp.roll(A, shift2, axis=n)
     return A
 
 
@@ -128,63 +121,33 @@ def orthogonalizeModes(p, method=None):
     Imposes orthogonality through singular value decomposition
     :return:
     """
-    # orthogonolize modes only for npsm and nosm which are lcoated and indices 1, 2
-    xp = getArrayModule(p)
-
     if method == "snapShots":
-        try:
-            p2D = p.reshape(p.shape[0], p.shape[1] * p.shape[2])
-            w, V = xp.linalg.eigh(xp.dot(p2D.conj(), xp.transpose(p2D)))
-            s = xp.sqrt(w).real
-            U = xp.dot(
-                xp.dot(xp.transpose(p2D), V),
-                xp.linalg.inv(xp.diag(s) + 1e-17 * xp.eye(len(s))),
-            )
-            # indices = xp.flip(xp.argsort(s))
-            indices = xp.argsort(s)[::-1]
-            s = s[indices]  # [::-1].sort()
-            U = U[:, indices]
-            V = V[:, indices]
-            p = xp.transpose(xp.dot(U, xp.diag(s))).reshape(
-                p.shape[0], p.shape[1], p.shape[2]
-            )
-            normalizedEigenvalues = s**2 / xp.sum(s**2)
-            V = xp.transpose(V)
-        except Exception as e:
-            print("Warning: performing SVD on CPU rather than GPU due to error", e)
-            # print('Exception: ', e)
-            # TODO: check, most likely this is faster to perform on the CPU rather than GPU
-            if hasattr(p, "device"):
-                p = p.get()
-            p2D = p.reshape(p.shape[0], p.shape[1] * p.shape[2])
-            w, V = np.linalg.eig(np.dot(p2D.conj(), np.transpose(p2D)))
-            s = np.sqrt(w).real
-            U = np.dot(
-                xp.dot(xp.transpose(p2D), V),
-                np.linalg.inv(np.diag(s) + 1e-17 * np.eye(len(s))),
-            )
-            indices = np.flip(np.argsort(s))
-            s[::-1].sort()
-            U = U[:, indices]
-            V = V[:, indices]
-            p = np.transpose(np.dot(U, np.diag(s))).reshape(
-                p.shape[0], p.shape[1], p.shape[2]
-            )
-            normalizedEigenvalues = s**2 / np.sum(s**2)
-            V = np.transpose(V)
-            # U, s, V = np.linalg.svd(p.reshape(p.shape[0], p.shape[1]*p.shape[2]), full_matrices=False )
-            # p = np.dot(np.diag(s), V).reshape(p.shape[0], p.shape[1], p.shape[2])
-            # normalizedEigenvalues = s**2/xp.sum(s**2)
-        return xp.asarray(p), normalizedEigenvalues, V
+        p2D = p.reshape(p.shape[0], p.shape[1] * p.shape[2])
+        w, V = jnp.linalg.eigh(jnp.dot(p2D.conj(), jnp.transpose(p2D)))
+        s = jnp.sqrt(w).real
+        U = jnp.dot(
+            jnp.dot(jnp.transpose(p2D), V),
+            jnp.linalg.inv(jnp.diag(s) + 1e-17 * jnp.eye(len(s))),
+        )
+        indices = jnp.argsort(s)[::-1]
+        s = s[indices]
+        U = U[:, indices]
+        V = V[:, indices]
+        p = jnp.transpose(jnp.dot(U, jnp.diag(s))).reshape(
+            p.shape[0], p.shape[1], p.shape[2]
+        )
+        normalizedEigenvalues = s**2 / jnp.sum(s**2)
+        V = jnp.transpose(V)
+        return p, normalizedEigenvalues, V
 
     else:
-        U, s, V = xp.linalg.svd(
+        U, s, V = jnp.linalg.svd(
             p.reshape(p.shape[0], p.shape[1] * p.shape[2]), full_matrices=False
         )
-        p = xp.dot(xp.diag(s), V).reshape(p.shape[0], p.shape[1], p.shape[2])
-        normalizedEigenvalues = s**2 / xp.sum(s**2)
+        p = jnp.dot(jnp.diag(s), V).reshape(p.shape[0], p.shape[1], p.shape[2])
+        normalizedEigenvalues = s**2 / jnp.sum(s**2)
 
-        return xp.asarray(p), normalizedEigenvalues, U.T.conj()
+        return p, normalizedEigenvalues, U.T.conj()
 
 
 def zernikeAberrations(Xp, Yp, D, z_coeff):

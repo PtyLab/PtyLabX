@@ -1,13 +1,7 @@
 import numpy as np
+import jax.numpy as jnp
 from matplotlib import pyplot as plt
 
-try:
-    import cupy as cp
-except ImportError:
-    # print("Cupy not available, will not be able to run GPU based computation")
-    # Still define the name, we'll take care of it later but in this way it's still possible
-    # to see that gPIE exists for example.
-    cp = None
 
 import logging
 import sys
@@ -21,7 +15,6 @@ from PtyLabX.Params.Params import Params
 
 # PtyLab imports
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.gpuUtils import asNumpyArray, getArrayModule
 from PtyLabX.utils.utils import fft2c, ifft2c
 
 
@@ -94,8 +87,8 @@ class multiPIE(BaseEngine):
                 DELTA = self.reconstruction.eswUpdate - self.reconstruction.esw
 
                 # object update
-                self.reconstruction.object[..., sy, sx] = self.objectPatchUpdate(
-                    objectPatch, DELTA
+                self.reconstruction.object = self.reconstruction.object.at[..., sy, sx].set(
+                    self.objectPatchUpdate(objectPatch, DELTA)
                 )
 
                 # probe update
@@ -117,10 +110,6 @@ class multiPIE(BaseEngine):
 
             # todo clearMemory implementation
 
-        if self.params.gpuFlag:
-            self.logger.info("switch to cpu")
-            self._move_data_to_cpu()
-            self.params.gpuFlag = 0
 
     def objectMomentumUpdate(self):
         """
@@ -157,19 +146,16 @@ class multiPIE(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        # xp = getArrayModule(objectPatch)
-        # absP2 = xp.abs(self.reconstruction.probe[0]) ** 2
-        # Pmax = xp.max(xp.sum(absP2, axis=(0, 1, 2)), axis=(-1, -2))
+        # absP2 = jnp.abs(self.reconstruction.probe[0]) ** 2
+        # Pmax = jnp.max(jnp.sum(absP2, axis=(0, 1, 2)), axis=(-1, -2))
         # if self.experimentalData.operationMode == 'FPM':
         #     frac = abs(self.reconstruction.probe) / Pmax * \
         #            self.reconstruction.probe[0].conj() / (self.alphaObject * Pmax + (1 - self.alphaObject) * absP2)
         # else:
         #     frac = self.reconstruction.probe[0].conj() / (self.alphaObject * Pmax + (1 - self.alphaObject) * absP2)
         # return objectPatch + self.betaObject * frac * DELTA
-        xp = getArrayModule(objectPatch)
-        absP2 = xp.abs(self.reconstruction.probe) ** 2
-        Pmax = xp.max(xp.sum(absP2, axis=(0, 1, 2, 3)), axis=(-1, -2))
+        absP2 = jnp.abs(self.reconstruction.probe) ** 2
+        Pmax = jnp.max(jnp.sum(absP2, axis=(0, 1, 2, 3)), axis=(-1, -2))
         if self.experimentalData.operationMode == "FPM":
             frac = (
                 abs(self.reconstruction.probe)
@@ -181,7 +167,7 @@ class multiPIE(BaseEngine):
             frac = self.reconstruction.probe.conj() / (
                 self.alphaObject * Pmax + (1 - self.alphaObject) * absP2
             )
-        return objectPatch + self.betaObject * xp.sum(
+        return objectPatch + self.betaObject * jnp.sum(
             frac * DELTA, axis=2, keepdims=True
         )
 
@@ -192,14 +178,12 @@ class multiPIE(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
-        absO2 = xp.abs(objectPatch) ** 2
-        Omax = xp.max(xp.sum(absO2, axis=(0, 1, 2, 3)), axis=(-1, -2))
+        absO2 = jnp.abs(objectPatch) ** 2
+        Omax = jnp.max(jnp.sum(absO2, axis=(0, 1, 2, 3)), axis=(-1, -2))
         frac = objectPatch.conj() / (
             self.alphaProbe * Omax + (1 - self.alphaProbe) * absO2
         )
-        r = self.reconstruction.probe + self.betaProbe * xp.sum(
+        r = self.reconstruction.probe + self.betaProbe * jnp.sum(
             frac * DELTA, axis=(0, 1), keepdims=True
         )
         return r

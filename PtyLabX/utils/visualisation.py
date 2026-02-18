@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import math
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from PtyLabX.utils.gpuUtils import asNumpyArray, getArrayModule, isGpuArray
 from matplotlib.colors import LinearSegmentedColormap
 
 try:
@@ -22,8 +21,8 @@ def hsv2rgb(hsv: np.ndarray) -> np.ndarray:
     :param hsv: np.ndarray of shape (x,y,3)
     :return: hsv2rgb returns an array of uints between 0 and 255.
     """
-    xp = getArrayModule(hsv)
-    rgb = xp.empty_like(hsv)
+    hsv = np.asarray(hsv)
+    rgb = np.empty_like(hsv)
     rgb[..., 3:] = hsv[..., 3:]
     h, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
     i = (h * 6.0).astype("uint8")
@@ -33,32 +32,30 @@ def hsv2rgb(hsv: np.ndarray) -> np.ndarray:
     t = v * (1.0 - s * (1.0 - f))
     i = i % 6
     conditions = [s == 0.0, i == 1, i == 2, i == 3, i == 4, i == 5, i == i]
-    rgb[..., 0] = xp.select(conditions, [v, q, p, p, t, v, v])  # , default=v)
-    rgb[..., 1] = xp.select(conditions, [v, v, v, q, p, p, t])  # , default=t)
-    rgb[..., 2] = xp.select(conditions, [v, p, t, v, v, q, p])  # , default=p)
+    rgb[..., 0] = np.select(conditions, [v, q, p, p, t, v, v])  # , default=v)
+    rgb[..., 1] = np.select(conditions, [v, v, v, q, p, p, t])  # , default=t)
+    rgb[..., 2] = np.select(conditions, [v, p, t, v, v, q, p])  # , default=p)
     return rgb.astype("uint8")
 
 
-def complex2rgb(u, amplitudeScalingFactor=1, force_numpy=True, center_phase=False):
+def complex2rgb(u, amplitudeScalingFactor=1, center_phase=False):
     """
     Preparation function for a complex plot, converting a 2D complex array into an rgb array
     :param u: a 2D complex array
     :return: an rgb array for complex plot
     """
     # hue (normalize angle)
-    # if u is on the GPU, remove it as we can toss it now.
-    xp = getArrayModule(u)
-    # u = asNumpyArray(u)
+    u = np.asarray(u)
     if center_phase:
         N = u.shape[-1]
-        phexp = xp.sum(u[...,N//3:2*N//3,N//3:2*N//3], axis=(-2,-1))
+        phexp = np.sum(u[...,N//3:2*N//3,N//3:2*N//3], axis=(-2,-1))
         u = u * phexp.conj() / (abs(phexp) + 1e-9)
-    h = xp.angle(u)
+    h = np.angle(u)
     h = (h + np.pi) / (2 * np.pi)
     # saturation  (ones)
-    s = xp.ones_like(h)
+    s = np.ones_like(h)
     # value (normalize brightness to 8-bit)
-    v = xp.abs(u)
+    v = np.abs(u)
     if amplitudeScalingFactor == "2sigma":
         ASF = v.mean() + 2 * np.std(v)
         ASF = ASF / v.max()
@@ -67,15 +64,13 @@ def complex2rgb(u, amplitudeScalingFactor=1, force_numpy=True, center_phase=Fals
         amplitudeScalingFactor = ASF
     else:
         ASF = amplitudeScalingFactor
-    
+
     if ASF != 1 and amplitudeScalingFactor != "2sigma":
         v[v > amplitudeScalingFactor * np.max(v)] = amplitudeScalingFactor * np.max(v)
-    v = v / (xp.max(v) + xp.finfo(float).eps) * (2**8 - 1)
+    v = v / (np.max(v) + np.finfo(float).eps) * (2**8 - 1)
 
-    hsv = xp.dstack([h, s, v])
+    hsv = np.dstack([h, s, v])
     rgb = hsv2rgb(hsv)
-    if isGpuArray(rgb) and force_numpy:
-        rgb = rgb.get()
     return rgb
 
 
@@ -84,10 +79,10 @@ def complex2rgb_vectorized(probe, **kwargs):
 
     The individual images are all autoscaled, so you cannot compare them.
     """
-    xp = getArrayModule(probe)
+    probe = np.asarray(probe)
     original_shape = probe.shape
     probe = probe.reshape(-1, *probe.shape[-2:])
-    probe_rgb = xp.array([complex2rgb(p, force_numpy=False, **kwargs) for p in probe])
+    probe_rgb = np.array([complex2rgb(p, **kwargs) for p in probe])
     probe_rgb = probe_rgb.reshape(original_shape + (3,))
     return probe_rgb
 
@@ -120,7 +115,7 @@ def complexPlot(rgb, ax=None, pixelSize=1, axisUnit="pixel"):
     scalar_mappable = mpl.cm.ScalarMappable(norm=norm, cmap=mpl.cm.hsv)
     scalar_mappable.set_array([])
     cbar = plt.colorbar(scalar_mappable, ax=ax, cax=cax, ticks=[-np.pi, 0, np.pi])
-    cbar.ax.set_yticklabels(["$-\pi$", "0", "$\pi$"])
+    cbar.ax.set_yticklabels([r"$-\pi$", "0", r"$\pi$"])
     return im
 
 
@@ -165,7 +160,7 @@ def hsvplot(u, ax=None, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1)
     :param axisUnit, default 'pixel', options: 'm', 'cm', 'mm', 'um'
     return: a complex plot
     """
-    u = np.squeeze(asNumpyArray(u))
+    u = np.squeeze(np.asarray(u))
     rgb = complex2rgb(u, amplitudeScalingFactor=amplitudeScalingFactor)
     complexPlot(rgb, ax, pixelSize, axisUnit)
 
@@ -181,7 +176,7 @@ def hsvmodeplot(
     :return: a tiled complex plot
     """
 
-    Q = modeTile(np.squeeze(asNumpyArray(P)), normalize=normalize)
+    Q = modeTile(np.squeeze(np.asarray(P)), normalize=normalize)
     hsvplot(
         Q,
         ax=ax,
@@ -194,7 +189,7 @@ def hsvmodeplot(
 def absplot(
     u, ax=None, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1, cmap="gray"
 ):
-    U = np.abs(asNumpyArray(u))
+    U = np.abs(np.asarray(u))
     if not ax:
         fig, ax = plt.subplots()
     unitRatio = {"pixel": 1, "m": 1, "cm": 1e2, "mm": 1e3, "um": 1e6}

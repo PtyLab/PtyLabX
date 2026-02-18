@@ -1,14 +1,8 @@
 import numpy as np
+import jax.numpy as jnp
 from matplotlib import pyplot as plt
 
 # PtyLab imports
-try:
-    import cupy as cp
-except ImportError:
-    # print("Cupy not available, will not be able to run GPU based computation")
-    # Still define the name, we'll take care of it later but in this way it's still possible
-    # to see that gPIE exists for example.
-    cp = None
 import logging
 import sys
 
@@ -19,7 +13,6 @@ from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
 from PtyLabX.Monitor.Monitor import Monitor
 from PtyLabX.Params.Params import Params
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.gpuUtils import getArrayModule
 from PtyLabX.utils.utils import fft2c, ifft2c
 
 
@@ -82,8 +75,8 @@ class qNewton(BaseEngine):
                 DELTA = self.reconstruction.eswUpdate - self.reconstruction.esw
 
                 # object update
-                self.reconstruction.object[..., sy, sx] = self.objectPatchUpdate(
-                    objectPatch, DELTA
+                self.reconstruction.object = self.reconstruction.object.at[..., sy, sx].set(
+                    self.objectPatchUpdate(objectPatch, DELTA)
                 )
 
                 # probe update
@@ -98,10 +91,6 @@ class qNewton(BaseEngine):
             # show reconstruction
             self.showReconstruction(loop)
 
-        if self.params.gpuFlag:
-            self.logger.info("switch to cpu")
-            self._move_data_to_cpu()
-            self.params.gpuFlag = 0
 
             # todo clearMemory implementation
 
@@ -109,15 +98,14 @@ class qNewton(BaseEngine):
         """
         Temporary barebones update
         """
-        xp = getArrayModule(objectPatch)
-        Pmax = xp.max(xp.sum(xp.abs(self.reconstruction.probe), axis=(0, 1, 2, 3)))
+        Pmax = jnp.max(jnp.sum(jnp.abs(self.reconstruction.probe), axis=(0, 1, 2, 3)))
         frac = (
-            xp.abs(self.reconstruction.probe)
+            jnp.abs(self.reconstruction.probe)
             / Pmax
             * self.reconstruction.probe.conj()
-            / (xp.abs(self.reconstruction.probe) ** 2 + self.regObject)
+            / (jnp.abs(self.reconstruction.probe) ** 2 + self.regObject)
         )
-        return objectPatch + self.betaObject * xp.sum(
+        return objectPatch + self.betaObject * jnp.sum(
             frac * DELTA, axis=(0, 2, 3), keepdims=True
         )
 
@@ -126,15 +114,14 @@ class qNewton(BaseEngine):
         Temporary barebones update
 
         """
-        xp = getArrayModule(objectPatch)
-        Omax = xp.max(xp.sum(xp.abs(self.reconstruction.object), axis=(0, 1, 2, 3)))
+        Omax = jnp.max(jnp.sum(jnp.abs(self.reconstruction.object), axis=(0, 1, 2, 3)))
         frac = (
-            xp.abs(objectPatch)
+            jnp.abs(objectPatch)
             / Omax
             * objectPatch.conj()
-            / (xp.abs(objectPatch) ** 2 + self.regProbe)
+            / (jnp.abs(objectPatch) ** 2 + self.regProbe)
         )
-        r = self.reconstruction.probe + self.betaProbe * xp.sum(
+        r = self.reconstruction.probe + self.betaProbe * jnp.sum(
             frac * DELTA, axis=(0, 1, 3), keepdims=True
         )
         return r

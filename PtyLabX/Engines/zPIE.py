@@ -2,14 +2,7 @@ import numpy as np
 import tqdm
 from matplotlib import pyplot as plt
 
-try:
-    import cupy as cp
-except ImportError:
-    # print("Cupy not available, will not be able to run GPU based computation")
-    # Still define the name, we'll take care of it later but in this way it's still possible
-    # to see that gPIE exists for example.
-    cp = None
-
+import jax.numpy as jnp
 import logging
 import sys
 
@@ -21,7 +14,6 @@ from PtyLabX.Params.Params import Params
 
 # PtyLab imports
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.gpuUtils import asNumpyArray, getArrayModule
 
 
 class zPIE(BaseEngine):
@@ -96,7 +88,6 @@ class zPIE(BaseEngine):
 
         ###################################### actual reconstruction zPIE_engine #######################################
 
-        xp = getArrayModule(self.reconstruction.object)
         if not hasattr(self.reconstruction, "zHistory"):
             self.reconstruction.zHistory = []
 
@@ -109,8 +100,8 @@ class zPIE(BaseEngine):
         if not self.focusObject:
             n = self.reconstruction.Np
 
-        X, Y = xp.meshgrid(xp.arange(-n // 2, n // 2), xp.arange(-n // 2, n // 2))
-        w = xp.exp(-((xp.sqrt(X**2 + Y**2) / self.reconstruction.Np) ** 4))
+        X, Y = jnp.meshgrid(jnp.arange(-n // 2, n // 2), jnp.arange(-n // 2, n // 2))
+        w = jnp.exp(-((jnp.sqrt(X**2 + Y**2) / self.reconstruction.Np) ** 4))
 
         self.pbar = tqdm.trange(
             self.numIterations, desc="zPIE", file=sys.stdout, leave=True
@@ -139,7 +130,7 @@ class zPIE(BaseEngine):
                             self.reconstruction.No // 2 + n // 2,
                         )
                         imProp, _ = aspw(
-                            u=xp.squeeze(self.reconstruction.object[..., roi, roi]),
+                            u=jnp.squeeze(self.reconstruction.object[..., roi, roi]),
                             z=dz[k],
                             wavelength=self.reconstruction.wavelength,
                             L=self.reconstruction.dxo * n,
@@ -148,7 +139,7 @@ class zPIE(BaseEngine):
                     else:
                         if self.reconstruction.nlambda == 1:
                             imProp, _ = aspw(
-                                u=xp.squeeze(self.reconstruction.probe[..., :, :]),
+                                u=jnp.squeeze(self.reconstruction.probe[..., :, :]),
                                 z=dz[k],
                                 wavelength=self.reconstruction.wavelength,
                                 L=self.reconstruction.Lp,
@@ -156,33 +147,32 @@ class zPIE(BaseEngine):
                         else:
                             nlambda = self.reconstruction.nlambda // 2
                             imProp, _ = aspw(
-                                xp.squeeze(
+                                jnp.squeeze(
                                     self.reconstruction.probe[nlambda, ..., :, :]
                                 ),
                                 dz[k],
                                 self.reconstruction.spectralDensity[nlambda],
                                 self.reconstruction.Lp,
                             )
-                    imProps.append(imProp.get())
+                    imProps.append(np.asarray(imProp))
                     # TV approach
                     aleph = 1e-2
-                    gradx = xp.roll(imProp, -1, axis=-1) - xp.roll(imProp, 1, axis=-1)
-                    grady = xp.roll(imProp, -1, axis=-2) - xp.roll(imProp, 1, axis=-2)
+                    gradx = jnp.roll(imProp, -1, axis=-1) - jnp.roll(imProp, 1, axis=-1)
+                    grady = jnp.roll(imProp, -1, axis=-2) - jnp.roll(imProp, 1, axis=-2)
                     merit.append(
-                        xp.sum(xp.sqrt(abs(gradx) ** 2 + abs(grady) ** 2 + aleph))
+                        jnp.sum(jnp.sqrt(abs(gradx) ** 2 + abs(grady) ** 2 + aleph))
                     )
                     # take a tiny break, we may overask the GPU
                     # yield 0, 0
 
-                merit = xp.array(merit)
+                merit = jnp.array(merit)
                 if not hasattr(self.reconstruction, "TV_history"):
                     self.reconstruction.TV_history = []
 
                 self.reconstruction.TV_history.append(
-                    float(merit[len(merit) // 2].get())
+                    float(merit[len(merit) // 2])
                 )
-                if xp is not np:
-                    merit = merit.get()
+                merit = np.asarray(merit)
                 feedback = np.sum(dz * merit) / np.sum(
                     merit
                 )  # at optimal z, feedback term becomes 0
@@ -215,7 +205,7 @@ class zPIE(BaseEngine):
                     / self.reconstruction.Ld
                 )
                 # reset propagatorType
-                # self.reconstruction.quadraticPhase = xp.array(np.exp(1.j * np.pi / (self.reconstruction.wavelength * self.reconstruction.zo)
+                # self.reconstruction.quadraticPhase = jnp.array(np.exp(1.j * np.pi / (self.reconstruction.wavelength * self.reconstruction.zo)
                 #                                                      * (self.reconstruction.Xp ** 2 + self.reconstruction.Yp ** 2)))
             ##################################################################################################################
 
@@ -239,8 +229,8 @@ class zPIE(BaseEngine):
                 DELTA = self.reconstruction.eswUpdate - self.reconstruction.esw
 
                 # object update
-                self.reconstruction.object[..., sy, sx] = self.objectPatchUpdate(
-                    objectPatch, DELTA
+                self.reconstruction.object = self.reconstruction.object.at[..., sy, sx].set(
+                    self.objectPatchUpdate(objectPatch, DELTA)
                 )
 
                 # probe update
@@ -305,10 +295,6 @@ class zPIE(BaseEngine):
                     figure.canvas.flush_events()
             self.showReconstruction(loop)
 
-        if self.params.gpuFlag:
-            self.logger.info("switch to cpu")
-            self._move_data_to_cpu()
-            self.params.gpuFlag = 0
 
     def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
         """
@@ -317,13 +303,11 @@ class zPIE(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
 
-        frac = self.reconstruction.probe.conj() / xp.max(
-            xp.sum(xp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
+        frac = self.reconstruction.probe.conj() / jnp.max(
+            jnp.sum(jnp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
         )
-        return objectPatch + self.betaObject * xp.sum(
+        return objectPatch + self.betaObject * jnp.sum(
             frac * DELTA, axis=(0, 2, 3), keepdims=True
         )
 
@@ -334,12 +318,10 @@ class zPIE(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
-        frac = objectPatch.conj() / xp.max(
-            xp.sum(xp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3))
+        frac = objectPatch.conj() / jnp.max(
+            jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3))
         )
-        r = self.reconstruction.probe + self.betaProbe * xp.sum(
+        r = self.reconstruction.probe + self.betaProbe * jnp.sum(
             frac * DELTA, axis=(0, 1, 3), keepdims=True
         )
         return r

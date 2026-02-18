@@ -7,7 +7,6 @@ from matplotlib import pyplot as plt
 from matplotlib.image import AxesImage
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from PtyLabX.utils import gpuUtils
 from PtyLabX.utils.visualisation import complex2rgb, complexPlot, modeTile
 
 
@@ -251,7 +250,7 @@ class DiffractionDataPlot(object):
 
     def updateIestimated(self, Iestimate, cmap="gray", **kwargs):
         # move it to CPU if it's on the GPU
-        Iestimate = gpuUtils.asNumpyArray(Iestimate)
+        Iestimate = np.asarray(Iestimate)
 
         if self.firstrun:
 
@@ -272,7 +271,7 @@ class DiffractionDataPlot(object):
         # self.im_Iestimated.set_
 
     def updateImeasured(self, Imeasured, cmap="gray", **kwargs):
-        Imeasured = gpuUtils.asNumpyArray(Imeasured)
+        Imeasured = np.asarray(Imeasured)
         if self.firstrun:
             self.im_Imeasured: AxesImage = self.ax_Imeasured.imshow(
                 np.log10(np.squeeze(Imeasured + 1)), cmap=cmap, interpolation=None

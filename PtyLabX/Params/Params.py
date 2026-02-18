@@ -1,12 +1,11 @@
 import logging
 
+import jax
 import numpy as np
-
-from PtyLabX.utils.gpuUtils import check_gpu_availability
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("GPU")
+logger = logging.getLogger("JAX")
 
 
 class Params(object):
@@ -48,9 +47,11 @@ class Params(object):
         self.adaptiveMomentumAcceleration = False  # default False, it is turned on in the individual Engines that use momentum
 
         ## Specific reconstruction settings that are the same for all Engines
-        self._gpuSwitch = check_gpu_availability(verbose=True)
-        # This only makes sense on a GPU, not there yet
-        self.saveMemory = False
+        # Report JAX backend at initialization
+        backend = jax.default_backend()
+        logger.info("JAX backend: %s", backend)
+        self.gpuFlag = 1 if backend == "gpu" else 0
+
         self.probeUpdateStart = 1
         self.objectUpdateStart = 1
         self.positionOrder = "random"  # 'random' or 'sequential' or 'NA'
@@ -159,28 +160,5 @@ class Params(object):
         # SHG stuff
         self.SHG_probe = False
 
-    @property
-    def gpuSwitch(self):
-        """Get the GPU switch state."""
-        return self._gpuSwitch
-
-    @gpuSwitch.setter
-    def gpuSwitch(self, value: bool):
-        """Set the GPU switch state with appropriate checks."""
-        if value:
-            if check_gpu_availability():
-                # if gpuSwitch set to True and GPU is available, either nothing or
-                # set again to True if False
-                self._gpuSwitch = value
-            else:
-                msg = "cuda/cupy unavailable or incompatible, cannot set `self.gpuSwitch = True`"
-                raise AttributeError(msg)
-        else:
-            if check_gpu_availability():
-                logger.warning(
-                    "Disabling GPU switch. If this is unwanted, please set `self.gpuSwitch = True`"
-                )
-            else:
-                # gpuSwitch is already False and GPU is not available, nothing to do
-                pass
-            self._gpuSwitch = value
+        # OPRP
+        self.OPRP = False

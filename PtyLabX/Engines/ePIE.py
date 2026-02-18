@@ -1,13 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-try:
-    import cupy as cp
-except ImportError:
-    # print("Cupy not available, will not be able to run GPU based computation")
-    # Still define the name, we'll take care of it later but in this way it's still possible
-    # to see that gPIE exists for example.
-    cp = None
+import jax.numpy as jnp
 
 import logging
 import sys
@@ -21,7 +15,6 @@ from PtyLabX.Params.Params import Params
 
 # PtyLab imports
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.gpuUtils import getArrayModule
 from PtyLabX.utils.utils import fft2c, ifft2c
 
 
@@ -72,55 +65,45 @@ class ePIE(BaseEngine):
                 )
             for positionLoop, positionIndex in enumerate(self.positionIndices):
                 # get object patch
-                with cp.cuda.Stream(non_blocking=True) as stream:
-                    if self.params.OPRP:
-                        self.reconstruction.probe = (
-                            self.reconstruction.probe_storage.get(positionIndex)
-                        )
-                    row, col = self.reconstruction.positions[positionIndex]
-                    sy = slice(row, row + self.reconstruction.Np)
-                    sx = slice(col, col + self.reconstruction.Np)
-                    # note that object patch has size of probe array
-                    objectPatch = self.reconstruction.object[..., sy, sx].copy()
-
-                    # make exit surface wave
-                    self.reconstruction.esw = objectPatch * self.reconstruction.probe
-
-                    # propagate to camera, intensityProjection, propagate back to object
-                    self.intensityProjection(positionIndex)
-
-                    # difference term
-                    DELTA = self.reconstruction.eswUpdate - self.reconstruction.esw
-
-                    # object update
-                    self.reconstruction.object[..., sy, sx] = self.objectPatchUpdate(
-                        objectPatch, DELTA
+                if self.params.OPRP:
+                    self.reconstruction.probe = (
+                        self.reconstruction.probe_storage.get(positionIndex)
                     )
+                row, col = self.reconstruction.positions[positionIndex]
+                sy = slice(row, row + self.reconstruction.Np)
+                sx = slice(col, col + self.reconstruction.Np)
+                # note that object patch has size of probe array
+                objectPatch = self.reconstruction.object[..., sy, sx].copy()
 
-                    # probe update
-                    self.reconstruction.probe = self.probeUpdate(objectPatch, DELTA)
-                    if self.params.OPRP:
-                        self.reconstruction.probe_storage.push(
-                            self.reconstruction.probe,
-                            positionIndex,
-                            self.experimentalData.ptychogram.shape[0],
-                        )
-                    stream.synchronize()
-                    yield loop, positionLoop
+                # make exit surface wave
+                self.reconstruction.esw = objectPatch * self.reconstruction.probe
+
+                # propagate to camera, intensityProjection, propagate back to object
+                self.intensityProjection(positionIndex)
+
+                # difference term
+                DELTA = self.reconstruction.eswUpdate - self.reconstruction.esw
+
+                # object update
+                self.reconstruction.object = self.reconstruction.object.at[..., sy, sx].set(
+                    self.objectPatchUpdate(objectPatch, DELTA)
+                )
+
+                # probe update
+                self.reconstruction.probe = self.probeUpdate(objectPatch, DELTA)
+                if self.params.OPRP:
+                    self.reconstruction.probe_storage.push(
+                        self.reconstruction.probe,
+                        positionIndex,
+                        self.experimentalData.ptychogram.shape[0],
+                    )
+                yield loop, positionLoop
 
             # get error metric
             self.getErrorMetrics()
 
             # apply Constraints
             self.applyConstraints(loop)
-
-            # show reconstruction
-            # self.showReconstruction(loop)
-
-        if self.params.gpuFlag:
-            self.logger.info("switch to cpu")
-            self._move_data_to_cpu()
-            self.params.gpuFlag = 0
 
     def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
         """
@@ -129,13 +112,10 @@ class ePIE(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
-
-        frac = self.reconstruction.probe.conj() / xp.max(
-            xp.sum(xp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
+        frac = self.reconstruction.probe.conj() / jnp.max(
+            jnp.sum(jnp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
         )
-        return objectPatch + self.betaObject * xp.sum(
+        return objectPatch + self.betaObject * jnp.sum(
             frac * DELTA, axis=(0, 2, 3), keepdims=True
         )
 
@@ -146,12 +126,10 @@ class ePIE(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
-        frac = objectPatch.conj() / xp.max(
-            xp.sum(xp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3))
+        frac = objectPatch.conj() / jnp.max(
+            jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3))
         )
-        r = self.reconstruction.probe + self.betaProbe * xp.sum(
+        r = self.reconstruction.probe + self.betaProbe * jnp.sum(
             frac * DELTA, axis=(0, 1, 3), keepdims=True
         )
         return r

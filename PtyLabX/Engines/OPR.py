@@ -1,13 +1,7 @@
 import numpy as np
+import jax.numpy as jnp
 from matplotlib import pyplot as plt
 
-try:
-    import cupy as cp
-except ImportError:
-    # print('Cupy not available, will not be able to run GPU based computation')
-    # Still define the name, we'll take care of it later but in this way it's still possible
-    # to see that gPIE exists for example.
-    cp = None
 
 import logging
 import sys
@@ -22,7 +16,6 @@ from PtyLabX.Params.Params import Params
 # fracPy imports
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 from PtyLabX.utils.fsvd import rsvd
-from PtyLabX.utils.gpuUtils import asNumpyArray, getArrayModule, isGpuArray
 
 
 class OPR(BaseEngine):
@@ -63,14 +56,14 @@ class OPR(BaseEngine):
         mode_slice = self.OPR_modes
         n_subspace = self.n_subspace
 
-        self.reconstruction.probe_stack = cp.zeros(
-            (1, 1, Nmodes, 1, Np, Np, Nframes), dtype=cp.complex64
+        self.reconstruction.probe_stack = jnp.zeros(
+            (1, 1, Nmodes, 1, Np, Np, Nframes), dtype=jnp.complex64
         )
 
         for i, mode in enumerate(self.OPR_modes):
             # fill the probe-stack with the inital guess of the probes
-            self.reconstruction.probe_stack[0, 0, i, 0, :, :, :] = cp.repeat(
-                self.reconstruction.probe[0, 0, mode, 0, :, :, cp.newaxis],
+            self.reconstruction.probe_stack[0, 0, i, 0, :, :, :] = jnp.repeat(
+                self.reconstruction.probe[0, 0, mode, 0, :, :, jnp.newaxis],
                 Nframes,
                 axis=2,
             )
@@ -92,7 +85,7 @@ class OPR(BaseEngine):
                 objectPatch = self.reconstruction.object[..., sy, sx].copy()
 
                 # Get dim reduced probe
-                self.reconstruction.probe[:, :, mode_slice, :, :, :] = (
+                self.reconstruction.probe = self.reconstruction.probe.at[:, :, mode_slice, :, :, :].set(
                     self.reconstruction.probe_stack[..., positionIndex]
                 )
 
@@ -106,13 +99,13 @@ class OPR(BaseEngine):
                 DELTA = self.reconstruction.eswUpdate - self.reconstruction.esw
 
                 if loop % self.params.OPR_tv_freq == 0 and self.params.OPR_tv:
-                    self.reconstruction.object[..., sy, sx] = self.objectPatchUpdate_TV(
-                        objectPatch, DELTA
+                    self.reconstruction.object = self.reconstruction.object.at[..., sy, sx].set(
+                        self.objectPatchUpdate_TV(objectPatch, DELTA)
                     )
                 else:
                     # object update
-                    self.reconstruction.object[..., sy, sx] = self.objectPatchUpdate(
-                        objectPatch, DELTA
+                    self.reconstruction.object = self.reconstruction.object.at[..., sy, sx].set(
+                        self.objectPatchUpdate(objectPatch, DELTA)
                     )
 
                 # probe update
@@ -121,7 +114,7 @@ class OPR(BaseEngine):
                 )
 
                 # save first, dominant probe mode
-                self.reconstruction.probe_stack[..., positionIndex] = cp.copy(
+                self.reconstruction.probe_stack[..., positionIndex] = jnp.copy(
                     self.reconstruction.probe[:, :, mode_slice, :, :, :]
                 )
 
@@ -141,10 +134,6 @@ class OPR(BaseEngine):
             # show reconstruction
             self.showReconstruction(loop)
 
-        if self.params.gpuFlag:
-            self.logger.info("switch to cpu")
-            self._move_data_to_cpu()
-            self.params.gpuFlag = 0
 
     def orthogonalizeIncoherentModes(self):
         """
@@ -172,28 +161,15 @@ class OPR(BaseEngine):
         """
         arr_start = arr[:-1]
         arr_end = arr[1:]
-        arr_end = cp.append(arr_end, 0)
-        arr_start = cp.append(0, arr_start)
-        divider = cp.ones_like(arr) * 3
+        arr_end = jnp.append(arr_end, 0)
+        arr_start = jnp.append(0, arr_start)
+        divider = jnp.ones_like(arr) * 3
         divider[0] = 2
         divider[-1] = 2
         return (arr + arr_end + arr_start) / divider
 
     def svd(self, P):
-        if isGpuArray(P):
-            try:
-                return cp.linalg.svd(P, full_matrices=False)
-            except:
-                print(
-                    "Something is wrong with SVD on cuda. Probably an installation error"
-                )
-                raise
-        A, v, At = np.linalg.svd(asNumpyArray(P), full_matrices=False)
-        if isGpuArray(P):
-            A = cp.array(A)
-            v = cp.array(v)
-            At = cp.array(At)
-        return A, v, At
+        return jnp.linalg.svd(P, full_matrices=False)
 
     def rsvd(self, P, n_dim):
         return rsvd(P, n_dim)
@@ -219,7 +195,7 @@ class OPR(BaseEngine):
                     probe_stack[:, :, i, :, :, :].reshape(n * n, nFrames), n_dim
                 )
             elif self.params.OPR_tsvd_type == "numpy":
-                U, s, Vh = cp.linalg.svd(
+                U, s, Vh = jnp.linalg.svd(
                     probe_stack[:, :, i, :, :, :].reshape(n * n, nFrames),
                     full_matrices=False,
                 )
@@ -227,13 +203,13 @@ class OPR(BaseEngine):
 
             if self.params.OPR_neighbor_constraint:
                 # Calculate the average of neigboring singular values
-                content = cp.dot(cp.diag(s), Vh)
+                content = jnp.dot(jnp.diag(s), Vh)
                 for j in range(n_dim):
                     content[j] = self.average(content[j])
 
                 probe_stack[:, :, i, :, :, :] = self.alpha * probe_stack[
                     :, :, i, :, :, :
-                ] + (1 - self.alpha) * cp.dot(U, content).reshape(n, n, nFrames)
+                ] + (1 - self.alpha) * jnp.dot(U, content).reshape(n, n, nFrames)
             else:
                 update = (U @ (s[:, None] * Vh)).reshape(n, n, nFrames)
                 probe_stack[:, :, i, :, :, :] *= self.alpha
@@ -248,13 +224,11 @@ class OPR(BaseEngine):
         :param DELTA:
         :return: updated object patch
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
 
-        frac = self.reconstruction.probe.conj() / xp.max(
-            xp.sum(xp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
+        frac = self.reconstruction.probe.conj() / jnp.max(
+            jnp.sum(jnp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
         )
-        return objectPatch + self.betaObject * xp.sum(
+        return objectPatch + self.betaObject * jnp.sum(
             frac * DELTA, axis=(0, 2, 3), keepdims=True
         )
 
@@ -267,13 +241,11 @@ class OPR(BaseEngine):
         :param DELTA:
         :return: updated probe
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
         frac = objectPatch.conj() / (
-            xp.max(xp.sum(xp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3))) + gimmel
+            jnp.max(jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3))) + gimmel
         )
         frac = frac * weight
-        r = self.reconstruction.probe + self.betaProbe * xp.sum(
+        r = self.reconstruction.probe + self.betaProbe * jnp.sum(
             frac * DELTA, axis=(0, 1, 3), keepdims=True
         )
         return r

@@ -1,13 +1,7 @@
 import numpy as np
+import jax.numpy as jnp
 from matplotlib import pyplot as plt
 
-try:
-    import cupy as cp
-except ImportError:
-    # print("Cupy not available, will not be able to run GPU based computation")
-    # Still define the name, we'll take care of it later but in this way it's still possible
-    # to see that gPIE exists for example.
-    cp = None
 
 import logging
 import sys
@@ -21,7 +15,6 @@ from PtyLabX.Params.Params import Params
 
 # PtyLab imports
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.gpuUtils import asNumpyArray, getArrayModule
 from PtyLabX.utils.utils import fft2c, ifft2c
 
 
@@ -146,16 +139,16 @@ class mPIE_mw(BaseEngine):
 
                     average_object_path = False
                     if average_object_path:
-                        average_object_patch = cp.average(object_patch, axis=0)
+                        average_object_patch = jnp.average(object_patch, axis=0)
                         for ij in range(objectPatch.shape[0]):
                             object_patch[ij] = average_object_patch
 
                 if self.keepPatches:
-                    self.patches[positionIndex, ..., sy, sx] = asNumpyArray(
+                    self.patches[positionIndex, ..., sy, sx] = np.asarray(
                         abs(object_patch) ** 2
                     )
                 else:
-                    self.reconstruction.object[..., sy, sx] = object_patch
+                    self.reconstruction.object = self.reconstruction.object.at[..., sy, sx].set(object_patch)
 
                 # probe update
                 weight = 1
@@ -181,9 +174,9 @@ class mPIE_mw(BaseEngine):
             average_obj = False
             if average_obj:
                 # average object
-                average_object = cp.average(self.reconstruction.object, axis=0)
+                average_object = jnp.average(self.reconstruction.object, axis=0)
                 for ij in range(self.reconstruction.object.shape[0]):
-                    self.reconstruction.object[ij] = average_object
+                    self.reconstruction.object = self.reconstruction.object.at[ij].set(average_object)
 
             # plt.figure()
             # plt.imshow(np.abs(average_object.get()).squeeze())
@@ -202,10 +195,6 @@ class mPIE_mw(BaseEngine):
             if callable(vis_after_each_iteration):
                 vis_after_each_iteration(loop, self.reconstruction)
 
-        if self.params.gpuFlag:
-            self.logger.info("switch to cpu")
-            self._move_data_to_cpu()
-            self.params.gpuFlag = 0
 
             # todo clearMemory implementation
 
@@ -246,10 +235,8 @@ class mPIE_mw(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
-        absP2 = xp.abs(self.reconstruction.probe) ** 2
-        Pmax = xp.max(xp.sum(absP2, axis=(0, 1, 2, 3)), axis=(-1, -2))
+        absP2 = jnp.abs(self.reconstruction.probe) ** 2
+        Pmax = jnp.max(jnp.sum(absP2, axis=(0, 1, 2, 3)), axis=(-1, -2))
         if self.experimentalData.operationMode == "FPM":
             frac = (
                 abs(self.reconstruction.probe)
@@ -262,7 +249,7 @@ class mPIE_mw(BaseEngine):
                 self.alphaObject * Pmax + (1 - self.alphaObject) * absP2
             )
 
-        return objectPatch + self.betaObject * xp.sum(
+        return objectPatch + self.betaObject * jnp.sum(
             frac * DELTA, axis=2, keepdims=True
         )
 
@@ -273,14 +260,12 @@ class mPIE_mw(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
-        absO2 = xp.abs(objectPatch) ** 2
-        Omax = xp.max(xp.sum(absO2, axis=(0, 1, 2, 3)), axis=(-1, -2))
+        absO2 = jnp.abs(objectPatch) ** 2
+        Omax = jnp.max(jnp.sum(absO2, axis=(0, 1, 2, 3)), axis=(-1, -2))
         frac = objectPatch.conj() / (
             self.alphaProbe * Omax + (1 - self.alphaProbe) * absO2
         )
-        r = self.reconstruction.probe + weight * self.betaProbe * xp.sum(
+        r = self.reconstruction.probe + weight * self.betaProbe * jnp.sum(
             frac * DELTA, axis=1, keepdims=True
         )
         return r

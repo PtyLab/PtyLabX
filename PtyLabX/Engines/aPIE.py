@@ -7,13 +7,7 @@ from scipy.interpolate import interp2d
 
 from PtyLabX.utils.visualisation import hsvplot
 
-try:
-    import cupy as cp
-except ImportError:
-    # print("Cupy not available, will not be able to run GPU based computation")
-    # Still define the name, we'll take care of it later but in this way it's still possible
-    # to see that gPIE exists for example.
-    cp = None
+import jax.numpy as jnp
 
 import logging
 import sys
@@ -26,7 +20,6 @@ from PtyLabX.Params.Params import Params
 
 # PtyLab imports
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.gpuUtils import asNumpyArray, getArrayModule
 
 
 class aPIE(BaseEngine):
@@ -76,7 +69,6 @@ class aPIE(BaseEngine):
     def doReconstruction(self):
         self._prepareReconstruction()
 
-        xp = getArrayModule(self.reconstruction.object)
 
         # linear search
         thetaSearchRadiusList = np.linspace(
@@ -90,7 +82,7 @@ class aPIE(BaseEngine):
             # save theta search history
             self.reconstruction.thetaHistory = np.append(
                 self.reconstruction.thetaHistory,
-                asNumpyArray(self.reconstruction.theta),
+                np.asarray(self.reconstruction.theta),
             )
 
             # select two angles (todo check if three angles behave better)
@@ -110,11 +102,11 @@ class aPIE(BaseEngine):
             objectTemp = self.reconstruction.object.copy()
 
             # probe and object buffer (todo maybe there's more elegant way )
-            probeBuffer = xp.zeros_like(
+            probeBuffer = jnp.zeros_like(
                 probeTemp
             )  # shape=(np.array([probeTemp, probeTemp])).shape)
             probeBuffer = [probeBuffer, probeBuffer]
-            objectBuffer = xp.zeros_like(
+            objectBuffer = jnp.zeros_like(
                 objectTemp
             )  # , shape=(np.array([objectTemp, objectTemp])).shape)  # for polychromatic case this will need to be multimode
             objectBuffer = [objectBuffer, objectBuffer]
@@ -143,7 +135,7 @@ class aPIE(BaseEngine):
                     temp2 = abs(f(Xq[0], self.reconstruction.xd))
                     temp2 = np.nan_to_num(temp2)
                     temp2[temp2 < 0] = 0
-                    self.experimentalData.ptychogram[l] = xp.array(temp2)
+                    self.experimentalData.ptychogram[l] = temp2
 
                 # renormalization(for energy conservation) # todo not layer by layer?
                 self.experimentalData.ptychogram = (
@@ -163,14 +155,13 @@ class aPIE(BaseEngine):
                 self.experimentalData.W = abs(fw(Xq[0], self.reconstruction.xd))
                 self.experimentalData.W = np.nan_to_num(self.experimentalData.W)
                 self.experimentalData.W[self.experimentalData.W == 0] = 1e-3
-                self.experimentalData.W = xp.array(self.experimentalData.W)
 
                 # todo check if it is right
                 if self.params.fftshiftSwitch:
-                    self.experimentalData.ptychogram = xp.fft.ifftshift(
+                    self.experimentalData.ptychogram = jnp.fft.ifftshift(
                         self.experimentalData.ptychogram, axes=(-1, -2)
                     )
-                    self.experimentalData.W = xp.fft.ifftshift(
+                    self.experimentalData.W = jnp.fft.ifftshift(
                         self.experimentalData.W, axes=(-1, -2)
                     )
 
@@ -196,8 +187,8 @@ class aPIE(BaseEngine):
                     DELTA = self.reconstruction.eswUpdate - self.reconstruction.esw
 
                     # object update
-                    self.reconstruction.object[..., sy, sx] = self.objectPatchUpdate(
-                        objectPatch, DELTA
+                    self.reconstruction.object = self.reconstruction.object.at[..., sy, sx].set(
+                        self.objectPatchUpdate(objectPatch, DELTA)
                     )
 
                     # probe update
@@ -280,10 +271,6 @@ class aPIE(BaseEngine):
 
             self.showReconstruction(loop)
 
-        if self.params.gpuFlag:
-            self.logger.info("switch to cpu")
-            self._move_data_to_cpu()
-            self.params.gpuFlag = 0
 
         # self.thetaSearchRadiusMax = thetaSearchRadiusList[loop]
 
@@ -294,13 +281,11 @@ class aPIE(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
 
-        frac = self.reconstruction.probe.conj() / xp.max(
-            xp.sum(xp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
+        frac = self.reconstruction.probe.conj() / jnp.max(
+            jnp.sum(jnp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
         )
-        return objectPatch + self.betaObject * xp.sum(
+        return objectPatch + self.betaObject * jnp.sum(
             frac * DELTA, axis=(0, 2, 3), keepdims=True
         )
 
@@ -311,12 +296,10 @@ class aPIE(BaseEngine):
         :param DELTA:
         :return:
         """
-        # find out which array module to use, numpy or cupy (or other...)
-        xp = getArrayModule(objectPatch)
-        frac = objectPatch.conj() / xp.max(
-            xp.sum(xp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3))
+        frac = objectPatch.conj() / jnp.max(
+            jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3))
         )
-        r = self.reconstruction.probe + self.betaProbe * xp.sum(
+        r = self.reconstruction.probe + self.betaProbe * jnp.sum(
             frac * DELTA, axis=(0, 1, 3), keepdims=True
         )
         return r

@@ -9,13 +9,7 @@ import h5py
 from PtyLabX.Regularizers import metric_at, TV
 
 from PtyLabX.utils.initializationFunctions import initialProbeOrObject
-from PtyLabX.utils.gpuUtils import (
-    transfer_fields_to_cpu,
-    transfer_fields_to_gpu,
-    getArrayModule,
-)
 from PtyLabX import Params
-from PtyLabX.utils.gpuUtils import asNumpyArray
 
 
 def calculate_pixel_positions(encoder_corrected, dxo, No, Np, asint):
@@ -79,21 +73,7 @@ class Reconstruction(object):
         self.computeParameters()
         self.initializeSettings()
 
-        # list of the fields that have to be transfered back and forth from the GPU
-        self.possible_GPU_fields = [
-            "probe",
-            "object",
-            "probeBuffer",
-            "objectBuffer",
-            "probeMomentum",
-            "objectMomentum",
-            "detectorError",
-            "background",
-            "purityProbe",
-            "purityObject",
-            "reference",
-            "intensity_mask"
-        ]
+        pass
 
     # @property
     # def probe(self):
@@ -571,7 +551,7 @@ class Reconstruction(object):
                 )
         elif type == "probe_stack":
             hf = h5py.File(fileName + '_probe_stack.hdf5', 'w')
-            hf.create_dataset('probe_stack', data=self.probe_stack.get(), dtype='complex64')
+            hf.create_dataset('probe_stack', data=np.asarray(self.probe_stack), dtype='complex64')
         print("The reconstruction results (%s) have been saved" % type)
 
     # detector coordinates
@@ -722,16 +702,6 @@ class Reconstruction(object):
         # self.Dof2 = 5.2 *self.dxp**2 /self.wavelength
         return DoF
 
-    def _move_data_to_cpu(self):
-        """
-        Move all the required fields to the CPU
-        :return:
-        """
-        transfer_fields_to_cpu(self, self.possible_GPU_fields, self.logger)
-
-    def _move_data_to_gpu(self):
-        transfer_fields_to_gpu(self, self.possible_GPU_fields, self.logger)
-
     def describe_reconstruction(self):
         minmax_tv = ''
         try:
@@ -863,7 +833,7 @@ class Reconstruction(object):
         phexp = OEs.sum((-2,-1), keepdims=True).conj()
         phexp = phexp / abs(phexp)
         OEs *= phexp
-        return merit[nplanes//2] / asNumpyArray(abs(self.object[..., sy, sx]).mean()), np.hstack(OEs), (scores, self.zo)
+        return merit[nplanes//2] / float(np.asarray(abs(self.object[..., sy, sx]).mean())), np.hstack(OEs), (scores, self.zo)
 
     def reset_TV_autofocus(self):
         """Reset the settings of TV autofocus. Can be useful to reset the memory effect if the steps are getting really large."""
