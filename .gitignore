@@ -4,7 +4,7 @@
 *__pycache__*
 *.vscode
 *.venv
+ptylabx-venv
 *.hdf5
-# uv.lock
 .DS_Store
 .claude

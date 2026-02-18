@@ -2,7 +2,7 @@
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)
 
-This is the experimental clone of [PtyLab.py](https://github.com/PtyLab/PtyLab.py) that is refactored to have a JAX backend. This is mainly done for adding new models flexibly and use the automatic differentiation feature.
+This is an experimental clone of [PtyLab.py](https://github.com/PtyLab/PtyLab.py) that is refactored to have a JAX backend. This is mainly done for adding new models flexibly for using AD and other cool features from JAX for speed-ups. 
 
 PtyLab is an inverse modeling toolbox for Conventional (CP) and Fourier (FP) ptychography in a unified framework. For more information please check the [paper](https://opg.optica.org/oe/fulltext.cfm?uri=oe-31-9-13763&id=529026).
 
@@ -11,8 +11,6 @@ PtyLab is an inverse modeling toolbox for Conventional (CP) and Fourier (FP) pty
 To explore use cases of PtyLab, check the [example_scripts](example_scripts) and [jupyter_tutorials](jupyter_tutorials) directories. However, please install the package first as described in the below sections.
 
 ## Installation
-
-This project uses [uv](https://docs.astral.sh/uv/) for package management.
 
 ### From source (pip)
 
@@ -28,7 +26,9 @@ pip install "ptylabx[cuda12]@git+https://github.com/ShantanuKodgirwar/PtyLabX.gi
 
 ### Development
 
-Clone the repository and install with uv in a virtual environment:
+This project uses [uv](https://docs.astral.sh/uv/) for package management.
+
+Follow the below steps for cloning, install with uv in a dedicated virtual environment:
 
 ```bash
 git clone https://github.com/ShantanuKodgirwar/PtyLabX.git
