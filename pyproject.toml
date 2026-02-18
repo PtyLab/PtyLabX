@@ -20,6 +20,7 @@ dependencies = [
     "bokeh>=3.2",
     "jax>=0.4",
     "PyQt5>=5.15",
+    "optax>=0.2.7",
 ]
 
 [project.optional-dependencies]
