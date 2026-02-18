@@ -1,6 +1,5 @@
 import numpy as np
 import jax.numpy as jnp
-from matplotlib import pyplot as plt
 
 
 import logging
@@ -14,8 +13,8 @@ from PtyLabX.Monitor.Monitor import Monitor
 from PtyLabX.Params.Params import Params
 
 # PtyLab imports
+from PtyLabX.Engines._jit_kernels import momentum_step, mpie_object_update
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.utils import fft2c, ifft2c
 
 
 class multiPIE(BaseEngine):
@@ -112,63 +111,35 @@ class multiPIE(BaseEngine):
 
 
     def objectMomentumUpdate(self):
-        """
-        momentum update object, save updated objectMomentum and objectBuffer.
-        :return:
-        """
-        gradient = self.reconstruction.objectBuffer - self.reconstruction.object
-        self.reconstruction.objectMomentum = (
-            gradient + self.stepM * self.reconstruction.objectMomentum
+        self.reconstruction.object, self.reconstruction.objectMomentum, self.reconstruction.objectBuffer = (
+            momentum_step(
+                self.reconstruction.object,
+                self.reconstruction.objectBuffer,
+                self.reconstruction.objectMomentum,
+                self.stepM,
+                self.betaM,
+            )
         )
-        self.reconstruction.object = (
-            self.reconstruction.object - self.betaM * self.reconstruction.objectMomentum
-        )
-        self.reconstruction.objectBuffer = self.reconstruction.object.copy()
 
     def probeMomentumUpdate(self):
-        """
-        momentum update probe, save updated probeMomentum and probeBuffer.
-        :return:
-        """
-        gradient = self.reconstruction.probeBuffer - self.reconstruction.probe
-        self.reconstruction.probeMomentum = (
-            gradient + self.stepM * self.reconstruction.probeMomentum
+        self.reconstruction.probe, self.reconstruction.probeMomentum, self.reconstruction.probeBuffer = (
+            momentum_step(
+                self.reconstruction.probe,
+                self.reconstruction.probeBuffer,
+                self.reconstruction.probeMomentum,
+                self.stepM,
+                self.betaM,
+            )
         )
-        self.reconstruction.probe = (
-            self.reconstruction.probe - self.betaM * self.reconstruction.probeMomentum
-        )
-        self.reconstruction.probeBuffer = self.reconstruction.probe.copy()
 
     def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
-        """
-        Todo add docstring
-        :param objectPatch:
-        :param DELTA:
-        :return:
-        """
-        # absP2 = jnp.abs(self.reconstruction.probe[0]) ** 2
-        # Pmax = jnp.max(jnp.sum(absP2, axis=(0, 1, 2)), axis=(-1, -2))
-        # if self.experimentalData.operationMode == 'FPM':
-        #     frac = abs(self.reconstruction.probe) / Pmax * \
-        #            self.reconstruction.probe[0].conj() / (self.alphaObject * Pmax + (1 - self.alphaObject) * absP2)
-        # else:
-        #     frac = self.reconstruction.probe[0].conj() / (self.alphaObject * Pmax + (1 - self.alphaObject) * absP2)
-        # return objectPatch + self.betaObject * frac * DELTA
-        absP2 = jnp.abs(self.reconstruction.probe) ** 2
-        Pmax = jnp.max(jnp.sum(absP2, axis=(0, 1, 2, 3)), axis=(-1, -2))
-        if self.experimentalData.operationMode == "FPM":
-            frac = (
-                abs(self.reconstruction.probe)
-                / Pmax
-                * self.reconstruction.probe.conj()
-                / (self.alphaObject * Pmax + (1 - self.alphaObject) * absP2)
-            )
-        else:
-            frac = self.reconstruction.probe.conj() / (
-                self.alphaObject * Pmax + (1 - self.alphaObject) * absP2
-            )
-        return objectPatch + self.betaObject * jnp.sum(
-            frac * DELTA, axis=2, keepdims=True
+        return mpie_object_update(
+            objectPatch,
+            self.reconstruction.probe,
+            DELTA,
+            self.betaObject,
+            self.alphaObject,
+            fpm_mode=(self.experimentalData.operationMode == "FPM"),
         )
 
     def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):

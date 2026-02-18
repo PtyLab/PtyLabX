@@ -1,7 +1,11 @@
+import functools
+
+import jax
 import jax.numpy as jnp
 import numpy as np
 
 
+@jax.jit
 def complexexp(angle):
     """
     Faster way of implementing np.exp(1j*something_unitary)

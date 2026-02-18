@@ -1,3 +1,4 @@
+import functools
 import logging
 
 try:  # pre 3.10
@@ -7,6 +8,7 @@ except ImportError:
 
 from functools import lru_cache
 
+import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -19,6 +21,12 @@ from PtyLabX.Operators.off_axis_sas import (
 )
 from PtyLabX.Operators.propagator_utils import complexexp
 from PtyLabX.utils.utils import circ, fft2c, ifft2c
+
+
+@functools.partial(jax.jit, static_argnums=(2,))
+def _asp_propagate(u, transfer_function, fftshiftSwitch):
+    """JIT-compiled core of ASP propagation: FFT, multiply by transfer function, IFFT."""
+    return ifft2c(fft2c(u, fftshiftSwitch=fftshiftSwitch) * transfer_function, fftshiftSwitch=fftshiftSwitch)
 
 # how many kernels are kept in memory for every type of propagator? Higher can be faster but comes
 # at the expense of (GPU) memory.
@@ -203,10 +211,7 @@ def propagate_ASP(
         transfer_function = jnp.fft.ifftshift(transfer_function, axes=(-2, -1))
     if inverse:
         transfer_function = transfer_function.conj()
-    result = ifft2c(
-        fft2c(fields, fftshiftSwitch=fftflag) * transfer_function,
-        fftshiftSwitch=fftflag,
-    )
+    result = _asp_propagate(fields, transfer_function, fftflag)
     return reconstruction.esw, result
 
 
@@ -604,12 +609,15 @@ def aspw(u, z, wavelength, L, bandlimit=True, is_FT=True):
         float(L),
         bandlimit=bandlimit,
     )
-    if is_FT:
-        U = u
-    else:
-        U = fft2c(u)
-    u_prop = ifft2c(U * phase_exp)
+    u_prop = _aspw_propagate_core(u, phase_exp, is_FT)
     return u_prop, phase_exp
+
+
+@functools.partial(jax.jit, static_argnums=(2,))
+def _aspw_propagate_core(u, phase_exp, is_FT):
+    """JIT-compiled core of aspw: FFT (if needed), multiply, IFFT."""
+    U = u if is_FT else fft2c(u)
+    return ifft2c(U * phase_exp)
 
 
 def scaledASP(u, z, wavelength, dx, dq, bandlimit=True, exactSolution=False):

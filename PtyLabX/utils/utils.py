@@ -1,7 +1,11 @@
-import numpy as np
+import functools
+
+import jax
 import jax.numpy as jnp
+import numpy as np
 
 
+@functools.partial(jax.jit, static_argnums=(1,))
 def fft2c(field, fftshiftSwitch=False, *args, **kwargs):
     """
     performs 2 - dimensional unitary Fourier transformation, where energy is preserved sum( abs(g)**2 ) == sum( abs(fft2c(g))**2 )
@@ -19,6 +23,7 @@ def fft2c(field, fftshiftSwitch=False, *args, **kwargs):
         )
 
 
+@functools.partial(jax.jit, static_argnums=(1,))
 def ifft2c(field, fftshiftSwitch=False):
     """
     performs 2 - dimensional inverse Fourier transformation, where energy is preserved sum( abs(G)**2 ) == sum( abs(fft2c(g))**2 )
@@ -36,6 +41,7 @@ def ifft2c(field, fftshiftSwitch=False):
         )
 
 
+@jax.jit
 def circ(x, y, D):
     """
     generate a binary array containing a circle on a 2D grid
@@ -48,6 +54,7 @@ def circ(x, y, D):
     return circle
 
 
+@jax.jit
 def rect(arr, threshold=0.5):
     """
     generate a binary array containing a rectangle on a 2D grid
@@ -59,6 +66,7 @@ def rect(arr, threshold=0.5):
     return arr < threshold
 
 
+@jax.jit
 def posit(x):
     """
     returns 0 when x negative
@@ -68,23 +76,23 @@ def posit(x):
     return r
 
 
+@jax.jit
 def fraccircshift(A, shiftsize):
     """
     fraccircshift expands jnp.roll to fractional shifts values, using linear interpolation.
     :param A: ndarray
     :param shiftsize: shift size in each dimension of A, len(shiftsize)==A.ndim.
     """
-    integer = jnp.floor(shiftsize).astype(int)  # integer portions of shiftsize
+    integer = jnp.floor(shiftsize).astype(int)
     fraction = shiftsize - integer
-    dim = len(shiftsize)
-    # the dimensions are treated one after another
-    for n in range(dim):
-        intn = int(integer[n])
-        fran = fraction[n]
-        shift1 = intn
-        shift2 = intn + 1
-        # linear interpolation
-        A = (1 - fran) * jnp.roll(A, shift1, axis=n) + fran * jnp.roll(A, shift2, axis=n)
+
+    def _shift_along_axis(A, axis, int_shift, frac_shift):
+        return (1 - frac_shift) * jnp.roll(A, int_shift, axis=axis) + frac_shift * jnp.roll(
+            A, int_shift + 1, axis=axis
+        )
+
+    A = _shift_along_axis(A, 0, integer[0], fraction[0])
+    A = _shift_along_axis(A, 1, integer[1], fraction[1])
     return A
 
 
@@ -116,6 +124,7 @@ def gaussian2D(n, std):
     return h
 
 
+@functools.partial(jax.jit, static_argnames=("method",))
 def orthogonalizeModes(p, method=None):
     """
     Imposes orthogonality through singular value decomposition

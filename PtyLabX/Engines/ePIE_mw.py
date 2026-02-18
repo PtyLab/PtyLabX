@@ -1,6 +1,5 @@
 import numpy as np
 import jax.numpy as jnp
-from matplotlib import pyplot as plt
 
 
 import logging
@@ -14,8 +13,8 @@ from PtyLabX.Monitor.Monitor import Monitor
 from PtyLabX.Params.Params import Params
 
 # fracPy imports
+from PtyLabX.Engines._jit_kernels import epie_object_update
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.utils import fft2c, ifft2c
 
 
 class ePIE_mw(BaseEngine):
@@ -90,19 +89,7 @@ class ePIE_mw(BaseEngine):
 
 
     def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
-        """
-        Todo add docstring
-        :param objectPatch:
-        :param DELTA:
-        :return:
-        """
-
-        frac = self.reconstruction.probe.conj() / jnp.max(
-            jnp.sum(jnp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
-        )
-        return objectPatch + self.betaObject * jnp.sum(
-            frac * DELTA, axis=(0, 2, 3), keepdims=True
-        )
+        return epie_object_update(objectPatch, self.reconstruction.probe, DELTA, self.betaObject)
 
     def objectPatchUpdate_TV(self, objectPatch: np.ndarray, DELTA: np.ndarray):
         """
@@ -163,7 +150,7 @@ class ePIE_mw(BaseEngine):
         :return:
         """
         # frac = objectPatch.conj() / jnp.max(jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0,1,2,3)))
-        self.reconstruction.probe += self.betaProbe * jnp.sum(
+        self.reconstruction.probe = self.reconstruction.probe + self.betaProbe * jnp.sum(
             objectPatch.conj()
             / jnp.max(jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3)))
             * DELTA,

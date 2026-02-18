@@ -15,6 +15,7 @@ from PtyLabX.Params.Params import Params
 
 # PtyLab imports
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
+from PtyLabX.Engines._jit_kernels import epie_object_update, epie_probe_update
 from PtyLabX.utils.utils import fft2c, ifft2c
 
 
@@ -106,30 +107,7 @@ class ePIE(BaseEngine):
             self.applyConstraints(loop)
 
     def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
-        """
-        Todo add docstring
-        :param objectPatch:
-        :param DELTA:
-        :return:
-        """
-        frac = self.reconstruction.probe.conj() / jnp.max(
-            jnp.sum(jnp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
-        )
-        return objectPatch + self.betaObject * jnp.sum(
-            frac * DELTA, axis=(0, 2, 3), keepdims=True
-        )
+        return epie_object_update(objectPatch, self.reconstruction.probe, DELTA, self.betaObject)
 
     def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
-        """
-        Todo add docstring
-        :param objectPatch:
-        :param DELTA:
-        :return:
-        """
-        frac = objectPatch.conj() / jnp.max(
-            jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3))
-        )
-        r = self.reconstruction.probe + self.betaProbe * jnp.sum(
-            frac * DELTA, axis=(0, 1, 3), keepdims=True
-        )
-        return r
+        return epie_probe_update(self.reconstruction.probe, objectPatch, DELTA, self.betaProbe)

@@ -1,6 +1,5 @@
 import numpy as np
 import jax.numpy as jnp
-from matplotlib import pyplot as plt
 
 # PtyLab imports
 import logging
@@ -12,8 +11,8 @@ from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
 from PtyLabX.Monitor.Monitor import Monitor
 from PtyLabX.Params.Params import Params
+from PtyLabX.Engines._jit_kernels import qnewton_object_update, qnewton_probe_update
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.utils import fft2c, ifft2c
 
 
 class mqNewton(BaseEngine):
@@ -186,7 +185,7 @@ class mqNewton(BaseEngine):
             loop + 1,
         )
 
-        self.reconstruction.object -= self.betaObject_m * update
+        self.reconstruction.object = self.reconstruction.object - self.betaObject_m * update
         self.reconstruction.objectBuffer = self.reconstruction.object.copy()
 
     def probeMomentumUpdate(self, loop):
@@ -207,30 +206,11 @@ class mqNewton(BaseEngine):
             loop + 1,
         )
 
-        self.reconstruction.probe -= self.betaProbe_m * update
+        self.reconstruction.probe = self.reconstruction.probe - self.betaProbe_m * update
         self.reconstruction.probeBuffer = self.reconstruction.probe.copy()
 
     def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
-        Pmax = jnp.max(jnp.sum(jnp.abs(self.reconstruction.probe), axis=(0, 1, 2, 3)))
-        frac = (
-            jnp.abs(self.reconstruction.probe)
-            / Pmax
-            * self.reconstruction.probe.conj()
-            / (jnp.abs(self.reconstruction.probe) ** 2 + self.regObject)
-        )
-        return objectPatch + self.betaObject * jnp.sum(
-            frac * DELTA, axis=(0, 2, 3), keepdims=True
-        )
+        return qnewton_object_update(objectPatch, self.reconstruction.probe, DELTA, self.betaObject, self.regObject)
 
     def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
-        Omax = jnp.max(jnp.sum(jnp.abs(self.reconstruction.object), axis=(0, 1, 2, 3)))
-        frac = (
-            jnp.abs(objectPatch)
-            / Omax
-            * objectPatch.conj()
-            / (jnp.abs(objectPatch) ** 2 + self.regProbe)
-        )
-        r = self.reconstruction.probe + self.betaProbe * jnp.sum(
-            frac * DELTA, axis=(0, 1, 3), keepdims=True
-        )
-        return r
+        return qnewton_probe_update(self.reconstruction.probe, objectPatch, DELTA, self.betaProbe, self.regProbe)

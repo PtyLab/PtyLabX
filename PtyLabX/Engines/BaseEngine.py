@@ -15,6 +15,7 @@ from PtyLabX.Reconstruction.Reconstruction import (
 )
 from PtyLabX.Regularizers import grad_TV
 
+import jax
 import jax.numpy as jnp
 
 from PtyLabX.utils.utils import circ, fft2c, ifft2c, orthogonalizeModes
@@ -1070,18 +1071,18 @@ class BaseEngine(object):
                 Opatch = fft2c(objectPatch)
 
             if self.params.positionCorrectionSwitch_radius < 2:
-                # do the direct one as it's a bit faster
+                # Vectorized cross-correlation over all shifts
+                O_slice = O[..., sy, sx]
+                rowShifts = jnp.array(self.rowShifts)
+                colShifts = jnp.array(self.colShifts)
 
-                for shifts in range(len(self.rowShifts)):
-                    tempShift = jnp.roll(Opatch, self.rowShifts[shifts], axis=-2)
-                    # shiftedImages[shifts, ...] = jnp.roll(tempShift, self.colShifts[shifts], axis=-1)
-                    shiftedImages = jnp.roll(tempShift, self.colShifts[shifts], axis=-1)
-                    cc = cc.at[shifts].set(jnp.squeeze(
-                        jnp.sum(shiftedImages.conj() * O[..., sy, sx], axis=(-2, -1))
-                    ))
-                    del tempShift, shiftedImages
-                    betaGrad = 1000
-                    r = 3
+                def _cc_at_shift(i):
+                    shifted = jnp.roll(jnp.roll(Opatch, rowShifts[i], axis=-2), colShifts[i], axis=-1)
+                    return jnp.squeeze(jnp.sum(shifted.conj() * O_slice, axis=(-2, -1)))
+
+                cc = jax.vmap(_cc_at_shift)(jnp.arange(len(self.rowShifts))).reshape(-1, 1)
+                betaGrad = 1000
+                r = 3
             else:
                 # print('doing FT position correction')
                 ss = slice(
@@ -1276,12 +1277,13 @@ class BaseEngine(object):
                 * self.experimentalData.maxProbePower
             )
         if self.params.probeSpectralPowerCorrectionSwitch:
-            for wl in range(self.reconstruction.probe.shape[0]):
-                scale = self.experimentalData.maxProbePower * self.experimentalData.spectralPower[wl] \
-                    / jnp.sqrt(jnp.sum(self.reconstruction.probe[wl, ...] * self.reconstruction.probe[wl, ...].conj()))
-                self.reconstruction.probe = self.reconstruction.probe.at[wl, ...].set(
-                    self.reconstruction.probe[wl, ...] * scale
-                )
+            probe = self.reconstruction.probe
+            norms = jnp.sqrt(
+                jnp.sum(probe * probe.conj(), axis=(1, 2, 3, 4, 5), keepdims=True)
+            )
+            spectral_power = jnp.array(self.experimentalData.spectralPower).reshape(-1, 1, 1, 1, 1, 1)
+            scales = self.experimentalData.maxProbePower * spectral_power / norms
+            self.reconstruction.probe = probe * scales
 
         if (
             self.params.comStabilizationSwitch is not None
@@ -1356,23 +1358,16 @@ class BaseEngine(object):
                 )
             )
         if self.params.couplingSwitch and self.reconstruction.nlambda > 1:
-            self.reconstruction.probe = self.reconstruction.probe.at[0].set(
-                (1 - self.params.couplingAleph) * self.reconstruction.probe[0]
-                + self.params.couplingAleph * self.reconstruction.probe[1]
-            )
-            for lambdaLoop in np.arange(1, self.reconstruction.nlambda - 1):
-                self.reconstruction.probe = self.reconstruction.probe.at[lambdaLoop].set(
-                    (1 - self.params.couplingAleph) * self.reconstruction.probe[lambdaLoop]
-                    + self.params.couplingAleph * (
-                        self.reconstruction.probe[lambdaLoop + 1]
-                        + self.reconstruction.probe[lambdaLoop - 1]
-                    ) / 2
-                )
-
-            self.reconstruction.probe = self.reconstruction.probe.at[-1].set(
-                (1 - self.params.couplingAleph) * self.reconstruction.probe[-1]
-                + self.params.couplingAleph * self.reconstruction.probe[-2]
-            )
+            probe = self.reconstruction.probe
+            a = self.params.couplingAleph
+            # Vectorized coupling: average neighbors along wavelength axis
+            shifted_up = jnp.roll(probe, -1, axis=0)
+            shifted_down = jnp.roll(probe, 1, axis=0)
+            coupled = (1 - a) * probe + a * (shifted_up + shifted_down) / 2
+            # Fix boundary conditions (first and last wavelength)
+            coupled = coupled.at[0].set((1 - a) * probe[0] + a * probe[1])
+            coupled = coupled.at[-1].set((1 - a) * probe[-1] + a * probe[-2])
+            self.reconstruction.probe = coupled
         if self.params.binaryProbeSwitch:
             probePeakAmplitude = jnp.max(abs(self.reconstruction.probe))
             probeThresholded = jnp.where(

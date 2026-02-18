@@ -1,6 +1,9 @@
-import numpy as np
+import functools
+from typing import List, Tuple, Union
+
+import jax
 import jax.numpy as jnp
-from typing import List, Union, Tuple
+import numpy as np
 
 from PtyLabX.Operators.Operators import aspw
 from PtyLabX.utils.utils import fft2c
@@ -44,6 +47,14 @@ def min_std(*args, **kwargs):
     return -std(*args, **kwargs)
 
 
+@jax.jit
+def _TV_jit(field, aleph=1e-3):
+    """JIT-compiled TV computation core."""
+    grad_x = jnp.roll(field, -1, axis=-1) - jnp.roll(field, 1, axis=-1)
+    grad_y = jnp.roll(field, -1, axis=-2) - jnp.roll(field, 1, axis=-2)
+    return jnp.sum(jnp.sqrt(abs(grad_x * grad_x.conj()) + abs(grad_y * grad_y.conj()) + aleph))
+
+
 def TV(field, aleph=1e-3):
     """
     Calculate Total Variation of a field.
@@ -60,14 +71,7 @@ def TV(field, aleph=1e-3):
     TV_value: float
         Total variation of the field.
     """
-
-    grad_x = jnp.roll(field, -1, axis=-1) - jnp.roll(field, 1, axis=-1)
-    grad_y = jnp.roll(field, -1, axis=-2) - jnp.roll(field, 1, axis=-1)
-    value = jnp.sum(
-        jnp.sqrt(abs(grad_x * grad_x.conj()) + abs(grad_y * grad_y.conj()) + aleph)
-    )
-    value = float(np.asarray(value))
-    return value
+    return float(np.asarray(_TV_jit(field, aleph)))
 
 
 def metric_at(
@@ -80,7 +84,7 @@ def metric_at(
     return_propagated=False,
     average_by_power=True,
     metric: str = TV,
-        savemem=True,
+    savemem=True,
 ) -> Union[Tuple[np.ndarray, np.ndarray], np.ndarray]:
     """
     Return the value of a metric function over a range of distances given by dz.
@@ -104,7 +108,7 @@ def metric_at(
     ss: Union[slice, slice]
         The region to propagate.
     intensity_only: bool
-        Wether to only asses the intensity or the complex field
+        Whether to only assess the intensity or the complex field
     return_propagated: bool
         If true, returns the propagated field
     average_by_power: bool
@@ -138,7 +142,7 @@ def metric_at(
 
     dz = np.asarray(dz)
 
-    OE_ff = fft2c(object_estimate[...,sy1,sx1])
+    OE_ff = fft2c(object_estimate[..., sy1, sx1])
     if intensity_only:
         op = lambda x: abs(x).real ** 2
     else:
@@ -156,7 +160,7 @@ def metric_at(
                 bandlimit=False,
                 is_FT=True,
             )[0][sy, sx]
-        )  # [...,sy,sx])
+        )
         if average_by_power and not intensity_only:
             OE = OE / abs(OE**2).mean()
         elif average_by_power and intensity_only:
@@ -171,6 +175,7 @@ def metric_at(
         return np.array(scores)
 
 
+@functools.partial(jax.jit, static_argnums=(1,))
 def _finite_diff_gradient(f, axis):
     """Central finite difference approximation of gradient along a single axis."""
     return (jnp.roll(f, -1, axis=axis) - jnp.roll(f, 1, axis=axis)) / 2
@@ -190,17 +195,20 @@ def divergence(f):
     """
     return _finite_diff_gradient(f[0], axis=4) + _finite_diff_gradient(f[1], axis=5)
 
+
+@jax.jit
 def divergence_new(f):
     grad_y = _finite_diff_gradient(f[0], axis=-2)
     grad_x = _finite_diff_gradient(f[1], axis=-1)
     return grad_y + grad_x
 
 
+@jax.jit
 def grad_TV(field, epsilon=1e-2):
     gradient_y = _finite_diff_gradient(field, axis=-2)
     gradient_x = _finite_diff_gradient(field, axis=-1)
     gradient = jnp.array([gradient_y, gradient_x])
-    norm = jnp.sqrt(jnp.sum(gradient, axis=0)**2+epsilon)
+    norm = jnp.sqrt(jnp.sum(gradient, axis=0) ** 2 + epsilon)
     gradient = gradient / norm
     TV_update = divergence_new(gradient)
     return TV_update

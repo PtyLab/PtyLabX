@@ -1,6 +1,5 @@
 import numpy as np
 import jax.numpy as jnp
-from matplotlib import pyplot as plt
 
 
 import logging
@@ -14,6 +13,7 @@ from PtyLabX.Monitor.Monitor import Monitor
 from PtyLabX.Params.Params import Params
 
 # fracPy imports
+from PtyLabX.Engines._jit_kernels import epie_object_update
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 from PtyLabX.utils.fsvd import rsvd
 
@@ -62,10 +62,12 @@ class OPR(BaseEngine):
 
         for i, mode in enumerate(self.OPR_modes):
             # fill the probe-stack with the inital guess of the probes
-            self.reconstruction.probe_stack[0, 0, i, 0, :, :, :] = jnp.repeat(
-                self.reconstruction.probe[0, 0, mode, 0, :, :, jnp.newaxis],
-                Nframes,
-                axis=2,
+            self.reconstruction.probe_stack = self.reconstruction.probe_stack.at[0, 0, i, 0, :, :, :].set(
+                jnp.repeat(
+                    self.reconstruction.probe[0, 0, mode, 0, :, :, jnp.newaxis],
+                    Nframes,
+                    axis=2,
+                )
             )
 
         # actual reconstruction ePIE_engine
@@ -114,7 +116,7 @@ class OPR(BaseEngine):
                 )
 
                 # save first, dominant probe mode
-                self.reconstruction.probe_stack[..., positionIndex] = jnp.copy(
+                self.reconstruction.probe_stack = self.reconstruction.probe_stack.at[..., positionIndex].set(
                     self.reconstruction.probe[:, :, mode_slice, :, :, :]
                 )
 
@@ -150,7 +152,7 @@ class OPR(BaseEngine):
             U, s, Vh = self.svd(probe)
 
             modes = (s[:, None] * Vh).reshape(nModes, n, n)
-            self.reconstruction.probe_stack[0, 0, :, 0, :, :, pos] = modes
+            self.reconstruction.probe_stack = self.reconstruction.probe_stack.at[0, 0, :, 0, :, :, pos].set(modes)
 
     def average(self, arr):
         """
@@ -164,8 +166,8 @@ class OPR(BaseEngine):
         arr_end = jnp.append(arr_end, 0)
         arr_start = jnp.append(0, arr_start)
         divider = jnp.ones_like(arr) * 3
-        divider[0] = 2
-        divider[-1] = 2
+        divider = divider.at[0].set(2)
+        divider = divider.at[-1].set(2)
         return (arr + arr_end + arr_start) / divider
 
     def svd(self, P):
@@ -199,38 +201,28 @@ class OPR(BaseEngine):
                     probe_stack[:, :, i, :, :, :].reshape(n * n, nFrames),
                     full_matrices=False,
                 )
-                s[n_dim:] = 0
+                s = s.at[n_dim:].set(0)
 
             if self.params.OPR_neighbor_constraint:
                 # Calculate the average of neigboring singular values
                 content = jnp.dot(jnp.diag(s), Vh)
                 for j in range(n_dim):
-                    content[j] = self.average(content[j])
+                    content = content.at[j].set(self.average(content[j]))
 
-                probe_stack[:, :, i, :, :, :] = self.alpha * probe_stack[
-                    :, :, i, :, :, :
-                ] + (1 - self.alpha) * jnp.dot(U, content).reshape(n, n, nFrames)
+                probe_stack = probe_stack.at[:, :, i, :, :, :].set(
+                    self.alpha * probe_stack[:, :, i, :, :, :]
+                    + (1 - self.alpha) * jnp.dot(U, content).reshape(n, n, nFrames)
+                )
             else:
                 update = (U @ (s[:, None] * Vh)).reshape(n, n, nFrames)
-                probe_stack[:, :, i, :, :, :] *= self.alpha
-                probe_stack[:, :, i, :, :, :] += (1 - self.alpha) * update
+                probe_stack = probe_stack.at[:, :, i, :, :, :].set(
+                    self.alpha * probe_stack[:, :, i, :, :, :] + (1 - self.alpha) * update
+                )
 
         return probe_stack
 
     def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
-        """
-        ePIE object update function
-        :param objectPatch: Slice of the object array
-        :param DELTA:
-        :return: updated object patch
-        """
-
-        frac = self.reconstruction.probe.conj() / jnp.max(
-            jnp.sum(jnp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
-        )
-        return objectPatch + self.betaObject * jnp.sum(
-            frac * DELTA, axis=(0, 2, 3), keepdims=True
-        )
+        return epie_object_update(objectPatch, self.reconstruction.probe, DELTA, self.betaObject)
 
     def probeUpdate(
         self, objectPatch: np.ndarray, DELTA: np.ndarray, weight: float, gimmel=0.1

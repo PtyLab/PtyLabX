@@ -30,18 +30,3 @@ def asJaxArray(field, dtype=None):
         elif np.iscomplexobj(field):
             dtype = jnp.complex64
     return jnp.array(field, dtype=dtype)
-
-
-# Compatibility shims — will be removed after full migration
-
-def getArrayModule(*args, **kwargs):
-    """Returns jax.numpy. All code should use jnp directly."""
-    return jnp
-
-
-def isGpuArray(ary):
-    """Always returns False. JAX handles device placement."""
-    return False
-
-
-CP_AVAILABLE = False

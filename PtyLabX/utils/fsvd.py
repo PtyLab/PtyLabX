@@ -5,13 +5,15 @@ Randomized SVD. See Halko, Martinsson, Tropp's 2011 SIAM paper:
 approximate matrix decompositions"
 ============================================================================="""
 
+import functools
+
 import jax
 import jax.numpy as jnp
 
 # ------------------------------------------------------------------------------
 
-def rsvd(A, rank, n_oversamples=None, n_subspace_iters=None,
-         return_range=False, rng_key=None):
+
+def rsvd(A, rank, n_oversamples=None, n_subspace_iters=None, return_range=False, rng_key=None):
     """Randomized SVD (p. 227 of Halko et al).
 
     :param A:                (m x n) matrix.
@@ -74,6 +76,7 @@ def find_range(A, n_samples, n_subspace_iters=None, rng_key=None):
 
 # ------------------------------------------------------------------------------
 
+@functools.partial(jax.jit, static_argnums=(2,))
 def subspace_iter(A, Y0, n_iters):
     """Algorithm 4.4: Randomized subspace iteration (p. 244 of Halko et al).
 
@@ -87,13 +90,17 @@ def subspace_iter(A, Y0, n_iters):
                     iterations.
     """
     Q = ortho_basis(Y0)
-    for _ in range(n_iters):
+
+    def body_fn(_, Q):
         Z = ortho_basis(A.T.conj() @ Q)
         Q = ortho_basis(A @ Z)
-    return Q
+        return Q
+
+    return jax.lax.fori_loop(0, n_iters, body_fn, Q)
 
 # ------------------------------------------------------------------------------
 
+@jax.jit
 def ortho_basis(M):
     """Computes an orthonormal basis for a matrix.
 

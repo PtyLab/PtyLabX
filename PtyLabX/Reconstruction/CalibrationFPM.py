@@ -1,21 +1,15 @@
-from skimage.transform import (
-    AffineTransform,
-    matrix_transform,
-    SimilarityTransform,
-    EuclideanTransform,
-)
-from skimage.filters import gaussian
-from skimage.measure import ransac
+from copy import deepcopy
+
 import numpy as np
 from matplotlib import pyplot as plt
-from copy import deepcopy
+from skimage.filters import gaussian
+from skimage.measure import ransac
+from skimage.transform import AffineTransform, EuclideanTransform, SimilarityTransform, matrix_transform
 
 try:
     from sklearn.cluster import KMeans
 except ImportError:
-    print(
-        " Could not load sklearn, will not be able to run Fourier Ptychography Calibration"
-    )
+    print(" Could not load sklearn, will not be able to run Fourier Ptychography Calibration")
 from scipy.ndimage import map_coordinates
 
 try:
@@ -25,15 +19,14 @@ except:
 import traceback
 
 import matplotlib.animation as animation
-from PtyLabX.utils.utils import ifft2c, fft2c
-from PtyLabX.Reconstruction.Reconstruction import Reconstruction
+
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
+from PtyLabX.Reconstruction.Reconstruction import Reconstruction
+from PtyLabX.utils.utils import fft2c, ifft2c
 
 
 class IlluminationCalibration:
-    def __init__(
-        self, reconstructor: Reconstruction, experimentalData: ExperimentalData
-    ):
+    def __init__(self, reconstructor: Reconstruction, experimentalData: ExperimentalData):
         # These statements don't copy any data, they just keep a reference to the object
         self.reconstructor = reconstructor
         self.experimentalData = experimentalData
@@ -54,9 +47,7 @@ class IlluminationCalibration:
         self.img_size = reconstructor.Np
         # # inverse calculation of the NA since we don't have the values provided by the user at the moment
         # self.reconstructor.NA = reconstructor.entrancePupilDiameter/2 * reconstructor.wavelength / (reconstructor.dxp**2 * reconstructor.Np)
-        self.apertRadiusPixel = (
-            self.dxp * self.img_size * self.reconstructor.NA / self.wavelength
-        )
+        self.apertRadiusPixel = self.dxp * self.img_size * self.reconstructor.NA / self.wavelength
         self.apertRadiusPixel_init = self.apertRadiusPixel
 
         lens_range = np.linspace(-self.img_size / 2, self.img_size / 2, self.img_size)
@@ -67,12 +58,8 @@ class IlluminationCalibration:
     def initialize_error_search_space(self):
         self.angleRange_x_init = np.sin(np.mgrid[0:360:10] / 180.0 * np.pi)
         self.angleRange_y_init = np.cos(np.mgrid[0:360:10] / 180.0 * np.pi)
-        self.gridSearch_x_init = np.mgrid[
-            -self.searchGridSize : self.searchGridSize + 1
-        ]
-        self.gridSearch_y_init = np.mgrid[
-            -self.searchGridSize : self.searchGridSize + 1
-        ]
+        self.gridSearch_x_init = np.mgrid[-self.searchGridSize : self.searchGridSize + 1]
+        self.gridSearch_y_init = np.mgrid[-self.searchGridSize : self.searchGridSize + 1]
         self.x_range = len(self.gridSearch_x_init)
         self.y_range = len(self.gridSearch_y_init)
 
@@ -198,31 +185,19 @@ class IlluminationCalibration:
         self.angleRange_x = np.reshape(self.angleRange_x, [1, 1, 1, -1])
         self.angleRange_y = np.reshape(self.angleRange_y, [1, 1, 1, -1])
         # convert grid search mesh grid into a 4D array
-        self.gridSearch_y, self.gridSearch_x = np.meshgrid(
-            self.gridSearch_x, self.gridSearch_y
-        )
-        self.gridSearch_x = np.reshape(
-            self.gridSearch_x, [1, self.x_range, self.y_range, 1]
-        )
-        self.gridSearch_y = np.reshape(
-            self.gridSearch_y, [1, self.x_range, self.y_range, 1]
-        )
+        self.gridSearch_y, self.gridSearch_x = np.meshgrid(self.gridSearch_x, self.gridSearch_y)
+        self.gridSearch_x = np.reshape(self.gridSearch_x, [1, self.x_range, self.y_range, 1])
+        self.gridSearch_y = np.reshape(self.gridSearch_y, [1, self.x_range, self.y_range, 1])
 
         # compute the radial arc values for each spatial frequency position
         # this is given in cartesian coordinates by:
         # x = Rsin(angle) + circle_center_x
         # y = Rcos(angle) + circle_center_y
         xx_circle_arc = np.single(
-            self.radiusScanRange * self.angleRange_x
-            + self.img_size / 2.0
-            + initialPositions[0]
-            + self.gridSearch_x
+            self.radiusScanRange * self.angleRange_x + self.img_size / 2.0 + initialPositions[0] + self.gridSearch_x
         )
         yy_circle_arc = np.single(
-            self.radiusScanRange * self.angleRange_y
-            + self.img_size / 2.0
-            + initialPositions[1]
-            + self.gridSearch_y
+            self.radiusScanRange * self.angleRange_y + self.img_size / 2.0 + initialPositions[1] + self.gridSearch_y
         )
 
         # convert back to a 1D array for filtering whether the circular arcs
@@ -236,7 +211,7 @@ class IlluminationCalibration:
             * (xx_circle_arc > 1)
             * (xx_circle_arc < (self.img_size - 1))
             * (yy_circle_arc < (self.img_size - 1))
-        ) == True
+        )
         outliers = np.all(outliers, 0)
 
         # the final circular arc array contains:
@@ -246,9 +221,7 @@ class IlluminationCalibration:
         # 4.   intensity values for each pixel along the circular radius
         #      np.count_nonzero(outliers)
         # 5.   split the whole array into XY
-        circularArcs = np.zeros(
-            [R_number, self.x_range, self.y_range, np.count_nonzero(outliers), 2]
-        )
+        circularArcs = np.zeros([R_number, self.x_range, self.y_range, np.count_nonzero(outliers), 2])
 
         # generate circle arcs
         self.gridSearch_x = self.gridSearch_x_init.copy()
@@ -263,27 +236,15 @@ class IlluminationCalibration:
         self.angleRange_x = np.reshape(self.angleRange_x[outliers], [1, 1, 1, -1])
         self.angleRange_y = np.reshape(self.angleRange_y[outliers], [1, 1, 1, -1])
         # convert grid search mesh grid into a 4D array
-        self.gridSearch_y, self.gridSearch_x = np.meshgrid(
-            self.gridSearch_x, self.gridSearch_y
-        )
-        self.gridSearch_x = np.reshape(
-            self.gridSearch_x, [1, self.x_range, self.y_range, 1]
-        )
-        self.gridSearch_y = np.reshape(
-            self.gridSearch_y, [1, self.x_range, self.y_range, 1]
-        )
+        self.gridSearch_y, self.gridSearch_x = np.meshgrid(self.gridSearch_x, self.gridSearch_y)
+        self.gridSearch_x = np.reshape(self.gridSearch_x, [1, self.x_range, self.y_range, 1])
+        self.gridSearch_y = np.reshape(self.gridSearch_y, [1, self.x_range, self.y_range, 1])
 
         circularArcs[:, :, :, :, 0] = np.single(
-            self.radiusScanRange * self.angleRange_x
-            + self.img_size / 2.0
-            + initialPositions[0]
-            + self.gridSearch_x
+            self.radiusScanRange * self.angleRange_x + self.img_size / 2.0 + initialPositions[0] + self.gridSearch_x
         )
         circularArcs[:, :, :, :, 1] = np.single(
-            self.radiusScanRange * self.angleRange_y
-            + self.img_size / 2.0
-            + initialPositions[1]
-            + self.gridSearch_y
+            self.radiusScanRange * self.angleRange_y + self.img_size / 2.0 + initialPositions[1] + self.gridSearch_y
         )
         return circularArcs
 
@@ -328,8 +289,7 @@ class IlluminationCalibration:
             pupil = np.zeros(fft_raw.shape)
             pupil_coords = (
                 (xx_img - self.img_size / 2.0 + (position[0] + positions_error_x)) ** 2
-                + (yy_img - self.img_size / 2.0 + (position[1] + positions_error_y))
-                ** 2
+                + (yy_img - self.img_size / 2.0 + (position[1] + positions_error_y)) ** 2
             ) <= self.apertRadiusPixel**2
             pupil[pupil_coords] = 1
             # generate a low-pass filtered image with a shifted filter
@@ -349,9 +309,7 @@ class IlluminationCalibration:
         # check if the value was on the edge of the error map
         b1 = 0
         b2 = len(self.gridSearch_x_init) - 1
-        if (error_candidates[err_idx, 0] in [b1, b2]) or (
-            error_candidates[err_idx, 1] in [b1, b2]
-        ):
+        if (error_candidates[err_idx, 0] in [b1, b2]) or (error_candidates[err_idx, 1] in [b1, b2]):
             edge_case = True
         else:
             edge_case = False
@@ -395,9 +353,7 @@ class IlluminationCalibration:
         rad_dx_dx_idx2 = np.argwhere(np.max(arc_dx2) == arc_dx2)[0][0]
         # get the search grid for the largest gradient
         search_grid_dx_dx = np.squeeze(arc_dx2[rad_dx_dx_idx2, :, :])
-        search_grid_dx_dx = search_grid_dx_dx >= np.max(
-            search_grid_dx_dx
-        ) - 0.25 * np.std(
+        search_grid_dx_dx = search_grid_dx_dx >= np.max(search_grid_dx_dx) - 0.25 * np.std(
             search_grid_dx_dx
         )  # Select region around max
 
@@ -445,8 +401,7 @@ class IlluminationCalibration:
         self.radiuSearchBounds = 5
         self.radiusSearchStep = 0.5
         self.radiusSearchRange = np.mgrid[
-            self.radiuSearchBounds : -self.radiuSearchBounds
-            - self.radiusSearchStep : -self.radiusSearchStep
+            self.radiuSearchBounds : -self.radiuSearchBounds - self.radiusSearchStep : -self.radiusSearchStep
         ]
         # radius tolerance array
         tolerance = [self.radiusSearchStep * 1.1, self.radiusSearchStep * 0.9]
@@ -475,9 +430,7 @@ class IlluminationCalibration:
 
                 # compute circular arc used as candidates and make an error
                 # storage array. This returns the radial arcs array
-                radial_arcs = self.generateCircularArcsVectorized(
-                    initialPositions[idx, :]
-                )
+                radial_arcs = self.generateCircularArcsVectorized(initialPositions[idx, :])
 
                 # flatten the coordinate array
                 coords = np.array(
@@ -487,18 +440,12 @@ class IlluminationCalibration:
                     ]
                 )
                 # interpolate to avoid quantization errors
-                image = gaussian(
-                    FT_ptychogram[idx, :, :], self.gaussSigma, preserve_range=True
-                )
-                gridSearchForEachR = map_coordinates(
-                    image, coords, order=1, prefilter=False
-                )
+                image = gaussian(FT_ptychogram[idx, :, :], self.gaussSigma, preserve_range=True)
+                gridSearchForEachR = map_coordinates(image, coords, order=1, prefilter=False)
 
                 # create the mean interpolated intensities along the perimeter for each
                 # circular radius and grid search position
-                circleSearchArray = np.mean(
-                    np.reshape(gridSearchForEachR, radial_arcs.shape[:-1]), 3
-                )
+                circleSearchArray = np.mean(np.reshape(gridSearchForEachR, radial_arcs.shape[:-1]), 3)
 
                 # compute the gradient along the radial values
                 arc_dx1 = np.gradient(circleSearchArray, axis=0)
@@ -535,9 +482,7 @@ class IlluminationCalibration:
         newRadius = self.apertRadiusPixel
         return oldRadius, newRadius
 
-    def findPositionCalibrationMatrix(
-        self, ptychogram, FT_ptychogram, initialPositions
-    ):
+    def findPositionCalibrationMatrix(self, ptychogram, FT_ptychogram, initialPositions):
         """
         Find the best aperture radius which corresponds to a wrong NA value.
         The actual radius is updated internally and is used for position
@@ -589,9 +534,7 @@ class IlluminationCalibration:
                     ##########################################################
                     # compute circular arc used as candidates and make an error
                     # storage array. This returns the radial arcs array
-                    radial_arcs = self.generateCircularArcsVectorized(
-                        calibrated_positions[idx]
-                    )
+                    radial_arcs = self.generateCircularArcsVectorized(calibrated_positions[idx])
 
                     # flatten the coordinate array
                     coords = np.array(
@@ -602,23 +545,17 @@ class IlluminationCalibration:
                     )
 
                     # interpolate to avoid quantization errors
-                    gridSearchForEachR = map_coordinates(
-                        image, coords, order=1, prefilter=False
-                    )
+                    gridSearchForEachR = map_coordinates(image, coords, order=1, prefilter=False)
 
                     # gridSearchForEachR = map_coordinates_gpu(cp.array(image),\
                     #                                           cp.array(coords),\
                     #                                           order=1,\
                     #                                           prefilter=False).get()
                     # define
-                    circleSearchArray = np.mean(
-                        np.reshape(gridSearchForEachR, radial_arcs.shape[:-1]), 3
-                    )
+                    circleSearchArray = np.mean(np.reshape(gridSearchForEachR, radial_arcs.shape[:-1]), 3)
 
                     # compute the position error candidates
-                    positionErrorCandidates = self.computePositionErrorCandidates(
-                        circleSearchArray
-                    )
+                    positionErrorCandidates = self.computePositionErrorCandidates(circleSearchArray)
 
                     # go through all the possible coordinates and find the best one
                     (
@@ -632,12 +569,8 @@ class IlluminationCalibration:
                     )
 
                     # update coordinate grid
-                    calibrated_positions[idx, 0] = (
-                        calibrated_positions[idx, 0] + positions_error_x
-                    )
-                    calibrated_positions[idx, 1] = (
-                        calibrated_positions[idx, 1] + positions_error_y
-                    )
+                    calibrated_positions[idx, 0] = calibrated_positions[idx, 0] + positions_error_x
+                    calibrated_positions[idx, 1] = calibrated_positions[idx, 1] + positions_error_y
 
                     # if the initial guess was too far and did not fall within
                     # the initial search grid, try again
@@ -689,36 +622,16 @@ class IlluminationCalibration:
                     plt.title("position calibration results, image {}".format(idx))
                     image = FT_ptychogram[idx, :, :]
 
-                    initial_row = (
-                        self.apertRadiusPixel_init * angles_x
-                        + self.img_size / 2
-                        + initialPositions[idx, 0]
-                    )
-                    initial_col = (
-                        self.apertRadiusPixel_init * angles_y
-                        + self.img_size / 2
-                        + initialPositions[idx, 1]
-                    )
+                    initial_row = self.apertRadiusPixel_init * angles_x + self.img_size / 2 + initialPositions[idx, 0]
+                    initial_col = self.apertRadiusPixel_init * angles_y + self.img_size / 2 + initialPositions[idx, 1]
 
-                    final_row = (
-                        self.apertRadiusPixel * angles_x
-                        + self.img_size / 2
-                        + calibrated_positions[idx, 0]
-                    )
-                    final_col = (
-                        self.apertRadiusPixel * angles_y
-                        + self.img_size / 2
-                        + calibrated_positions[idx, 1]
-                    )
+                    final_row = self.apertRadiusPixel * angles_x + self.img_size / 2 + calibrated_positions[idx, 0]
+                    final_col = self.apertRadiusPixel * angles_y + self.img_size / 2 + calibrated_positions[idx, 1]
 
                     plt.imshow(image)
-                    plt.scatter(
-                        initial_col, initial_row, label="initial guess", c="g", s=1
-                    )
+                    plt.scatter(initial_col, initial_row, label="initial guess", c="g", s=1)
                     plt.scatter(final_col, final_row, label="calibrated", c="r", s=1)
-                    legend = plt.legend(
-                        labels=["initial guess", "calibrated"], loc="upper right"
-                    )
+                    legend = plt.legend(labels=["initial guess", "calibrated"], loc="upper right")
                     plt.pause(1)
 
                     if not plt.fignum_exists(3):
@@ -796,11 +709,7 @@ class IlluminationCalibration:
 
         """
         # convert translation from pixels to SI units and update the encoder
-        conv = (
-            -(1 / self.reconstructor.wavelength)
-            * self.reconstructor.dxo
-            * self.reconstructor.Np
-        )
+        conv = -(1 / self.reconstructor.wavelength) * self.reconstructor.dxo * self.reconstructor.Np
         z = self.reconstructor.zled
 
         # convert caibration matrix values into encoder units
@@ -810,17 +719,9 @@ class IlluminationCalibration:
             np.sign(conv)
             * positionCalibMatrix[0:2, 2]
             * z
-            / (
-                np.sqrt(
-                    conv**2
-                    - positionCalibMatrix[0, 2] ** 2
-                    - positionCalibMatrix[1, 2] ** 2
-                )
-            )
+            / (np.sqrt(conv**2 - positionCalibMatrix[0, 2] ** 2 - positionCalibMatrix[1, 2] ** 2))
         )
-        self.experimentalData.encoder = matrix_transform(
-            self.experimentalData.encoder, encoderCalibMatrix
-        )
+        self.experimentalData.encoder = matrix_transform(self.experimentalData.encoder, encoderCalibMatrix)
 
         # self.experimentalData.encoder = np.sign(conv) *  self.positionsFitted * z / (np.sqrt(conv**2-self.positionsFitted[:,0]**2-self.positionsFitted[:,1]**2))[...,None]
         self.reconstructor.positions0 = self.reconstructor.positions.copy()
@@ -848,11 +749,7 @@ class IlluminationCalibration:
         self.ptychogram = deepcopy(self.experimentalData.ptychogram)
         self.initialPositions = deepcopy(self.reconstructor.positions)
         # UNSHFIT DUE TO EXAMPLEDATA SHIFTING BY No//2 and Np//2
-        self.initialPositions = (
-            self.initialPositions
-            - self.reconstructor.No // 2
-            + self.reconstructor.Np // 2
-        )
+        self.initialPositions = self.initialPositions - self.reconstructor.No // 2 + self.reconstructor.Np // 2
 
         self.initialize_error_search_space()
         # get the FFT(ptychogram) which will also be filtered to enhance
@@ -873,16 +770,12 @@ class IlluminationCalibration:
             print("Initial radius was {}px".format(np.round(oldRadius, 2)))
             print("Calibrated radius is {}px".format(np.round(newRadius, 2)))
             oldNA = np.round(oldRadius / self.dxp * self.wavelength / self.img_size, 3)
-            self.reconstructor.NA = np.round(
-                newRadius / self.dxp * self.wavelength / self.img_size, 3
-            )
+            self.reconstructor.NA = np.round(newRadius / self.dxp * self.wavelength / self.img_size, 3)
             print("Initial NA was {}".format(oldNA))
             print("Calibrated NA is {}".format(self.reconstructor.NA))
             self.apertRadiusPixel = newRadius
         else:
-            self.reconstructor.NA = (
-                self.apertRadiusPixel / self.dxp * self.wavelength / self.img_size
-            )
+            self.reconstructor.NA = self.apertRadiusPixel / self.dxp * self.wavelength / self.img_size
 
         # find the calibration matrix between the initial positions and the ones
         # found based on circle fitting
@@ -892,9 +785,7 @@ class IlluminationCalibration:
             self.initialPositions[self.brightfieldIndices, :],
         )
         # fit the positions
-        positionsFitted = matrix_transform(
-            self.initialPositions, self.calibMatrix.params
-        )
+        positionsFitted = matrix_transform(self.initialPositions, self.calibMatrix.params)
 
         # update the entrancePupilDiameter
         self.reconstructor.entrancePupilDiameter = self.apertRadiusPixel * self.dxp * 2
@@ -909,9 +800,7 @@ class IlluminationCalibration:
             self.plotCalibration(
                 FFT_ptychogram[self.brightfieldIndices],
                 self.initialPositions[self.brightfieldIndices],
-                self.reconstructor.positions[self.brightfieldIndices]
-                - self.No // 2
-                + self.Np // 2,
+                self.reconstructor.positions[self.brightfieldIndices] - self.No // 2 + self.Np // 2,
             )
 
         return self.calibMatrix
