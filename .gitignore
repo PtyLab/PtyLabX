@@ -4,7 +4,7 @@
 *__pycache__*
 *.vscode
 *.venv
-ptylabx-venv
+.ptylabx-venv
 *.hdf5
 .DS_Store
 .claude
