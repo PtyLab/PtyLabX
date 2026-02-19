@@ -1,6 +1,7 @@
 import numpy as np
 
 import logging
+from typing import Optional
 
 from PtyLabX.io import readHdf5
 from PtyLabX.utils.visualisation import show3Dslider
@@ -11,6 +12,34 @@ class ExperimentalData:
     This is a container class for all the data associated with the ptychography reconstruction.
     It only holds attributes that are the same for every type of reconstruction.
     """
+
+    # --- Fields loaded from HDF5 (required for CPM and FPM) ---
+    ptychogram: np.ndarray  # 3D image stack of diffraction patterns
+    wavelength: float  # illumination wavelength (meters)
+    encoder: np.ndarray  # scan positions
+
+    # --- CPM-specific fields ---
+    dxd: float  # detector pixel size (meters)
+    zo: float  # sample-to-detector distance (meters)
+    entrancePupilDiameter: Optional[float]  # probe aperture diameter (meters)
+    spectralDensity: Optional[np.ndarray]  # wavelength spectrum for polychromatic ptychography
+    theta: Optional[float]  # tilt angle for reflection geometry (radians)
+    emptyBeam: Optional[np.ndarray]  # reference image of the probe beam
+
+    # --- FPM-specific fields ---
+    zled: Optional[float]  # LED-to-sample distance (meters)
+    magnification: Optional[float]  # objective magnification
+    NA: Optional[float]  # numerical aperture of the objective
+
+    # --- Derived fields set by _setData() ---
+    Nd: int  # detector array size (pixels)
+    xd: np.ndarray  # 1D detector coordinate array (meters)
+    Xd: np.ndarray  # 2D detector X coordinates (meters)
+    Yd: np.ndarray  # 2D detector Y coordinates (meters)
+    Ld: float  # detector physical size (meters)
+    numFrames: int  # number of diffraction patterns
+    energyAtPos: np.ndarray  # integrated intensity at each scan position
+    maxProbePower: float  # maximum probe power across all positions
 
     def __init__(self, filename=None, operationMode="CPM"):
         self.logger = logging.getLogger("ExperimentalData")
