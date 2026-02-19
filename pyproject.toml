@@ -41,3 +41,8 @@ line-length = 120
 dev = [
     "pytest>=9.0.2",
 ]
+docs = [
+    "mkdocs>=1.6,<2.0",
+    "mkdocs-material>=9.5",
+    "mkdocs-jupyter>=0.25",
+]
