@@ -36,9 +36,7 @@ pip install "ptylabx[cuda13]@git+https://github.com/ShantanuKodgirwar/PtyLabX.gi
 
 ### Development
 
-This project uses [uv](https://docs.astral.sh/uv/) for package management.
-
-Follow the below steps for cloning, install with uv in a dedicated virtual environment:
+This project uses [uv](https://docs.astral.sh/uv/) for package management. Follow the below steps for cloning and installing in a dedicated virtual environment:
 
 ```bash
 git clone https://github.com/ShantanuKodgirwar/PtyLabX.git
