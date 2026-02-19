@@ -48,9 +48,7 @@ class qNewton(BaseEngine):
             self.experimentalData = experimentalData
         self._prepareReconstruction()
 
-        self.pbar = tqdm.trange(
-            self.numIterations, desc="qNewton", file=sys.stdout, leave=True
-        )
+        self.pbar = tqdm.trange(self.numIterations, desc="qNewton", file=sys.stdout, leave=True)
         for loop in self.pbar:
             # set position order
             self.setPositionOrder()
@@ -88,7 +86,6 @@ class qNewton(BaseEngine):
 
             # show reconstruction
             self.showReconstruction(loop)
-
 
             # todo clearMemory implementation
 

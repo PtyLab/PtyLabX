@@ -401,6 +401,7 @@ class Reconstruction(object):
         if type not in allowed_save_types:
             raise NotImplementedError(f"Only {allowed_save_types} are allowed keywords for type")
         if not squeeze:
+
             def squeezefun(x):
                 return x
         else:

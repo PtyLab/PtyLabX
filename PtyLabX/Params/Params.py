@@ -44,7 +44,9 @@ class Params(object):
         self.intensityConstraint = "standard"  # standard or sigmoid
         self.propagatorType = "Fraunhofer"  # 'Fresnel' 'ASP'
         self.momentumAcceleration = False  # default False, it is turned on in the individual Engines that use momentum
-        self.adaptiveMomentumAcceleration = False  # default False, it is turned on in the individual Engines that use momentum
+        self.adaptiveMomentumAcceleration = (
+            False  # default False, it is turned on in the individual Engines that use momentum
+        )
 
         ## Specific reconstruction settings that are the same for all Engines
         # Report JAX backend at initialization
@@ -61,12 +63,8 @@ class Params(object):
         self.orthogonalizationFrequency = 10  # probe orthogonalization frequency
         # object regularization
         self.objectSmoothenessSwitch = False
-        self.objectSmoothenessWidth = (
-            2  # # pixels over which object is assumed fairly smooth
-        )
-        self.objectSmoothnessAleph = (
-            1e-2  # relaxation constant that determines strength of regularization
-        )
+        self.objectSmoothenessWidth = 2  # # pixels over which object is assumed fairly smooth
+        self.objectSmoothnessAleph = 1e-2  # relaxation constant that determines strength of regularization
         self.absObjectSwitch = False  # force the object to be abs-only
         self.absObjectBeta = 1e-2  # relaxation parameter for abs-only constraint
         self.objectContrastSwitch = False  # pushes object to zero outside ROI
@@ -75,9 +73,7 @@ class Params(object):
         self.probeSmoothnessAleph = 5e-2  # relaxation parameter for probe smootheness
         self.probeSmoothenessWidth = 3  # loose object support diameter
         self.probeBoundary = False  # probe cut-off based on a window
-        self.absorbingProbeBoundary = (
-            False  # controls if probe has period boundary conditions (zero)
-        )
+        self.absorbingProbeBoundary = False  # controls if probe has period boundary conditions (zero)
         self.absorbingProbeBoundaryAleph = 5e-2
         self.probePowerCorrectionSwitch = False  # probe normalization to measured PSD
         self.probeSpectralPowerCorrectionSwitch = False  # probe normalization from experimentalData.probeSpectralPower
@@ -96,9 +92,7 @@ class Params(object):
         self.PSDestimationSwitch = False
         self.objectContrastSwitch = False  # pushes object to zero outside ROI
         self.positionCorrectionSwitch = False  # position correction for encoder
-        self.adaptiveDenoisingSwitch = (
-            False  # estimated noise floor to be clipped from raw data
-        )
+        self.adaptiveDenoisingSwitch = False  # estimated noise floor to be clipped from raw data
 
         self.l2reg = False  # l2 regularisation
         self.l2reg_probe_aleph = 0.01  # strength of the regularizer

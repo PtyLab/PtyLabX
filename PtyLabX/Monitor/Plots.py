@@ -1,4 +1,3 @@
-
 import matplotlib as mpl
 import numpy as np
 from IPython.display import clear_output, display
@@ -65,9 +64,7 @@ class ObjectProbeErrorPlot(object):
         self.txt_purityObject = self.ax_object.set_title("Object estimate")
         self.ax_error_metric.set_title("Error metric")
         self.ax_error_metric.grid(True)
-        self.ax_error_metric.grid(
-            animated=True, which="minor", color="#999999", linestyle="-", alpha=0.2
-        )
+        self.ax_error_metric.grid(animated=True, which="minor", color="#999999", linestyle="-", alpha=0.2)
         self.ax_error_metric.set_xlabel("iterations")
         self.ax_error_metric.set_ylabel("error")
         self.ax_error_metric.set_xscale("log")
@@ -106,22 +103,15 @@ class ObjectProbeErrorPlot(object):
                 self.im_object = self.ax_object.imshow(OE, interpolation=None)
                 divider = make_axes_locatable(self.ax_object)
                 cax = divider.append_axes("right", size="5%", pad=0.1)
-                self.objectCbar = plt.colorbar(
-                    self.im_object, ax=self.ax_object, cax=cax
-                )
+                self.objectCbar = plt.colorbar(self.im_object, ax=self.ax_object, cax=cax)
         else:
             self.im_object.set_data(OE)
             if optimizable.nosm > 1:
-                self.txt_purityObject.set_text(
-                    "Object estimate\nPurity: %i" % (100 * optimizable.purityObject)
-                    + "%"
-                )
+                self.txt_purityObject.set_text("Object estimate\nPurity: %i" % (100 * optimizable.purityObject) + "%")
 
         self.im_object.autoscale()
 
-    def updateProbe(
-        self, probe_estimate, optimizable, amplitudeScalingFactor=1, **kwargs
-    ):
+    def updateProbe(self, probe_estimate, optimizable, amplitudeScalingFactor=1, **kwargs):
 
         # from PtyLabX.Operators.Operators import fft2c
         #
@@ -139,13 +129,8 @@ class ObjectProbeErrorPlot(object):
         else:
             self.im_probe.set_data(PE)
             # self.im_probe_ff.set_data(PE_ff)
-            if (
-                optimizable.npsm > 1
-                and optimizable.purityProbe == optimizable.purityProbe
-            ):
-                self.txt_purityProbe.set_text(
-                    "Probe estimate\nPurity: %.2f" % (100 * optimizable.purityProbe) + "%"
-                )
+            if optimizable.npsm > 1 and optimizable.purityProbe == optimizable.purityProbe:
+                self.txt_purityProbe.set_text("Probe estimate\nPurity: %.2f" % (100 * optimizable.purityProbe) + "%")
         self.im_probe.autoscale()
 
     def updateError(self, error_estimate: np.ndarray) -> None:
@@ -156,25 +141,15 @@ class ObjectProbeErrorPlot(object):
         """
 
         if self.firstrun:
-            self.error_metric_plot = self.ax_error_metric.plot(
-                error_estimate, "o-", mfc="none"
-            )[0]
+            self.error_metric_plot = self.ax_error_metric.plot(error_estimate, "o-", mfc="none")[0]
         else:
             if len(error_estimate) > 1 and error_estimate[-1] == error_estimate[-1]:
-                self.error_metric_plot.set_data(
-                    np.arange(len(error_estimate)) + 1, error_estimate
-                )
+                self.error_metric_plot.set_data(np.arange(len(error_estimate)) + 1, error_estimate)
                 self.ax_error_metric.set_xlim(1, len(error_estimate))
-                self.ax_error_metric.set_ylim(
-                    np.min(error_estimate), np.max(error_estimate)
-                )
-                data_aspect = np.log(
-                    np.max(error_estimate) / np.min(error_estimate)
-                ) / np.log(len(error_estimate))
+                self.ax_error_metric.set_ylim(np.min(error_estimate), np.max(error_estimate))
+                data_aspect = np.log(np.max(error_estimate) / np.min(error_estimate)) / np.log(len(error_estimate))
                 self.ax_error_metric.set_aspect(1 / data_aspect)
-                self.ax_error_metric.set_title(
-                    f"Error metric (it {len(error_estimate)})"
-                )
+                self.ax_error_metric.set_title(f"Error metric (it {len(error_estimate)})")
 
     def drawNowScript(self):
         """
@@ -198,9 +173,7 @@ class ObjectProbeErrorPlot(object):
             self.firstrun = False
         else:
             clear_output(wait=True)
-            self.display_id = display(
-                self.figure, display_id=self.display_id.display_id
-            )
+            self.display_id = display(self.figure, display_id=self.display_id.display_id)
         self.canvas.draw_idle()
         self.canvas.flush_events()
 
@@ -237,9 +210,7 @@ class DiffractionDataPlot(object):
 
         # add an axis for the object
         plt.ion()
-        self.figure, axes = plt.subplots(
-            1, 2, num=self.figNum, squeeze=False, clear=True, figsize=(8, 3)
-        )
+        self.figure, axes = plt.subplots(1, 2, num=self.figNum, squeeze=False, clear=True, figsize=(8, 3))
         self.ax_Iestimated = axes[0][0]
         self.ax_Imeasured = axes[0][1]
         self.ax_Iestimated.set_title("Estimated intensity")
@@ -252,16 +223,13 @@ class DiffractionDataPlot(object):
         Iestimate = np.asarray(Iestimate)
 
         if self.firstrun:
-
             self.im_Iestimated: AxesImage = self.ax_Iestimated.imshow(
                 np.log10(np.squeeze(Iestimate + 1)), cmap=cmap, interpolation=None
             )
 
             divider = make_axes_locatable(self.ax_Iestimated)
             cax = divider.append_axes("right", size="5%", pad=0.1)
-            self.IestimatedCbar = plt.colorbar(
-                self.im_Iestimated, ax=self.ax_Iestimated, cax=cax
-            )
+            self.IestimatedCbar = plt.colorbar(self.im_Iestimated, ax=self.ax_Iestimated, cax=cax)
             # scale it according to I measured
 
         else:
@@ -278,9 +246,7 @@ class DiffractionDataPlot(object):
 
             divider = make_axes_locatable(self.ax_Imeasured)
             cax = divider.append_axes("right", size="5%", pad=0.1)
-            self.ImeasuredCbar = plt.colorbar(
-                self.im_Imeasured, ax=self.ax_Imeasured, cax=cax
-            )
+            self.ImeasuredCbar = plt.colorbar(self.im_Imeasured, ax=self.ax_Imeasured, cax=cax)
 
         else:
             self.im_Imeasured.set_data(np.log10(np.squeeze(Imeasured + 1)))
@@ -308,9 +274,7 @@ class DiffractionDataPlot(object):
             self.firstrun = False
         else:
             clear_output(wait=True)
-            self.display_id = display(
-                self.figure, display_id=self.display_id.display_id
-            )
+            self.display_id = display(self.figure, display_id=self.display_id.display_id)
         self.canvas.draw_idle()
         self.canvas.flush_events()
 

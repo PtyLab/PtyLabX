@@ -144,9 +144,11 @@ def metric_at(
 
     OE_ff = fft2c(object_estimate[..., sy1, sx1])
     if intensity_only:
+
         def op(x):
             return abs(x).real ** 2
     else:
+
         def op(x):
             return x
 

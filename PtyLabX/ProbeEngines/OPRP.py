@@ -57,9 +57,7 @@ class OPRP_storage:
         self.s = s[:N]
         self.At = At[:N]
 
-        self.logger.info(
-            f"Effective rank: {eRank}, truncating to {self.N_probes} modes"
-        )
+        self.logger.info(f"Effective rank: {eRank}, truncating to {self.N_probes} modes")
 
         self.logger.info(f"Average displacement: {np.mean(abs(self.center_mass))}")
 
@@ -70,11 +68,7 @@ class OPRP_storage:
         or tsvd has not been run yet, return the averaged probe that we measured so far."""
         if not hasattr(self, "A"):
             # tsvd has not been run yet, return the averaged probe
-            return (
-                self.probes[self.probe_indices]
-                .mean(axis=0)
-                .reshape(self.original_probe_shape)
-            )
+            return self.probes[self.probe_indices].mean(axis=0).reshape(self.original_probe_shape)
 
         if self.probe_indices[index]:  # we measured this one, all easy
             A = self.A[index]
@@ -95,10 +89,7 @@ class OPRP_storage:
         return probe
 
     def center_probe(self, probe, index):
-        dpos = (
-            np.array(ndimage.center_of_mass(np.asarray(abs(probe**2))))
-            - np.array(probe.shape) / 2
-        )
+        dpos = np.array(ndimage.center_of_mass(np.asarray(abs(probe**2)))) - np.array(probe.shape) / 2
         dpos = np.clip(dpos, -2.5, 2.5)
         self.center_mass[index] += 0.01 * dpos
         # move it
@@ -120,9 +111,7 @@ class OPRP_storage:
         self.original_probe_shape = single_probe.shape
         self.new_probe_shape = np.array([np.prod(np.array(single_probe.shape))])
         self.N_positions = N_positions
-        self.probes = jnp.zeros(
-            (self.N_positions, *self.new_probe_shape), dtype=jnp.complex64
-        )
+        self.probes = jnp.zeros((self.N_positions, *self.new_probe_shape), dtype=jnp.complex64)
         self.probe_indices = jnp.zeros(self.N_positions, dtype=jnp.bool_)
 
         if self.correct_position:

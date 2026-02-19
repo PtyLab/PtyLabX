@@ -48,9 +48,7 @@ class ePIE(BaseEngine):
         self._prepareReconstruction()
 
         # actual reconstruction ePIE_engine
-        self.pbar = tqdm.trange(
-            self.numIterations, desc="ePIE", file=sys.stdout, leave=True
-        )
+        self.pbar = tqdm.trange(self.numIterations, desc="ePIE", file=sys.stdout, leave=True)
         for loop in self.pbar:
             # set position order
             self.setPositionOrder()
@@ -64,9 +62,7 @@ class ePIE(BaseEngine):
             for positionLoop, positionIndex in enumerate(self.positionIndices):
                 # get object patch
                 if self.params.OPRP:
-                    self.reconstruction.probe = (
-                        self.reconstruction.probe_storage.get(positionIndex)
-                    )
+                    self.reconstruction.probe = self.reconstruction.probe_storage.get(positionIndex)
                 row, col = self.reconstruction.positions[positionIndex]
                 sy = slice(row, row + self.reconstruction.Np)
                 sx = slice(col, col + self.reconstruction.Np)

@@ -63,12 +63,8 @@ class mqNewton(BaseEngine):
         print("Momentum mqNewton used: {}".format(self.momentum_method))
         if self.momentum_method in ["ADAM", "NADAM"]:
             # 2nd order momentum terms
-            self.reconstruction.objectMomentum_v = (
-                self.reconstruction.objectMomentum.copy()
-            )
-            self.reconstruction.probeMomentum_v = (
-                self.reconstruction.probeMomentum.copy()
-            )
+            self.reconstruction.objectMomentum_v = self.reconstruction.objectMomentum.copy()
+            self.reconstruction.probeMomentum_v = self.reconstruction.probeMomentum.copy()
 
     def reconstruct(self, experimentalData: ExperimentalData = None):
         if experimentalData is not None:
@@ -77,9 +73,7 @@ class mqNewton(BaseEngine):
         self._prepareReconstruction()
         self.initializeAdaptiveMomentum()
 
-        self.pbar = tqdm.trange(
-            self.numIterations, desc="mqNewton", file=sys.stdout, leave=True
-        )
+        self.pbar = tqdm.trange(self.numIterations, desc="mqNewton", file=sys.stdout, leave=True)
         for loop in self.pbar:
             # set position order
             self.setPositionOrder()
@@ -131,10 +125,7 @@ class mqNewton(BaseEngine):
         beta1_scale = 1 - self.beta1**itr
         beta2_scale = 1 - self.beta2**itr
         mt = self.beta1 * mt + (1 - self.beta1) * grad
-        vt = (
-            self.beta2 * vt
-            + (1 - self.beta2) * jnp.linalg.norm(grad.flatten().squeeze(), 2) ** 2
-        )
+        vt = self.beta2 * vt + (1 - self.beta2) * jnp.linalg.norm(grad.flatten().squeeze(), 2) ** 2
         m_hat = mt / beta1_scale
         v_hat = vt / beta2_scale
         return m_hat / (v_hat**0.5 + 1e-8), mt, vt
@@ -154,9 +145,7 @@ class mqNewton(BaseEngine):
         vt = self.beta2 * vt + (1 - self.beta2) * norm_sq
         m_hat = mt / beta1_scale
         v_hat = vt / beta2_scale
-        update = (self.beta1 * m_hat + grad * (1 - self.beta1) / beta1_scale) / (
-            v_hat**0.5 + 1e-8
-        )
+        update = (self.beta1 * m_hat + grad * (1 - self.beta1) / beta1_scale) / (v_hat**0.5 + 1e-8)
         return update, mt, vt
 
     def momentum(self, grad, mt, vt, itr):

@@ -46,7 +46,9 @@ def rsvd(A, rank, n_oversamples=None, n_subspace_iters=None, return_range=False,
         return U, S, Vt, Q
     return U, S, Vt
 
+
 # ------------------------------------------------------------------------------
+
 
 def find_range(A, n_samples, n_subspace_iters=None, rng_key=None):
     """Algorithm 4.1: Randomized range finder (p. 240 of Halko et al).
@@ -74,7 +76,9 @@ def find_range(A, n_samples, n_subspace_iters=None, rng_key=None):
     else:
         return ortho_basis(Y)
 
+
 # ------------------------------------------------------------------------------
+
 
 @functools.partial(jax.jit, static_argnums=(2,))
 def subspace_iter(A, Y0, n_iters):
@@ -98,7 +102,9 @@ def subspace_iter(A, Y0, n_iters):
 
     return jax.lax.fori_loop(0, n_iters, body_fn, Q)
 
+
 # ------------------------------------------------------------------------------
+
 
 @jax.jit
 def ortho_basis(M):

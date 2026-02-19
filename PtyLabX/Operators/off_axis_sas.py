@@ -23,9 +23,7 @@ def _to_tuple(theta):
     elif isinstance(theta, tuple) and len(theta) == 2:
         return (float(theta[0]), float(theta[1]))
     else:
-        raise ValueError(
-            "theta must be specified as None, a scalar, or a tuple of two numbers"
-        )
+        raise ValueError("theta must be specified as None, a scalar, or a tuple of two numbers")
 
 
 def _pad_field(fields, pad_factor: int):
@@ -97,11 +95,7 @@ def __sas_transfer_function(wavelength, Lp, Np, theta, z1, z2):
 
     # transfer function
     # eq. 12 includes chi parameter under square root
-    chi = (
-        1 / wavelength**2
-        - (Fx + (sx / wavelength)) ** 2
-        - (Fy + (sy / wavelength)) ** 2
-    )
+    chi = 1 / wavelength**2 - (Fx + (sx / wavelength)) ** 2 - (Fy + (sy / wavelength)) ** 2
     sqrt_chi = jnp.sqrt(jnp.maximum(0, chi))
 
     def _create_bandpass_filter(smooth_filter=True, eps=1e-10):
@@ -138,9 +132,7 @@ def __sas_transfer_function(wavelength, Lp, Np, theta, z1, z2):
     H_AS = complexexp(2 * jnp.pi * z1 * sqrt_chi)
 
     # Fresnel transfer function
-    H_Fr = complexexp(
-        -jnp.pi * z2 / wavelength * ((wavelength * Fx) ** 2 + (wavelength * Fy) ** 2)
-    )
+    H_Fr = complexexp(-jnp.pi * z2 / wavelength * ((wavelength * Fx) ** 2 + (wavelength * Fy) ** 2))
 
     # off-axis consideration of the transfer function
     H_offaxis = complexexp(2 * jnp.pi * z1 * (tx * Fx + ty * Fy))
@@ -187,9 +179,7 @@ def __make_transferfunction_sas(
     """
 
     # off axis theta tuple in degrees
-    theta = _to_tuple(
-        reconstruction.theta if hasattr(reconstruction, "theta") else None
-    )
+    theta = _to_tuple(reconstruction.theta if hasattr(reconstruction, "theta") else None)
     fftshiftSwitch = params.fftshiftSwitch
     wavelength = reconstruction.wavelength  # Wavelength used in the scanning probe.
     nosm = reconstruction.nosm  # no. of spatial modes for the object.
@@ -205,9 +195,7 @@ def __make_transferfunction_sas(
         raise ValueError("Currently for multi-wavelength, off-axis SAS does not work")
 
     if nslice > 1:
-        raise ValueError(
-            " Currently off-axis SAS not valid for multi-slice ptychography"
-        )
+        raise ValueError(" Currently off-axis SAS not valid for multi-slice ptychography")
 
     # transfer function over the entire 6D field (nlambda, nosm, npsm, nslice, Np, Np)
     transfer_function = jnp.zeros(
@@ -216,9 +204,7 @@ def __make_transferfunction_sas(
     )
     for inds in iterate_6d_fields(transfer_function):
         i_nlambda, j_nosm, k_npsm, l_nslice = inds
-        transfer_function = transfer_function.at[
-            i_nlambda, j_nosm, k_npsm, l_nslice
-        ].set(
+        transfer_function = transfer_function.at[i_nlambda, j_nosm, k_npsm, l_nslice].set(
             __sas_transfer_function(wavelength, Lp, Np, theta, z1, z2)
         )
 
@@ -235,9 +221,7 @@ def _interface_sas(
     """Just an interface for the actual forward and backward off-axis sas propagator"""
 
     # ideally pad factor of 2 is supported as per the SAS publication, however can be modified by user.
-    pad_factor = (
-        reconstruction.pad_factor if hasattr(reconstruction, "pad_factor") else 2
-    )
+    pad_factor = reconstruction.pad_factor if hasattr(reconstruction, "pad_factor") else 2
     fields_padded = _pad_field(fields, pad_factor)
 
     # modified Np and Lp with the pad factor
@@ -250,28 +234,20 @@ def _interface_sas(
     z1 = reconstruction.zo if z is None else z
 
     # off-axis theta tuple in degrees and the calculated sines
-    theta = _to_tuple(
-        reconstruction.theta if hasattr(reconstruction, "theta") else None
-    )
+    theta = _to_tuple(reconstruction.theta if hasattr(reconstruction, "theta") else None)
     theta_x, theta_y = theta
     sx, sy = jnp.sin(jnp.radians(theta_x)), jnp.sin(jnp.radians(theta_y))
 
     # prefactor_z for relaxing sampling, defaults to 1 / sqrt(1-sx**2-sy**2)
     prefactor_z = (
-        reconstruction.prefactor_z
-        if hasattr(reconstruction, "prefactor_z")
-        else 1 / jnp.sqrt(1 - sx**2 - sy**2)
+        reconstruction.prefactor_z if hasattr(reconstruction, "prefactor_z") else 1 / jnp.sqrt(1 - sx**2 - sy**2)
     )
 
     # z2 virtual distance (Fresnel) for relaxing sampling requirements
     z2 = float(prefactor_z * z1)
 
     # modify real-space resolution if required, however preferably kept at 1.0 (diffraction-limited)
-    prefactor_dxp = (
-        reconstruction.prefactor_dxp
-        if hasattr(reconstruction, "prefactor_dxp")
-        else 1.0
-    )
+    prefactor_dxp = reconstruction.prefactor_dxp if hasattr(reconstruction, "prefactor_dxp") else 1.0
 
     # probe FOV adjusted with the pad factor
     Ld = reconstruction.Ld * pad_factor
@@ -280,9 +256,7 @@ def _interface_sas(
     # quadratic phase Q2 (currently zo, but this can be z2 and z1 separated)
     dxp = float(reconstruction.dxp)
 
-    quad_phase_Q1 = __make_quad_phase(
-        z2, wavelength, Np, dxp
-    )
+    quad_phase_Q1 = __make_quad_phase(z2, wavelength, Np, dxp)
 
     # precompensated transfer function
     H_precomp = __make_transferfunction_sas(params, reconstruction, Np, Lp, z1, z2)
@@ -294,17 +268,13 @@ def _interface_sas(
         x_q = jnp.linspace(-Np / 2, Np / 2, int(Np)) * dxq
         Xq, Yq = jnp.meshgrid(x_q, x_q)
 
-        quad_phase_Q2 = jnp.exp(1j * k * z1) * jnp.exp(
-            1.0j * k / (2 * z1) * (Xq**2 + Yq**2)
-        )
+        quad_phase_Q2 = jnp.exp(1j * k * z1) * jnp.exp(1.0j * k / (2 * z1) * (Xq**2 + Yq**2))
 
     return_dict = {
         "fields_padded": fields_padded,
         "H_precomp": H_precomp,
         "quad_phase_Q1": quad_phase_Q1,
-        "quad_phase_Q2": (
-            quad_phase_Q2 if with_quad_phase_Q2 else jnp.ones_like(fields_padded)
-        ),
+        "quad_phase_Q2": (quad_phase_Q2 if with_quad_phase_Q2 else jnp.ones_like(fields_padded)),
         "pad_factor": pad_factor,
     }
 

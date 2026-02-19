@@ -18,9 +18,7 @@ def fft2c(field, fftshiftSwitch=False, *args, **kwargs):
         return jnp.fft.fft2(field, norm="ortho")
     else:
         axes = (-2, -1)
-        return jnp.fft.fftshift(
-            jnp.fft.fft2(jnp.fft.ifftshift(field, axes=axes), norm="ortho"), axes=axes
-        )
+        return jnp.fft.fftshift(jnp.fft.fft2(jnp.fft.ifftshift(field, axes=axes), norm="ortho"), axes=axes)
 
 
 @functools.partial(jax.jit, static_argnums=(1,))
@@ -36,9 +34,7 @@ def ifft2c(field, fftshiftSwitch=False):
         return jnp.fft.ifft2(field, norm="ortho")
     else:
         axes = (-2, -1)
-        return jnp.fft.fftshift(
-            jnp.fft.ifft2(jnp.fft.ifftshift(field, axes=axes), norm="ortho"), axes=axes
-        )
+        return jnp.fft.fftshift(jnp.fft.ifft2(jnp.fft.ifftshift(field, axes=axes), norm="ortho"), axes=axes)
 
 
 @jax.jit
@@ -87,9 +83,7 @@ def fraccircshift(A, shiftsize):
     fraction = shiftsize - integer
 
     def _shift_along_axis(A, axis, int_shift, frac_shift):
-        return (1 - frac_shift) * jnp.roll(A, int_shift, axis=axis) + frac_shift * jnp.roll(
-            A, int_shift + 1, axis=axis
-        )
+        return (1 - frac_shift) * jnp.roll(A, int_shift, axis=axis) + frac_shift * jnp.roll(A, int_shift + 1, axis=axis)
 
     A = _shift_along_axis(A, 0, integer[0], fraction[0])
     A = _shift_along_axis(A, 1, integer[1], fraction[1])
@@ -142,17 +136,13 @@ def orthogonalizeModes(p, method=None):
         s = s[indices]
         U = U[:, indices]
         V = V[:, indices]
-        p = jnp.transpose(jnp.dot(U, jnp.diag(s))).reshape(
-            p.shape[0], p.shape[1], p.shape[2]
-        )
+        p = jnp.transpose(jnp.dot(U, jnp.diag(s))).reshape(p.shape[0], p.shape[1], p.shape[2])
         normalizedEigenvalues = s**2 / jnp.sum(s**2)
         V = jnp.transpose(V)
         return p, normalizedEigenvalues, V
 
     else:
-        U, s, V = jnp.linalg.svd(
-            p.reshape(p.shape[0], p.shape[1] * p.shape[2]), full_matrices=False
-        )
+        U, s, V = jnp.linalg.svd(p.reshape(p.shape[0], p.shape[1] * p.shape[2]), full_matrices=False)
         p = jnp.dot(jnp.diag(s), V).reshape(p.shape[0], p.shape[1], p.shape[2])
         normalizedEigenvalues = s**2 / jnp.sum(s**2)
 
@@ -216,28 +206,14 @@ def zernikeAberrations(Xp, Yp, D, z_coeff):
     # trefoil
     Z[10] = z_coeff[10] * 5 ** (1 / 2.0) * (6 * p**4 - 6 * p**2 + 1)
     # spherical
-    Z[11] = (
-        z_coeff[11] * 10 ** (1 / 2.0) * (4 * p**4 - 3 * p**2) * np.cos(2.0 * angle)
-    )
+    Z[11] = z_coeff[11] * 10 ** (1 / 2.0) * (4 * p**4 - 3 * p**2) * np.cos(2.0 * angle)
     # 2nd astigmatism
-    Z[12] = (
-        z_coeff[12] * 10 ** (1 / 2.0) * (4 * p**4 - 3 * p**2) * np.sin(2.0 * angle)
-    )
+    Z[12] = z_coeff[12] * 10 ** (1 / 2.0) * (4 * p**4 - 3 * p**2) * np.sin(2.0 * angle)
     # 2nd astigmatism
     Z[13] = z_coeff[13] * 10 ** (1 / 2.0) * (p**4) * np.cos(4.0 * angle)
     Z[14] = z_coeff[14] * 10 ** (1 / 2.0) * (p**4) * np.sin(4.0 * angle)
-    Z[15] = (
-        z_coeff[15]
-        * 12 ** (1 / 2.0)
-        * (10 * p**5 - 12 * p**3 + 3 * p)
-        * np.cos(angle)
-    )
-    Z[16] = (
-        z_coeff[16]
-        * 12 ** (1 / 2)
-        * (10 * p**5 - 12 * p**3 + 3 * p)
-        * np.sin(angle)
-    )
+    Z[15] = z_coeff[15] * 12 ** (1 / 2.0) * (10 * p**5 - 12 * p**3 + 3 * p) * np.cos(angle)
+    Z[16] = z_coeff[16] * 12 ** (1 / 2) * (10 * p**5 - 12 * p**3 + 3 * p) * np.sin(angle)
     Z[17] = z_coeff[17] * 12 ** (1 / 2) * (5 * p**5 - 4 * p**3) * np.cos(3 * angle)
     Z[18] = z_coeff[18] * 12 ** (1 / 2) * (5 * p**5 - 4 * p**3) * np.sin(3 * angle)
 
@@ -255,9 +231,7 @@ def p2bin(im, binningFactor):
     if np.mod(binningFactor, 2) != 0 and binningFactor != 1:
         raise ValueError("binning factor needs to be a power of 2")
     if np.mod(M, binningFactor) != 0 or np.mod(N, binningFactor) != 0:
-        raise ValueError(
-            "#rows and #columns of reference need to be divided by binningFactor!"
-        )
+        raise ValueError("#rows and #columns of reference need to be divided by binningFactor!")
 
     if binningFactor != 1:
         for k in range(1, int(np.log2(binningFactor))):

@@ -17,7 +17,6 @@ from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 
 
 class e3PIE(BaseEngine):
-
     def __init__(
         self,
         reconstruction: Reconstruction,
@@ -75,9 +74,7 @@ class e3PIE(BaseEngine):
         self.reconstruction.esw = self.reconstruction.probe.copy()
         # get module
 
-        self.pbar = tqdm.trange(
-            self.numIterations, desc="e3PIE", file=sys.stdout, leave=True
-        )
+        self.pbar = tqdm.trange(self.numIterations, desc="e3PIE", file=sys.stdout, leave=True)
 
         # self.pbar = (1, 2)
 
@@ -94,35 +91,27 @@ class e3PIE(BaseEngine):
 
                 # form first slice esw (exit surface wave)
                 self.reconstruction.esw = self.reconstruction.esw.at[:, :, :, 0, ...].set(
-                    objectPatch[:, :, :, 0, ...]
-                    * self.reconstruction.probe[:, :, :, 0, ...]
+                    objectPatch[:, :, :, 0, ...] * self.reconstruction.probe[:, :, :, 0, ...]
                 )
 
                 # propagate through object
                 for sliceLoop in range(1, self.reconstruction.nslice):
                     self.reconstruction.probe = self.reconstruction.probe.at[:, :, :, sliceLoop, ...].set(
                         jnp.fft.ifft2(
-                            jnp.fft.fft2(
-                                self.reconstruction.esw[:, :, :, sliceLoop - 1, ...]
-                            )
-                            * self.reconstruction.H
+                            jnp.fft.fft2(self.reconstruction.esw[:, :, :, sliceLoop - 1, ...]) * self.reconstruction.H
                         )
                     )
                     self.reconstruction.esw = self.reconstruction.esw.at[:, :, :, sliceLoop, ...].set(
-                        self.reconstruction.probe[:, :, :, sliceLoop, ...]
-                        * objectPatch[:, :, :, sliceLoop, ...]
+                        self.reconstruction.probe[:, :, :, sliceLoop, ...] * objectPatch[:, :, :, sliceLoop, ...]
                     )
 
                 # propagate to camera, intensityProjection, propagate back to object
                 self.intensityProjection(positionIndex)
 
                 # difference term
-                DELTA = (self.reconstruction.eswUpdate - self.reconstruction.esw)[
-                    :, :, :, -1, ...
-                ]
+                DELTA = (self.reconstruction.eswUpdate - self.reconstruction.esw)[:, :, :, -1, ...]
                 # update object slice
                 for loopTemp in range(self.reconstruction.nslice - 1):
-
                     sliceLoop = self.reconstruction.nslice - 1 - loopTemp
 
                     # temp_delta = self.reconstruction.esw[..., sliceLoop, sy, sx]
@@ -136,7 +125,7 @@ class e3PIE(BaseEngine):
                         )
                     )
                     # eswTemp update (here probe incident on last slice)
-                    beth = 0.9 # todo, why need beth, not betaProbe, changable?
+                    beth = 0.9  # todo, why need beth, not betaProbe, changable?
                     self.reconstruction.probe = self.reconstruction.probe.at[:, :, :, sliceLoop, ...].set(
                         self.probeUpdate(
                             objectPatch[:, :, :, sliceLoop, ...],
@@ -149,9 +138,7 @@ class e3PIE(BaseEngine):
                     # back-propagate and calculate gradient term
                     DELTA = (
                         jnp.fft.ifft2(
-                            jnp.fft.fft2(
-                                self.reconstruction.probe[:, :, :, sliceLoop, ...]
-                            )
+                            jnp.fft.fft2(self.reconstruction.probe[:, :, :, sliceLoop, ...])
                             * self.reconstruction.H.conj()
                         )
                         - self.reconstruction.esw[:, :, :, sliceLoop - 1, ...]
@@ -187,34 +174,23 @@ class e3PIE(BaseEngine):
             # show reconstruction
             self.showReconstruction(loop)
 
-
-    def objectPatchUpdate(
-        self, objectPatch: np.ndarray, DELTA: np.ndarray, localProbe: np.ndarray
-    ):
+    def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray, localProbe: np.ndarray):
         """
         Todo add docstring
         :param objectPatch:
         :param DELTA:
         :return:
         """
-        frac = localProbe.conj() / jnp.max(
-            jnp.sum(jnp.abs(localProbe) ** 2, axis=(0, 1, 2))
-        )
-        return objectPatch + self.betaObject * jnp.sum(
-            frac * DELTA, axis=(0, 2), keepdims=True
-        )
+        frac = localProbe.conj() / jnp.max(jnp.sum(jnp.abs(localProbe) ** 2, axis=(0, 1, 2)))
+        return objectPatch + self.betaObject * jnp.sum(frac * DELTA, axis=(0, 2), keepdims=True)
 
-    def probeUpdate(
-        self, objectPatch: np.ndarray, DELTA: np.ndarray, localProbe: np.ndarray, beth
-    ):
+    def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray, localProbe: np.ndarray, beth):
         """
         Todo add docstring
         :param objectPatch:
         :param DELTA:
         :return:
         """
-        frac = objectPatch.conj() / jnp.max(
-            jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0, 1, 2))
-        )
+        frac = objectPatch.conj() / jnp.max(jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0, 1, 2)))
         r = localProbe + beth * jnp.sum(frac * DELTA, axis=(0, 1), keepdims=True)
         return r

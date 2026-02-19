@@ -60,9 +60,7 @@ class multiPIE(BaseEngine):
     def reconstruct(self):
         self._prepareReconstruction()
 
-        self.pbar = tqdm.trange(
-            self.numIterations, desc="multiPIE", file=sys.stdout, leave=True
-        )
+        self.pbar = tqdm.trange(self.numIterations, desc="multiPIE", file=sys.stdout, leave=True)
 
         for loop in self.pbar:
             # set position order
@@ -109,7 +107,6 @@ class multiPIE(BaseEngine):
 
             # todo clearMemory implementation
 
-
     def objectMomentumUpdate(self):
         self.reconstruction.object, self.reconstruction.objectMomentum, self.reconstruction.objectBuffer = (
             momentum_step(
@@ -122,14 +119,12 @@ class multiPIE(BaseEngine):
         )
 
     def probeMomentumUpdate(self):
-        self.reconstruction.probe, self.reconstruction.probeMomentum, self.reconstruction.probeBuffer = (
-            momentum_step(
-                self.reconstruction.probe,
-                self.reconstruction.probeBuffer,
-                self.reconstruction.probeMomentum,
-                self.stepM,
-                self.betaM,
-            )
+        self.reconstruction.probe, self.reconstruction.probeMomentum, self.reconstruction.probeBuffer = momentum_step(
+            self.reconstruction.probe,
+            self.reconstruction.probeBuffer,
+            self.reconstruction.probeMomentum,
+            self.stepM,
+            self.betaM,
         )
 
     def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
@@ -151,10 +146,6 @@ class multiPIE(BaseEngine):
         """
         absO2 = jnp.abs(objectPatch) ** 2
         Omax = jnp.max(jnp.sum(absO2, axis=(0, 1, 2, 3)), axis=(-1, -2))
-        frac = objectPatch.conj() / (
-            self.alphaProbe * Omax + (1 - self.alphaProbe) * absO2
-        )
-        r = self.reconstruction.probe + self.betaProbe * jnp.sum(
-            frac * DELTA, axis=(0, 1), keepdims=True
-        )
+        frac = objectPatch.conj() / (self.alphaProbe * Omax + (1 - self.alphaProbe) * absO2)
+        r = self.reconstruction.probe + self.betaProbe * jnp.sum(frac * DELTA, axis=(0, 1), keepdims=True)
         return r

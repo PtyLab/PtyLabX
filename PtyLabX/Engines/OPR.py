@@ -19,7 +19,6 @@ from PtyLabX.utils.fsvd import rsvd
 
 
 class OPR(BaseEngine):
-
     def __init__(
         self,
         reconstruction: Reconstruction,
@@ -56,9 +55,7 @@ class OPR(BaseEngine):
         mode_slice = self.OPR_modes
         n_subspace = self.n_subspace
 
-        self.reconstruction.probe_stack = jnp.zeros(
-            (1, 1, Nmodes, 1, Np, Np, Nframes), dtype=jnp.complex64
-        )
+        self.reconstruction.probe_stack = jnp.zeros((1, 1, Nmodes, 1, Np, Np, Nframes), dtype=jnp.complex64)
 
         for i, mode in enumerate(self.OPR_modes):
             # fill the probe-stack with the inital guess of the probes
@@ -71,9 +68,7 @@ class OPR(BaseEngine):
             )
 
         # actual reconstruction ePIE_engine
-        self.pbar = tqdm.trange(
-            self.numIterations, desc="OPR", file=sys.stdout, leave=True
-        )
+        self.pbar = tqdm.trange(self.numIterations, desc="OPR", file=sys.stdout, leave=True)
         for loop in self.pbar:
             self.it = loop
             # set position order
@@ -111,9 +106,7 @@ class OPR(BaseEngine):
                     )
 
                 # probe update
-                self.reconstruction.probe = self.probeUpdate(
-                    objectPatch, DELTA, weight=1
-                )
+                self.reconstruction.probe = self.probeUpdate(objectPatch, DELTA, weight=1)
 
                 # save first, dominant probe mode
                 self.reconstruction.probe_stack = self.reconstruction.probe_stack.at[..., positionIndex].set(
@@ -126,16 +119,13 @@ class OPR(BaseEngine):
             if self.params.OPR_orthogonalize_modes:
                 self.orthogonalizeIncoherentModes()
 
-            self.reconstruction.probe_stack = self.orthogonalizeProbeStack(
-                self.reconstruction.probe_stack, n_subspace
-            )
+            self.reconstruction.probe_stack = self.orthogonalizeProbeStack(self.reconstruction.probe_stack, n_subspace)
 
             # apply Constraints
             self.applyConstraints(loop)
 
             # show reconstruction
             self.showReconstruction(loop)
-
 
     def orthogonalizeIncoherentModes(self):
         """
@@ -191,11 +181,8 @@ class OPR(BaseEngine):
         nFrames = self.experimentalData.numFrames
 
         for i, mode in enumerate(self.OPR_modes):
-
             if self.params.OPR_tsvd_type == "randomized":
-                U, s, Vh = self.rsvd(
-                    probe_stack[:, :, i, :, :, :].reshape(n * n, nFrames), n_dim
-                )
+                U, s, Vh = self.rsvd(probe_stack[:, :, i, :, :, :].reshape(n * n, nFrames), n_dim)
             elif self.params.OPR_tsvd_type == "numpy":
                 U, s, Vh = jnp.linalg.svd(
                     probe_stack[:, :, i, :, :, :].reshape(n * n, nFrames),
@@ -224,20 +211,14 @@ class OPR(BaseEngine):
     def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
         return epie_object_update(objectPatch, self.reconstruction.probe, DELTA, self.betaObject)
 
-    def probeUpdate(
-        self, objectPatch: np.ndarray, DELTA: np.ndarray, weight: float, gimmel=0.1
-    ):
+    def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray, weight: float, gimmel=0.1):
         """
         Update the probe
         :param objectPatch: Slice of the object array
         :param DELTA:
         :return: updated probe
         """
-        frac = objectPatch.conj() / (
-            jnp.max(jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3))) + gimmel
-        )
+        frac = objectPatch.conj() / (jnp.max(jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3))) + gimmel)
         frac = frac * weight
-        r = self.reconstruction.probe + self.betaProbe * jnp.sum(
-            frac * DELTA, axis=(0, 1, 3), keepdims=True
-        )
+        r = self.reconstruction.probe + self.betaProbe * jnp.sum(frac * DELTA, axis=(0, 1, 3), keepdims=True)
         return r

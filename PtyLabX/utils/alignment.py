@@ -37,9 +37,7 @@ def show_alignment(
 
     ax_pos = fig.add_subplot(gs[:, ncols])
     ax_pos.scatter(positions[:, 1], positions[:, 0], s=10, c="steelblue", label="all positions")
-    ax_pos.scatter(
-        positions[order, 1], positions[order, 0], s=40, c="red", zorder=5, label="shown (nearest 15)"
-    )
+    ax_pos.scatter(positions[order, 1], positions[order, 0], s=40, c="red", zorder=5, label="shown (nearest 15)")
     ax_pos.set_aspect("equal")
     ax_pos.set_xlabel("col position")
     ax_pos.set_ylabel("row position")

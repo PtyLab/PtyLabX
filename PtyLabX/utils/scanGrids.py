@@ -126,9 +126,7 @@ class tsp_ga:
     genetic algorithm for traveling salesman problem.
     """
 
-    def __init__(
-        self, R, C, start="0", population_size=5, iterations=100, plotUpdateFrequency=20
-    ):
+    def __init__(self, R, C, start="0", population_size=5, iterations=100, plotUpdateFrequency=20):
         self.xy = np.vstack((R, C)).T
         self.start = start
         self.population_size = population_size
@@ -140,9 +138,7 @@ class tsp_ga:
         self.ax_scanGridOpt.set_title("optimized scan grid")
         self.ax_scanGridOpt.set_xlabel("um")
         self.ax_scanGridOpt.set_ylabel("um")
-        (self.ax_scanGridOpt_plot,) = self.ax_scanGridOpt.plot(
-            self.xy[:, 0], self.xy[:, 1], "o-"
-        )
+        (self.ax_scanGridOpt_plot,) = self.ax_scanGridOpt.plot(self.xy[:, 0], self.xy[:, 1], "o-")
         self.figure.show()
 
         n = self.xy.shape[0]
@@ -261,9 +257,7 @@ class tsp_ga:
                     dists.append(totalDist[randomOrderP2])
                 idx = np.argmin(dists)
                 bestOf4Route = rtes[idx]
-                routeInsertionPoints = np.transpose(
-                    np.sort(np.ceil((len(geneP) - 2) * np.random.rand(1, 2)))
-                )
+                routeInsertionPoints = np.transpose(np.sort(np.ceil((len(geneP) - 2) * np.random.rand(1, 2))))
                 ins_i = int(routeInsertionPoints[0])
                 ins_j = int(routeInsertionPoints[1])
                 for k in range(4):  # Mutate the Best to get Three New Routes
@@ -296,9 +290,7 @@ class tsp_ga:
                 print("distance: %i um, numIteration: %i, " % (globalMin, iter))
                 current_best_gene_r = np.array(optRoute).astype(int)
 
-                self.ax_scanGridOpt_plot.set_data(
-                    self.xy[current_best_gene_r, 0], self.xy[current_best_gene_r, 1]
-                )
+                self.ax_scanGridOpt_plot.set_data(self.xy[current_best_gene_r, 0], self.xy[current_best_gene_r, 1])
                 self.figure.canvas.draw()
                 self.figure.canvas.flush_events()
 

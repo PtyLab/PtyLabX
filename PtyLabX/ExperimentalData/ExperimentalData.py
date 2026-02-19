@@ -16,9 +16,7 @@ class ExperimentalData:
         self.logger = logging.getLogger("ExperimentalData")
         self.logger.debug("Initializing ExperimentalData object")
 
-        self.operationMode = (
-            operationMode  # operationMode: 'CPM' or 'FPM', default is CPM is not given
-        )
+        self.operationMode = operationMode  # operationMode: 'CPM' or 'FPM', default is CPM is not given
         self._setFields()
         if filename is not None:
             self.loadData(filename)
@@ -80,9 +78,7 @@ class ExperimentalData:
             self.filename = filename
             from PtyLabX.io.readExample import examplePath
 
-            self.filename = examplePath(
-                filename
-            )  # readExample(filename, python_order=True)
+            self.filename = examplePath(filename)  # readExample(filename, python_order=True)
         else:
             self.filename = filename
 
@@ -90,9 +86,7 @@ class ExperimentalData:
         readHdf5.checkDataFields(self.filename, self.requiredFields)
         # 2. load dictionary. Only the values specified by 'requiredFields'
         # in readHdf.py file were loaded
-        measurementDict = readHdf5.loadInputData(
-            self.filename, self.requiredFields, self.optionalFields
-        )
+        measurementDict = readHdf5.loadInputData(self.filename, self.requiredFields, self.optionalFields)
         # 3. 'requiredFields' will be the attributes that must be set
         attributesToSet = measurementDict.keys()
         # 4. set object attributes as the essential data fields
@@ -113,28 +107,28 @@ class ExperimentalData:
         """
         Reduce the number of positions for the reconstruction
         """
-        self.ptychogram = self.ptychogram[start: end]
-        self.encoder = self.encoder[start: end]
+        self.ptychogram = self.ptychogram[start:end]
+        self.encoder = self.encoder[start:end]
 
     def cropCenter(self, size):
-        '''
+        """
         The parameter size corresponds to the finale size of the diffraction patterns
-        '''
+        """
         if not isinstance(size, int):
-            raise TypeError('Crop value is not valid. Int expected')
+            raise TypeError("Crop value is not valid. Int expected")
 
         x = self.ptychogram.shape[-1]
         startx = x // 2 - (size // 2)
 
         startx += 1
 
-        self.ptychogram = self.ptychogram[..., startx: startx + size, startx: startx + size]
+        self.ptychogram = self.ptychogram[..., startx : startx + size, startx : startx + size]
 
     def binData(self, binning):
-        '''
+        """
         :param binning: Binning parameter (int, e.g. 2)
         :return:
-        '''
+        """
         Ndp = self.ptychogram.shape[0]
         Ny = self.ptychogram.shape[1]
         Nx = self.ptychogram.shape[2]
@@ -214,9 +208,7 @@ class ExperimentalData:
         """
         print(f"Min max ptychogram: {np.min(self.ptychogram)}, {self.ptychogram.max()}")
         ptychogram_np = np.asarray(self.ptychogram)
-        log_ptychogram = np.log10(
-            np.swapaxes(np.clip(ptychogram_np.astype(np.float32), 0, None), 1, 2) + 1
-        )
+        log_ptychogram = np.log10(np.swapaxes(np.clip(ptychogram_np.astype(np.float32), 0, None), 1, 2) + 1)
         print(f"Min max ptychogram: {np.min(log_ptychogram)}, {log_ptychogram.max()}")
         show3Dslider(log_ptychogram)
 
@@ -224,7 +216,7 @@ class ExperimentalData:
         """
         Return the relative intensity of the ptychogram at index compared to the brightest one
         """
-        if not hasattr(self, '_relative_intensity'):
-            self._relative_intensity = self.ptychogram.mean((-2,-1))
-            self._relative_intensity /= (self._relative_intensity.mean() + 2*self._relative_intensity.std())
+        if not hasattr(self, "_relative_intensity"):
+            self._relative_intensity = self.ptychogram.mean((-2, -1))
+            self._relative_intensity /= self._relative_intensity.mean() + 2 * self._relative_intensity.std()
         return self._relative_intensity[index]

@@ -20,9 +20,7 @@ from PtyLabX.utils.utils import circ, fft2c, ifft2c, orthogonalizeModes
 from scipy.ndimage import fourier_gaussian
 
 
-def smooth_amplitude(
-    field, width: float, aleph: float, amplitude_only: bool = True
-):
+def smooth_amplitude(field, width: float, aleph: float, amplitude_only: bool = True):
     """
     Smooth the amplitude of a field. Optional phase can be smoothed as well.
     Parameters
@@ -111,12 +109,8 @@ class BaseEngine(object):
         self.experimentalData.ptychogramDownsampled = self.experimentalData.ptychogram
 
         # pad the probe
-        padNum_before = (
-            (self.params.CPSCupsamplingFactor - 1) * self.reconstruction.Np // 2
-        )
-        padNum_after = (
-            self.params.CPSCupsamplingFactor - 1
-        ) * self.reconstruction.Np - padNum_before
+        padNum_before = (self.params.CPSCupsamplingFactor - 1) * self.reconstruction.Np // 2
+        padNum_after = (self.params.CPSCupsamplingFactor - 1) * self.reconstruction.Np - padNum_before
         self.reconstruction.probe = np.pad(
             self.reconstruction.probe,
             (
@@ -147,12 +141,9 @@ class BaseEngine(object):
 
         # update coordinates (only need to update the Nd and dxd, the rest updates automatically)
         self.reconstruction.Nd = (
-            self.experimentalData.ptychogramDownsampled.shape[-1]
-            * self.params.CPSCupsamplingFactor
+            self.experimentalData.ptychogramDownsampled.shape[-1] * self.params.CPSCupsamplingFactor
         )
-        self.reconstruction.dxd = (
-            self.reconstruction.dxd / self.params.CPSCupsamplingFactor
-        )
+        self.reconstruction.dxd = self.reconstruction.dxd / self.params.CPSCupsamplingFactor
 
         self.logger.info("CPSCswitch is on, coordinates(dxd,dxp,dxo) have been updated")
 
@@ -168,9 +159,7 @@ class BaseEngine(object):
             self.daleth = 0.5  # feedback
             self.beth = 0.9  # friction
             self.adaptStep = 1  # adaptive step size
-            self.D = np.zeros(
-                (self.experimentalData.numFrames, 2)
-            )  # position search direction
+            self.D = np.zeros((self.experimentalData.numFrames, 2))  # position search direction
             # predefine shifts
             rmax = 2
             dy, dx = np.mgrid[-rmax : rmax + 1, -rmax : rmax + 1]
@@ -204,9 +193,7 @@ class BaseEngine(object):
                 )
         # initialize energy at each scan position
         if not hasattr(self.reconstruction, "errorAtPos"):
-            self.reconstruction.errorAtPos = np.zeros(
-                (self.experimentalData.numFrames, 1), dtype=np.float32
-            )
+            self.reconstruction.errorAtPos = np.zeros((self.experimentalData.numFrames, 1), dtype=np.float32)
         # initialize final error
         if not hasattr(self.reconstruction, "error"):
             self.reconstruction.error = []
@@ -215,9 +202,7 @@ class BaseEngine(object):
         if self.params.probePowerCorrectionSwitch:
             self.reconstruction.probe = (
                 self.reconstruction.probe
-                / np.sqrt(
-                    np.sum(self.reconstruction.probe * self.reconstruction.probe.conj())
-                )
+                / np.sqrt(np.sum(self.reconstruction.probe * self.reconstruction.probe.conj()))
                 * self.experimentalData.maxProbePower
             )
 
@@ -228,17 +213,7 @@ class BaseEngine(object):
                 -(
                     (
                         (self.reconstruction.Xp**2 + self.reconstruction.Yp**2)
-                        / (
-                            2
-                            * (
-                                3
-                                / 4
-                                * self.reconstruction.Np
-                                * self.reconstruction.dxp
-                                / 2.355
-                            )
-                            ** 2
-                        )
+                        / (2 * (3 / 4 * self.reconstruction.Np * self.reconstruction.dxp / 2.355) ** 2)
                     )
                     ** 10
                 )
@@ -248,8 +223,7 @@ class BaseEngine(object):
             self.probeWindow = circ(
                 self.reconstruction.Xp,
                 self.reconstruction.Yp,
-                self.experimentalData.entrancePupilDiameter
-                + self.experimentalData.entrancePupilDiameter * 0.2,
+                self.experimentalData.entrancePupilDiameter + self.experimentalData.entrancePupilDiameter * 0.2,
             )
 
     def _setObjectProbeROI(self, update=False):
@@ -289,24 +263,15 @@ class BaseEngine(object):
                 #     ),
                 # ]
                 self.monitor.objectROI = [
-                    slice(
-                        max(0, xc - rx // 2), min(self.reconstruction.No, xc + rx // 2)
-                    ),
-                    slice(
-                        max(0, yc - ry // 2), min(self.reconstruction.No, yc + ry // 2)
-                    )
+                    slice(max(0, xc - rx // 2), min(self.reconstruction.No, xc + rx // 2)),
+                    slice(max(0, yc - ry // 2), min(self.reconstruction.No, yc + ry // 2)),
                 ]
-
 
         if not hasattr(self.monitor, "probeROI") or update:
             if self.monitor.probeZoom == "full" or self.monitor.probeZoom is None:
                 self.monitor.probeROI = [slice(None, None), slice(None, None)]
             else:
-                r = int(
-                    self.experimentalData.entrancePupilDiameter
-                    / self.reconstruction.dxp
-                    / self.monitor.probeZoom
-                )
+                r = int(self.experimentalData.entrancePupilDiameter / self.reconstruction.dxp / self.monitor.probeZoom)
                 self.monitor.probeROI = [
                     slice(
                         max(0, self.reconstruction.Np // 2 - r),
@@ -321,15 +286,9 @@ class BaseEngine(object):
     def _showInitialGuesses(self):
         self.monitor.initializeMonitors()
         objectEstimate = np.squeeze(
-            self.reconstruction.object[
-                ..., self.monitor.objectROI[0], self.monitor.objectROI[1]
-            ]
+            self.reconstruction.object[..., self.monitor.objectROI[0], self.monitor.objectROI[1]]
         )
-        probeEstimate = np.squeeze(
-            self.reconstruction.probe[
-                ..., self.monitor.probeROI[0], self.monitor.probeROI[1]
-            ]
-        )
+        probeEstimate = np.squeeze(self.reconstruction.probe[..., self.monitor.probeROI[0], self.monitor.probeROI[1]])
 
         self.monitor.updateObjectProbeErrorMonitor(
             error=self.reconstruction.error,
@@ -348,45 +307,31 @@ class BaseEngine(object):
         checks miscellaneous quantities specific certain Engines
         """
         if self.params.backgroundModeSwitch:
-            self.reconstruction.background = 1e-1 * np.ones(
-                (self.reconstruction.Np, self.reconstruction.Np)
-            )
+            self.reconstruction.background = 1e-1 * np.ones((self.reconstruction.Np, self.reconstruction.Np))
 
         # preallocate intensity scaling vector
         if self.params.intensityConstraint == "fluctuation":
             self.intensityScaling = np.ones(self.experimentalData.numFrames)
 
         if self.params.intensityConstraint == "interferometric":
-            self.reconstruction.reference = np.ones(
-                self.reconstruction.probe[0, 0, 0, 0, ...].shape
-            )
+            self.reconstruction.reference = np.ones(self.reconstruction.probe[0, 0, 0, 0, ...].shape)
 
         # check if both probePoprobePowerCorrectionSwitch and modulusEnforcedProbeSwitch are on.
         # Since this can cause a contradiction, it raises an error
-        if (
-            self.params.probePowerCorrectionSwitch
-            and self.params.modulusEnforcedProbeSwitch
-        ):
+        if self.params.probePowerCorrectionSwitch and self.params.modulusEnforcedProbeSwitch:
             raise ValueError(
-                "probePowerCorrectionSwitch and modulusEnforcedProbeSwitch "
-                "can not simultaneously be switched on!"
+                "probePowerCorrectionSwitch and modulusEnforcedProbeSwitch can not simultaneously be switched on!"
             )
 
         if self.params.propagatorType == "ASP" and self.params.fftshiftSwitch:
-            raise ValueError(
-                "ASP propagatorType works only with fftshiftSwitch = False"
-            )
+            raise ValueError("ASP propagatorType works only with fftshiftSwitch = False")
         if self.params.propagatorType == "scaledASP" and self.params.fftshiftSwitch:
-            raise ValueError(
-                "scaledASP propagatorType works only with fftshiftSwitch = False"
-            )
+            raise ValueError("scaledASP propagatorType works only with fftshiftSwitch = False")
 
         if self.params.CPSCswitch:
             if not hasattr(self.experimentalData, "ptychogramDownsampled"):
                 if self.params.CPSCupsamplingFactor is None:
-                    raise ValueError(
-                        "CPSCswitch is on, CPSCupsamplingFactor need to be set"
-                    )
+                    raise ValueError("CPSCswitch is on, CPSCupsamplingFactor need to be set")
                 else:
                     self._setCPSC()
 
@@ -399,47 +344,33 @@ class BaseEngine(object):
                 print("check fftshift...")
                 print("fftshift data for fast far-field update")
                 # shift detector quantities
-                self.experimentalData.ptychogram = np.fft.ifftshift(
-                    self.experimentalData.ptychogram, axes=(-1, -2)
-                )
+                self.experimentalData.ptychogram = np.fft.ifftshift(self.experimentalData.ptychogram, axes=(-1, -2))
                 if hasattr(self.experimentalData, "ptychogramDownsampled"):
                     self.experimentalData.ptychogramDownsampled = np.fft.ifftshift(
                         self.experimentalData.ptychogramDownsampled, axes=(-1, -2)
                     )
                 if hasattr(self.experimentalData, "w"):
                     if self.experimentalData.W is not None:
-                        self.experimentalData.W = np.fft.ifftshift(
-                            self.experimentalData.W, axes=(-1, -2)
-                        )
+                        self.experimentalData.W = np.fft.ifftshift(self.experimentalData.W, axes=(-1, -2))
                 if self.experimentalData.emptyBeam is not None:
-                    self.experimentalData.emptyBeam = np.fft.ifftshift(
-                        self.experimentalData.emptyBeam, axes=(-1, -2)
-                    )
+                    self.experimentalData.emptyBeam = np.fft.ifftshift(self.experimentalData.emptyBeam, axes=(-1, -2))
                 if hasattr(self.experimentalData, "PSD"):
                     if self.experimentalData.PSD is not None:
-                        self.experimentalData.PSD = np.fft.ifftshift(
-                            self.experimentalData.PSD, axes=(-1, -2)
-                        )
+                        self.experimentalData.PSD = np.fft.ifftshift(self.experimentalData.PSD, axes=(-1, -2))
                 self.params.fftshiftFlag = 1
         else:
             if self.params.fftshiftFlag == 1:
                 print("check fftshift...")
                 print("ifftshift data")
-                self.experimentalData.ptychogram = np.fft.fftshift(
-                    self.experimentalData.ptychogram, axes=(-1, -2)
-                )
+                self.experimentalData.ptychogram = np.fft.fftshift(self.experimentalData.ptychogram, axes=(-1, -2))
                 if hasattr(self.experimentalData, "ptychogramDownsampled"):
                     self.experimentalData.ptychogramDownsampled = np.fft.fftshift(
                         self.experimentalData.ptychogramDownsampled, axes=(-1, -2)
                     )
                 if self.experimentalData.W is not None:
-                    self.experimentalData.W = np.fft.fftshift(
-                        self.experimentalData.W, axes=(-1, -2)
-                    )
+                    self.experimentalData.W = np.fft.fftshift(self.experimentalData.W, axes=(-1, -2))
                 if self.experimentalData.emptyBeam is not None:
-                    self.experimentalData.emptyBeam = np.fft.fftshift(
-                        self.experimentalData.emptyBeam, axes=(-1, -2)
-                    )
+                    self.experimentalData.emptyBeam = np.fft.fftshift(self.experimentalData.emptyBeam, axes=(-1, -2))
                 self.params.fftshiftFlag = 0
 
     def setPositionOrder(self):
@@ -461,12 +392,8 @@ class BaseEngine(object):
         # darkfield)
         # todo check this with Antonios
         elif self.params.positionOrder == "NA":
-            rows = self.reconstruction.positions[:, 0] - np.mean(
-                self.reconstruction.positions[:, 0]
-            )
-            cols = self.reconstruction.positions[:, 1] - np.mean(
-                self.reconstruction.positions[:, 1]
-            )
+            rows = self.reconstruction.positions[:, 0] - np.mean(self.reconstruction.positions[:, 0])
+            cols = self.reconstruction.positions[:, 1] - np.mean(self.reconstruction.positions[:, 1])
             dist = np.sqrt(rows**2 + cols**2)
             self.positionIndices = np.argsort(dist)
         else:
@@ -483,9 +410,7 @@ class BaseEngine(object):
 
         if optimizable is not None:
             if not isinstance(optimizable, Reconstruction):
-                raise TypeError(
-                    f"Argument should be an subclass of Reconstruction, but it is {type(optimizable)}"
-                )
+                raise TypeError(f"Argument should be an subclass of Reconstruction, but it is {type(optimizable)}")
             self.reconstruction = optimizable
 
     def convert2single(self):
@@ -512,9 +437,7 @@ class BaseEngine(object):
         if esw is None:
             # todo: check this, it seems weird to store it in self.esw
             esw = self.reconstruction.esw
-        self.esw, self.reconstruction.ESW = Operators.Operators.object2detector(
-            esw, self.params, self.reconstruction
-        )
+        self.esw, self.reconstruction.ESW = Operators.Operators.object2detector(esw, self.params, self.reconstruction)
 
     def detector2object(self, ESW=None):
         """
@@ -525,9 +448,7 @@ class BaseEngine(object):
         """
         if ESW is None:
             ESW = self.reconstruction.ESW
-        esw, eswUpdate = Operators.Operators.detector2object(
-            ESW, self.params, self.reconstruction
-        )
+        esw, eswUpdate = Operators.Operators.detector2object(ESW, self.params, self.reconstruction)
         # Dirk is not sure why this has to be changed at all but it sometimes is changed for some reason
         self.reconstruction.esw = esw
         # this is the new estimate which will be processed later
@@ -538,16 +459,12 @@ class BaseEngine(object):
         Computes the fourier transform of the exit surface wave.
         :return:
         """
-        self.reconstruction.ESW = fft2c(
-            self.reconstruction.esw, self.params.fftshiftSwitch
-        )
+        self.reconstruction.ESW = fft2c(self.reconstruction.esw, self.params.fftshiftSwitch)
 
     def ifft2s(self):
         """Inverse FFT"""
         # find out if this should be performed on the GPU
-        self.reconstruction.eswUpdate = ifft2c(
-            self.reconstruction.ESW, self.params.fftshiftSwitch
-        )
+        self.reconstruction.eswUpdate = ifft2c(self.reconstruction.ESW, self.params.fftshiftSwitch)
 
     def getBeamWidth(self):
         """
@@ -577,17 +494,11 @@ class BaseEngine(object):
         Calculate linear and area overlap between two scan positions indexed ind1 and ind2
         """
         sy = (
-            abs(
-                self.reconstruction.positions[ind2, 0]
-                - self.reconstruction.positions[ind1, 0]
-            )
+            abs(self.reconstruction.positions[ind2, 0] - self.reconstruction.positions[ind1, 0])
             * self.reconstruction.dxp
         )
         sx = (
-            abs(
-                self.reconstruction.positions[ind2, 1]
-                - self.reconstruction.positions[ind1, 1]
-            )
+            abs(self.reconstruction.positions[ind2, 1] - self.reconstruction.positions[ind1, 1])
             * self.reconstruction.dxp
         )
 
@@ -596,9 +507,7 @@ class BaseEngine(object):
         self.reconstruction.linearOverlap = 1 - np.sqrt(sx**2 + sy**2) / np.minimum(
             self.reconstruction.beamWidthX, self.reconstruction.beamWidthY
         )
-        self.reconstruction.linearOverlap = np.maximum(
-            self.reconstruction.linearOverlap, 0
-        )
+        self.reconstruction.linearOverlap = np.maximum(self.reconstruction.linearOverlap, 0)
 
         # task 2: get area overlap
         # spatial frequency pixel size
@@ -634,12 +543,10 @@ class BaseEngine(object):
                     axis=(-1, -2),
                 )
             else:
-                self.reconstruction.errorAtPos = np.sum(
-                    np.abs(self.reconstruction.detectorError), axis=(-1, -2)
-                )
-        self.reconstruction.errorAtPos = np.asarray(
-            self.reconstruction.errorAtPos
-        ) / np.asarray(self.experimentalData.energyAtPos + 1e-20)
+                self.reconstruction.errorAtPos = np.sum(np.abs(self.reconstruction.detectorError), axis=(-1, -2))
+        self.reconstruction.errorAtPos = np.asarray(self.reconstruction.errorAtPos) / np.asarray(
+            self.experimentalData.energyAtPos + 1e-20
+        )
         eAverage = np.sum(self.reconstruction.errorAtPos)
 
         # append to error vector (for plotting error as function of iteration)
@@ -651,9 +558,7 @@ class BaseEngine(object):
         :param positionIndex:
         :return:
         """
-        self.currentDetectorError = abs(
-            self.reconstruction.Imeasured - self.reconstruction.Iestimated
-        )
+        self.currentDetectorError = abs(self.reconstruction.Imeasured - self.reconstruction.Iestimated)
 
         if self.params.saveMemory:
             if self.params.FourierMaskSwitch and not self.params.CPSCswitch:
@@ -688,9 +593,7 @@ class BaseEngine(object):
                 axis=(0, 1, 2),
             )[-1]
         else:
-            self.reconstruction.Iestimated = jnp.sum(
-                jnp.abs(self.reconstruction.ESW) ** 2, axis=(0, 1, 2)
-            )[-1]
+            self.reconstruction.Iestimated = jnp.sum(jnp.abs(self.reconstruction.ESW) ** 2, axis=(0, 1, 2))[-1]
             self.logger.debug(
                 f"Estimated intensity: {self.reconstruction.Iestimated.sum()}, Measured: {self.experimentalData.ptychogram[positionIndex].sum()}"
             )
@@ -701,9 +604,7 @@ class BaseEngine(object):
         if self.params.CPSCswitch:
             self.decompressionProjection(positionIndex)
         else:
-            self.reconstruction.Imeasured = self.experimentalData.ptychogram[
-                positionIndex
-            ]
+            self.reconstruction.Imeasured = self.experimentalData.ptychogram[positionIndex]
 
         self.getRMSD(positionIndex)
 
@@ -716,43 +617,27 @@ class BaseEngine(object):
             # scaling
             if self.params.FourierMaskSwitch:
                 aleph = jnp.sum(
-                    self.reconstruction.Imeasured
-                    * self.reconstruction.Iestimated
-                    * self.experimentalData.W
-                ) / jnp.sum(
-                    self.reconstruction.Imeasured
-                    * self.reconstruction.Imeasured
-                    * self.experimentalData.W
-                )
+                    self.reconstruction.Imeasured * self.reconstruction.Iestimated * self.experimentalData.W
+                ) / jnp.sum(self.reconstruction.Imeasured * self.reconstruction.Imeasured * self.experimentalData.W)
             else:
-                aleph = jnp.sum(
-                    self.reconstruction.Imeasured * self.reconstruction.Iestimated
-                ) / jnp.sum(
+                aleph = jnp.sum(self.reconstruction.Imeasured * self.reconstruction.Iestimated) / jnp.sum(
                     self.reconstruction.Imeasured * self.reconstruction.Imeasured
                 )
             self.params.intensityScaling[positionIndex] = aleph
             # scaled projection
-            frac = (
-                (1 + aleph)
-                / 2
-                * self.reconstruction.Imeasured
-                / (self.reconstruction.Iestimated + gimmel)
-            )
+            frac = (1 + aleph) / 2 * self.reconstruction.Imeasured / (self.reconstruction.Iestimated + gimmel)
 
         elif self.params.intensityConstraint.lower() == "exponential":
             x = self.currentDetectorError / (self.reconstruction.Iestimated + gimmel)
             W = jnp.exp(-0.05 * x)
-            frac = jnp.sqrt(
-                self.reconstruction.Imeasured
-                / (self.reconstruction.Iestimated + gimmel)
-            )
+            frac = jnp.sqrt(self.reconstruction.Imeasured / (self.reconstruction.Iestimated + gimmel))
             frac = W * frac + (1 - W)
 
-        elif (self.params.intensityConstraint.lower() == "poisson" or
-              self.params.intensityConstraint.lower() == "poission"):
-            frac = (self.reconstruction.Imeasured + gimmel) / (
-                self.reconstruction.Iestimated + gimmel
-            )
+        elif (
+            self.params.intensityConstraint.lower() == "poisson"
+            or self.params.intensityConstraint.lower() == "poission"
+        ):
+            frac = (self.reconstruction.Imeasured + gimmel) / (self.reconstruction.Iestimated + gimmel)
 
         elif self.params.intensityConstraint.lower() == "proxpoisson":
             lam = 1
@@ -763,35 +648,28 @@ class BaseEngine(object):
             self.params.intensityConstraint.lower() == "standard"
             or self.params.intensityConstraint.lower() == "interferometric"
         ):
-            frac = jnp.sqrt(
-                self.reconstruction.Imeasured
-                / (self.reconstruction.Iestimated + gimmel)
-            )
+            frac = jnp.sqrt(self.reconstruction.Imeasured / (self.reconstruction.Iestimated + gimmel))
 
         else:
             raise ValueError("intensity constraint not properly specified!")
 
         # apply mask
-        if (
-            self.params.FourierMaskSwitch
-            and self.params.CPSCswitch
-            and len(self.reconstruction.error) > 5
-        ):
+        if self.params.FourierMaskSwitch and self.params.CPSCswitch and len(self.reconstruction.error) > 5:
             frac = self.experimentalData.W * frac + (1 - self.experimentalData.W)
 
         # update ESW
         if self.params.intensityConstraint == "interferometric":
-            temp = (
-                self.reconstruction.ESW + self.reconstruction.reference
-            ) * frac - self.reconstruction.ESW
+            temp = (self.reconstruction.ESW + self.reconstruction.reference) * frac - self.reconstruction.ESW
             self.reconstruction.ESW = (
                 self.reconstruction.ESW + self.reconstruction.reference
             ) * frac - self.reconstruction.reference
             self.reconstruction.reference = temp
         else:
-            if hasattr(self.params, 'intensityMask'):
+            if hasattr(self.params, "intensityMask"):
                 if self.params.intensityMask:
-                    self.reconstruction.ESW = self.reconstruction.ESW * (frac * (self.reconstruction.intensity_mask) + (self.reconstruction.intensity_mask - 1))
+                    self.reconstruction.ESW = self.reconstruction.ESW * (
+                        frac * (self.reconstruction.intensity_mask) + (self.reconstruction.intensity_mask - 1)
+                    )
                 else:
                     self.reconstruction.ESW = self.reconstruction.ESW * frac
             else:
@@ -802,15 +680,13 @@ class BaseEngine(object):
             if self.params.FourierMaskSwitch:
                 self.reconstruction.background = (
                     self.reconstruction.background
-                    * (1 + 1 / self.experimentalData.numFrames * (jnp.sqrt(frac) - 1))
-                    ** 2
+                    * (1 + 1 / self.experimentalData.numFrames * (jnp.sqrt(frac) - 1)) ** 2
                     * self.experimentalData.W
                 )
             else:
                 self.reconstruction.background = (
                     self.reconstruction.background
-                    * (1 + 1 / self.experimentalData.numFrames * (jnp.sqrt(frac) - 1))
-                    ** 2
+                    * (1 + 1 / self.experimentalData.numFrames * (jnp.sqrt(frac) - 1)) ** 2
                 )
 
         # back propagate to object plane
@@ -823,7 +699,6 @@ class BaseEngine(object):
         :return:
         """
         # overwrite the measured intensity (just to have same dimensions as Iestimated)
-        
 
         # determine downsampled fraction (Sl)
         frac = self.experimentalData.ptychogramDownsampled[positionIndex] / (
@@ -854,36 +729,21 @@ class BaseEngine(object):
         :return:
         """
         if np.mod(loop, self.monitor.figureUpdateFrequency) == 0:
-
             if self.experimentalData.operationMode == "FPM":
                 object_estimate = np.squeeze(
                     np.asarray(
-                        fft2c(self.reconstruction.object)[
-                            ..., self.monitor.objectROI[0], self.monitor.objectROI[1]
-                        ]
+                        fft2c(self.reconstruction.object)[..., self.monitor.objectROI[0], self.monitor.objectROI[1]]
                     )
                 )
                 probe_estimate = np.squeeze(
-                    np.asarray(
-                        self.reconstruction.probe[
-                            ..., self.monitor.probeROI[0], self.monitor.probeROI[1]
-                        ]
-                    )
+                    np.asarray(self.reconstruction.probe[..., self.monitor.probeROI[0], self.monitor.probeROI[1]])
                 )
             else:
                 object_estimate = np.squeeze(
-                    np.asarray(
-                        self.reconstruction.object[
-                            ..., self.monitor.objectROI[0], self.monitor.objectROI[1]
-                        ]
-                    )
+                    np.asarray(self.reconstruction.object[..., self.monitor.objectROI[0], self.monitor.objectROI[1]])
                 )
                 probe_estimate = np.squeeze(
-                    np.asarray(
-                        self.reconstruction.probe[
-                            ..., self.monitor.probeROI[0], self.monitor.probeROI[1]
-                        ]
-                    )
+                    np.asarray(self.reconstruction.probe[..., self.monitor.probeROI[0], self.monitor.probeROI[1]])
                 )
             self.monitor.updateObjectProbeErrorMonitor(
                 error=self.reconstruction.error,
@@ -908,49 +768,31 @@ class BaseEngine(object):
 
             if self.monitor.verboseLevel == "high":
                 if self.params.fftshiftSwitch:
-                    Iestimated = np.fft.fftshift(
-                        np.asarray(self.reconstruction.Iestimated)
-                    )
-                    Imeasured = np.fft.fftshift(
-                        np.asarray(self.reconstruction.Imeasured)
-                    )
+                    Iestimated = np.fft.fftshift(np.asarray(self.reconstruction.Iestimated))
+                    Imeasured = np.fft.fftshift(np.asarray(self.reconstruction.Imeasured))
                 else:
                     Iestimated = np.asarray(self.reconstruction.Iestimated)
                     Imeasured = np.asarray(self.reconstruction.Imeasured)
 
-                self.monitor.updateDiffractionDataMonitor(
-                    Iestimated=Iestimated, Imeasured=Imeasured
-                )
+                self.monitor.updateDiffractionDataMonitor(Iestimated=Iestimated, Imeasured=Imeasured)
 
                 self.getOverlap(0, 1)
 
                 self.pbar.write("")
                 self.pbar.write("iteration: %i" % loop)
                 self.pbar.write("error: %.1f" % self.reconstruction.error[-1])
-                self.pbar.write(
-                    "estimated linear overlap: %.1f %%"
-                    % (100 * self.reconstruction.linearOverlap)
-                )
-                self.pbar.write(
-                    "estimated area overlap: %.1f %%"
-                    % (100 * self.reconstruction.areaOverlap)
-                )
+                self.pbar.write("estimated linear overlap: %.1f %%" % (100 * self.reconstruction.linearOverlap))
+                self.pbar.write("estimated area overlap: %.1f %%" % (100 * self.reconstruction.areaOverlap))
 
-                self.monitor.update_overlap(
-                    self.reconstruction.areaOverlap, self.reconstruction.linearOverlap
-                )
+                self.monitor.update_overlap(self.reconstruction.areaOverlap, self.reconstruction.linearOverlap)
                 # self.pbar.write('coherence structure:')
 
             if self.params.positionCorrectionSwitch:
                 # show reconstruction
                 return
-                if (
-                    len(self.reconstruction.error) > self.startAtIteration
-                ):  # & (np.mod(loop,
+                if len(self.reconstruction.error) > self.startAtIteration:  # & (np.mod(loop,
                     # self.monitor.figureUpdateFrequency) == 0):
-                    figure, ax = plt.subplots(
-                        1, 1, num=102, squeeze=True, clear=True, figsize=(5, 5)
-                    )
+                    figure, ax = plt.subplots(1, 1, num=102, squeeze=True, clear=True, figsize=(5, 5))
                     ax.set_title("Estimated scan grid positions")
                     ax.set_xlabel("(um)")
                     ax.set_ylabel("(um)")
@@ -998,9 +840,7 @@ class BaseEngine(object):
                     plt.tight_layout()
                     # plt.show(block=False)
 
-                    figure2, ax2 = plt.subplots(
-                        1, 1, num=103, squeeze=True, clear=True, figsize=(5, 5)
-                    )
+                    figure2, ax2 = plt.subplots(1, 1, num=103, squeeze=True, clear=True, figsize=(5, 5))
                     ax2.set_title("Displacement")
                     ax2.set_xlabel("(um)")
                     ax2.set_ylabel("(um)")
@@ -1027,7 +867,7 @@ class BaseEngine(object):
 
         # Dump each iteration the current object
         if self.params.dump_obj:
-            folder_path = 'dumps'
+            folder_path = "dumps"
             if loop == 0:
                 if not os.path.exists(folder_path):
                     # Create the folder
@@ -1036,13 +876,13 @@ class BaseEngine(object):
                 else:
                     print(f"Folder '{folder_path}' already exists.")
 
-            filename = 'obj_dump_' + str(loop) + '.h5py'
+            filename = "obj_dump_" + str(loop) + ".h5py"
             import h5py
-            file_path = os.path.join(folder_path, filename)
-            with h5py.File(file_path, 'w') as hdf:
-                obj = np.asarray(self.reconstruction.object)
-                hdf.create_dataset('Object', data=obj)
 
+            file_path = os.path.join(folder_path, filename)
+            with h5py.File(file_path, "w") as hdf:
+                obj = np.asarray(self.reconstruction.object)
+                hdf.create_dataset("Object", data=obj)
 
     def positionCorrection(self, objectPatch, positionIndex, sy, sx):
         """
@@ -1054,7 +894,6 @@ class BaseEngine(object):
         :return:
         """
 
-        
         if len(self.reconstruction.error) > self.startAtIteration:
             self.logger.debug("Calculating position correction")
             # position gradients
@@ -1110,12 +949,8 @@ class BaseEngine(object):
             cc = abs(cc)
 
             normFactor = jnp.sum(Opatch.conj() * Opatch, axis=(-2, -1)).real
-            grad_x = betaGrad * jnp.sum(
-                (cc.T - jnp.mean(cc)) / normFactor * jnp.array(self.colShifts)
-            )
-            grad_y = betaGrad * jnp.sum(
-                (cc.T - jnp.mean(cc)) / normFactor * jnp.array(self.rowShifts)
-            )
+            grad_x = betaGrad * jnp.sum((cc.T - jnp.mean(cc)) / normFactor * jnp.array(self.colShifts))
+            grad_y = betaGrad * jnp.sum((cc.T - jnp.mean(cc)) / normFactor * jnp.array(self.rowShifts))
             # r = np.clip(self.params.positionCorrectionSwitch_radius//5, 3, self.reconstruction.Np//10) # maximum shift in pixels?
 
             if abs(grad_x) > r:
@@ -1196,14 +1031,10 @@ class BaseEngine(object):
 
         new_encoder += self.experimentalData.encoder.mean(axis=0, keepdims=True)
 
-        msqdisplacement_a = np.linalg.norm(
-            1e6 * new_encoder - self.experimentalData.encoder * 1e6
-        )
+        msqdisplacement_a = np.linalg.norm(1e6 * new_encoder - self.experimentalData.encoder * 1e6)
 
         self.reconstruction.encoder_corrected = new_encoder
-        self.logger.info(
-            f"Mean square displacement: before: {msqdisplacement:.3f} after: {msqdisplacement_a:.3f}"
-        )
+        self.logger.info(f"Mean square displacement: before: {msqdisplacement:.3f} after: {msqdisplacement_a:.3f}")
 
     def positionCorrectionUpdate(self):
         # fit the scaling out, to put in the z
@@ -1212,11 +1043,7 @@ class BaseEngine(object):
 
             # update positions
             if self.experimentalData.operationMode == "FPM":
-                conv = (
-                    -(1 / self.reconstruction.wavelength)
-                    * self.reconstruction.dxo
-                    * self.reconstruction.Np
-                )
+                conv = -(1 / self.reconstruction.wavelength) * self.reconstruction.dxo * self.reconstruction.Np
                 z = self.reconstruction.zled
                 k = (
                     self.reconstruction.positions
@@ -1225,21 +1052,12 @@ class BaseEngine(object):
                     + self.reconstruction.Np // 2
                 )
                 self.reconstruction.encoder_corrected = (
-                    np.sign(conv)
-                    * k
-                    * z
-                    / (np.sqrt(conv**2 - k[:, 0] ** 2 - k[:, 1] ** 2))[..., None]
+                    np.sign(conv) * k * z / (np.sqrt(conv**2 - k[:, 0] ** 2 - k[:, 1] ** 2))[..., None]
                 )
             else:
-
-                new_encoder = (
-                    self.reconstruction.encoder_corrected
-                    - self.adaptStep * self.D * self.reconstruction.dxo
-                )
+                new_encoder = self.reconstruction.encoder_corrected - self.adaptStep * self.D * self.reconstruction.dxo
                 new_encoder = new_encoder - new_encoder.mean(axis=0, keepdims=True)
-                new_encoder = new_encoder + self.experimentalData.encoder.mean(
-                    axis=0, keepdims=True
-                )
+                new_encoder = new_encoder + self.experimentalData.encoder.mean(axis=0, keepdims=True)
 
                 self.reconstruction.encoder_corrected = new_encoder
                 self.logger.info(f"Average update size: {abs(self.D).mean():.2f} pixels")
@@ -1269,24 +1087,17 @@ class BaseEngine(object):
         if self.params.probePowerCorrectionSwitch:
             self.reconstruction.probe = (
                 self.reconstruction.probe
-                / np.sqrt(
-                    np.sum(self.reconstruction.probe * self.reconstruction.probe.conj())
-                )
+                / np.sqrt(np.sum(self.reconstruction.probe * self.reconstruction.probe.conj()))
                 * self.experimentalData.maxProbePower
             )
         if self.params.probeSpectralPowerCorrectionSwitch:
             probe = self.reconstruction.probe
-            norms = jnp.sqrt(
-                jnp.sum(probe * probe.conj(), axis=(1, 2, 3, 4, 5), keepdims=True)
-            )
+            norms = jnp.sqrt(jnp.sum(probe * probe.conj(), axis=(1, 2, 3, 4, 5), keepdims=True))
             spectral_power = jnp.array(self.experimentalData.spectralPower).reshape(-1, 1, 1, 1, 1, 1)
             scales = self.experimentalData.maxProbePower * spectral_power / norms
             self.reconstruction.probe = probe * scales
 
-        if (
-            self.params.comStabilizationSwitch is not None
-            and self.params.comStabilizationSwitch is not False
-        ):
+        if self.params.comStabilizationSwitch is not None and self.params.comStabilizationSwitch is not False:
             if loop % int(self.params.comStabilizationSwitch) == 0:
                 self.comStabilization()
 
@@ -1301,11 +1112,8 @@ class BaseEngine(object):
                 self.absorbingProbeBoundaryAleph = 1
 
             self.reconstruction.probe = (
-                (1 - self.params.absorbingProbeBoundaryAleph)
-                * self.reconstruction.probe
-                + self.params.absorbingProbeBoundaryAleph
-                * self.reconstruction.probe
-                * self.probeWindow
+                (1 - self.params.absorbingProbeBoundaryAleph) * self.reconstruction.probe
+                + self.params.absorbingProbeBoundaryAleph * self.reconstruction.probe * self.probeWindow
             )
 
             # experimental: also apply in fourier space
@@ -1313,7 +1121,6 @@ class BaseEngine(object):
 
         # Todo: objectSmoothenessSwitch,probeSmoothenessSwitch,
         if self.params.probeSmoothenessSwitch:
-
             self.reconstruction.probe = smooth_amplitude(
                 self.reconstruction.probe,
                 self.params.probeSmoothenessWidth,
@@ -1330,30 +1137,18 @@ class BaseEngine(object):
         if self.params.absObjectSwitch:
             self.reconstruction.object = (
                 1 - self.params.absObjectBeta
-            ) * self.reconstruction.object + self.params.absObjectBeta * abs(
-                self.reconstruction.object
-            )
+            ) * self.reconstruction.object + self.params.absObjectBeta * abs(self.reconstruction.object)
 
         if self.params.absProbeSwitch:
             self.reconstruction.probe = (
                 1 - self.params.absProbeBeta
-            ) * self.reconstruction.probe + self.params.absProbeBeta * abs(
-                self.reconstruction.probe
-            )
+            ) * self.reconstruction.probe + self.params.absProbeBeta * abs(self.reconstruction.probe)
 
         # this is intended to slowly push non-measured object region to abs value lower than
         # the max abs inside object ROI allowing for good contrast when monitoring object
         if self.params.objectContrastSwitch:
-            self.reconstruction.object = (
-                0.995 * self.reconstruction.object
-                + 0.005
-                * np.mean(
-                    abs(
-                        self.reconstruction.object[
-                            ..., self.monitor.objectROI[0], self.monitor.objectROI[1]
-                        ]
-                    )
-                )
+            self.reconstruction.object = 0.995 * self.reconstruction.object + 0.005 * np.mean(
+                abs(self.reconstruction.object[..., self.monitor.objectROI[0], self.monitor.objectROI[1]])
             )
         if self.params.couplingSwitch and self.reconstruction.nlambda > 1:
             probe = self.reconstruction.probe
@@ -1375,25 +1170,17 @@ class BaseEngine(object):
             )
 
             self.reconstruction.probe = (
-                (1 - self.params.binaryProbeAleph) * self.reconstruction.probe
-                + self.params.binaryProbeAleph * probeThresholded
-            )
+                1 - self.params.binaryProbeAleph
+            ) * self.reconstruction.probe + self.params.binaryProbeAleph * probeThresholded
 
         if self.params.positionCorrectionSwitch:
-
             self.positionCorrectionUpdate()
 
-        if (
-            self.params.map_position_to_z_change
-            and (loop % 5 == 1)
-            and self.params.positionCorrectionSwitch
-        ):
+        if self.params.map_position_to_z_change and (loop % 5 == 1) and self.params.positionCorrectionSwitch:
             self.position_update_to_change_in_z(loop)
 
         if self.params.TV_autofocus:
-            merit, AOI_image, allmerits = self.reconstruction.TV_autofocus(
-                self.params, loop=loop
-            )
+            merit, AOI_image, allmerits = self.reconstruction.TV_autofocus(self.params, loop=loop)
             self.monitor.update_focusing_metric(
                 merit,
                 AOI_image,
@@ -1418,30 +1205,30 @@ class BaseEngine(object):
                         method="snapShots",
                     )
                     self.reconstruction.probe = self.reconstruction.probe.at[id_l, 0, :, id_s, :, :].set(orthog_result)
-                    self.reconstruction.purityProbe = float(np.sqrt(
-                        np.sum(np.asarray(self.normalizedEigenvaluesProbe)**2)
-                    ))
+                    self.reconstruction.purityProbe = float(
+                        np.sqrt(np.sum(np.asarray(self.normalizedEigenvaluesProbe) ** 2))
+                    )
                     self.reconstruction.purityProbeHist.append(self.reconstruction.purityProbe)
                     # orthogonalize momentum operator
                     if self.params.momentumAcceleration:
                         # orthogonalize probe Buffer
-                        p = self.reconstruction.probeBuffer[
-                            id_l, 0, :, id_s, :, :
-                        ].reshape(
+                        p = self.reconstruction.probeBuffer[id_l, 0, :, id_s, :, :].reshape(
                             (self.reconstruction.npsm, self.reconstruction.Np**2)
                         )
-                        self.reconstruction.probeBuffer = self.reconstruction.probeBuffer.at[id_l, 0, :, id_s, :, :].set(
+                        self.reconstruction.probeBuffer = self.reconstruction.probeBuffer.at[
+                            id_l, 0, :, id_s, :, :
+                        ].set(
                             (jnp.array(self.MSPVprobe) @ p).reshape(
                                 (self.reconstruction.npsm, self.reconstruction.Np, self.reconstruction.Np)
                             )
                         )
                         # orthogonalize probe momentum
-                        p = self.reconstruction.probeMomentum[
-                            id_l, 0, :, id_s, :, :
-                        ].reshape(
+                        p = self.reconstruction.probeMomentum[id_l, 0, :, id_s, :, :].reshape(
                             (self.reconstruction.npsm, self.reconstruction.Np**2)
                         )
-                        self.reconstruction.probeMomentum = self.reconstruction.probeMomentum.at[id_l, 0, :, id_s, :, :].set(
+                        self.reconstruction.probeMomentum = self.reconstruction.probeMomentum.at[
+                            id_l, 0, :, id_s, :, :
+                        ].set(
                             (jnp.array(self.MSPVprobe) @ p).reshape(
                                 (self.reconstruction.npsm, self.reconstruction.Np, self.reconstruction.Np)
                             )
@@ -1455,31 +1242,33 @@ class BaseEngine(object):
                         self.reconstruction.object[id_l, :, 0, id_s, :, :],
                         method="snapShots",
                     )
-                    self.reconstruction.object = self.reconstruction.object.at[id_l, :, 0, id_s, :, :].set(orthog_result)
-                    self.reconstruction.purityObject = float(np.sqrt(
-                        np.sum(np.asarray(self.normalizedEigenvaluesObject)**2)
-                    ))
+                    self.reconstruction.object = self.reconstruction.object.at[id_l, :, 0, id_s, :, :].set(
+                        orthog_result
+                    )
+                    self.reconstruction.purityObject = float(
+                        np.sqrt(np.sum(np.asarray(self.normalizedEigenvaluesObject) ** 2))
+                    )
 
                     # orthogonalize momentum operator
                     if self.params.momentumAcceleration:
                         # orthogonalize object Buffer
-                        p = self.reconstruction.objectBuffer[
-                            id_l, :, 0, id_s, :, :
-                        ].reshape(
+                        p = self.reconstruction.objectBuffer[id_l, :, 0, id_s, :, :].reshape(
                             (self.reconstruction.nosm, self.reconstruction.No**2)
                         )
-                        self.reconstruction.objectBuffer = self.reconstruction.objectBuffer.at[id_l, :, 0, id_s, :, :].set(
+                        self.reconstruction.objectBuffer = self.reconstruction.objectBuffer.at[
+                            id_l, :, 0, id_s, :, :
+                        ].set(
                             (jnp.array(self.MSPVobject) @ p).reshape(
                                 (self.reconstruction.nosm, self.reconstruction.No, self.reconstruction.No)
                             )
                         )
                         # orthogonalize object momentum
-                        p = self.reconstruction.objectMomentum[
-                            id_l, :, 0, id_s, :, :
-                        ].reshape(
+                        p = self.reconstruction.objectMomentum[id_l, :, 0, id_s, :, :].reshape(
                             (self.reconstruction.nosm, self.reconstruction.No**2)
                         )
-                        self.reconstruction.objectMomentum = self.reconstruction.objectMomentum.at[id_l, :, 0, id_s, :, :].set(
+                        self.reconstruction.objectMomentum = self.reconstruction.objectMomentum.at[
+                            id_l, :, 0, id_s, :, :
+                        ].set(
                             (jnp.array(self.MSPVobject) @ p).reshape(
                                 (self.reconstruction.nosm, self.reconstruction.No, self.reconstruction.No)
                             )
@@ -1494,19 +1283,13 @@ class BaseEngine(object):
         :return:
         """
         self.logger.info("Doing probe com stabilization")
-        
+
         # calculate center of mass of the probe (for multislice cases, the probe for the last slice is used)
-        P2 = jnp.sum(
-            abs(self.reconstruction.probe[:, :, :, -1, ...]) ** 2, axis=(0, 1, 2)
-        )
+        P2 = jnp.sum(abs(self.reconstruction.probe[:, :, :, -1, ...]) ** 2, axis=(0, 1, 2))
         P2 = abs(self.reconstruction.probe[0, 0, 0, -1])
         demon = jnp.sum(P2) * self.reconstruction.dxp
-        xc = int(
-            jnp.around(jnp.sum(jnp.array(self.reconstruction.Xp, jnp.float32) * P2) / demon)
-        )
-        yc = int(
-            jnp.around(jnp.sum(jnp.array(self.reconstruction.Yp, jnp.float32) * P2) / demon)
-        )
+        xc = int(jnp.around(jnp.sum(jnp.array(self.reconstruction.Xp, jnp.float32) * P2) / demon))
+        yc = int(jnp.around(jnp.sum(jnp.array(self.reconstruction.Yp, jnp.float32) * P2) / demon))
         # print('Center of mass:', yc, xc)
         # shift only if necessary
         if xc**2 + yc**2 > 1:
@@ -1514,9 +1297,7 @@ class BaseEngine(object):
             # self.reconstruction.probe_storage.roll(-yc, -xc)
 
             # shift probe
-            self.reconstruction.probe = jnp.roll(
-                self.reconstruction.probe, (-yc, -xc), axis=(-2, -1)
-            )
+            self.reconstruction.probe = jnp.roll(self.reconstruction.probe, (-yc, -xc), axis=(-2, -1))
             # for k in jnp.arange(self.reconstruction.npsm):
             #     self.reconstruction.probe[:, :, k, -1, ...] = \
             #         jnp.roll(self.reconstruction.probe[:, :, k, -1, ...], (-yc, -xc), axis=(-2, -1))
@@ -1525,26 +1306,20 @@ class BaseEngine(object):
                 self.reconstruction.probeMomentum = jnp.roll(
                     self.reconstruction.probeMomentum, (-yc, -xc), axis=(-2, -1)
                 )
-                self.reconstruction.probeBuffer = jnp.roll(
-                    self.reconstruction.probeBuffer, (-yc, -xc), axis=(-2, -1)
-                )
+                self.reconstruction.probeBuffer = jnp.roll(self.reconstruction.probeBuffer, (-yc, -xc), axis=(-2, -1))
 
             # shift object
-            self.reconstruction.object = jnp.roll(
-                self.reconstruction.object, (-yc, -xc), axis=(-2, -1)
-            )
+            self.reconstruction.object = jnp.roll(self.reconstruction.object, (-yc, -xc), axis=(-2, -1))
             # for mPIE
             if self.params.momentumAcceleration:
                 self.reconstruction.objectMomentum = jnp.roll(
                     self.reconstruction.objectMomentum, (-yc, -xc), axis=(-2, -1)
                 )
-                self.reconstruction.objectBuffer = jnp.roll(
-                    self.reconstruction.objectBuffer, (-yc, -xc), axis=(-2, -1)
-                )
+                self.reconstruction.objectBuffer = jnp.roll(self.reconstruction.objectBuffer, (-yc, -xc), axis=(-2, -1))
 
     def modulusEnforcedProbe(self):
         # propagate probe to detector
-        
+
         self.reconstruction.esw = self.reconstruction.probe
         self.object2detector()
 
@@ -1552,9 +1327,7 @@ class BaseEngine(object):
             self.reconstruction.ESW = self.reconstruction.ESW * jnp.sqrt(
                 self.experimentalData.emptyBeam / 1e-10
                 + jnp.sum(jnp.abs(self.reconstruction.ESW) ** 2, axis=(0, 1, 2, 3))
-            ) * self.experimentalData.W + self.reconstruction.ESW * (
-                1 - self.experimentalData.W
-            )
+            ) * self.experimentalData.W + self.reconstruction.ESW * (1 - self.experimentalData.W)
         else:
             self.reconstruction.ESW = self.reconstruction.ESW * np.sqrt(
                 self.experimentalData.emptyBeam
@@ -1577,7 +1350,6 @@ class BaseEngine(object):
         :return:
         """
         # figure out wether or not to use the GPU
-        
 
         Ameasured = self.reconstruction.Imeasured**0.5
         Aestimated = jnp.abs(self.reconstruction.Iestimated) ** 0.5
@@ -1605,7 +1377,6 @@ class BaseEngine(object):
         :return:
         """
 
-        
         frac = self.reconstruction.probe.conj() / jnp.max(
             jnp.sum(jnp.abs(self.reconstruction.probe) ** 2, axis=(0, 1, 2, 3))
         )

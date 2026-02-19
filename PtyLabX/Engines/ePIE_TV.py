@@ -18,7 +18,6 @@ from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 
 
 class ePIE_TV(BaseEngine):
-
     def __init__(
         self,
         reconstruction: Reconstruction,
@@ -47,9 +46,7 @@ class ePIE_TV(BaseEngine):
         self._prepareReconstruction()
 
         # actual reconstruction ePIE_engine
-        self.pbar = tqdm.trange(
-            self.numIterations, desc="ePIE", file=sys.stdout, leave=True
-        )
+        self.pbar = tqdm.trange(self.numIterations, desc="ePIE", file=sys.stdout, leave=True)
         for loop in self.pbar:
             # set position order
             self.setPositionOrder()
@@ -91,7 +88,6 @@ class ePIE_TV(BaseEngine):
 
             # show reconstruction
             self.showReconstruction(loop)
-
 
     def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
         return epie_object_update(objectPatch, self.reconstruction.probe, DELTA, self.betaObject)
@@ -138,9 +134,7 @@ class ePIE_TV(BaseEngine):
         :return:
         """
         self.reconstruction.probe = self.reconstruction.probe + self.betaProbe * jnp.sum(
-            objectPatch.conj()
-            / jnp.max(jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3)))
-            * DELTA,
+            objectPatch.conj() / jnp.max(jnp.sum(jnp.abs(objectPatch) ** 2, axis=(0, 1, 2, 3))) * DELTA,
             axis=(0, 1, 3),
             keepdims=True,
         )

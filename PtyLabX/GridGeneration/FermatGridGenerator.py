@@ -44,7 +44,7 @@ def solve_order(coords):
     final_coords = coords.T[np.array(order)].T
     final_length = get_travel_distance(final_coords)
     print(
-        f"Travel distance reduced from {initial_length} to {final_length}. Reduction: {100-100*final_length/initial_length:.2f}%"
+        f"Travel distance reduced from {initial_length} to {final_length}. Reduction: {100 - 100 * final_length / initial_length:.2f}%"
     )
     return final_coords
 
@@ -93,9 +93,7 @@ def display_spiral(coordinates, probe_size_coords=1):
     plt.show()
 
 
-def scale_coordinates_by_probe_size(
-    coordinates: np.ndarray, probe_size: float, overlap=0.6
-):
+def scale_coordinates_by_probe_size(coordinates: np.ndarray, probe_size: float, overlap=0.6):
     """Scale the coordinates by a given probe size, with a desired overlap. Scales the coordinates in such a way
     that we have the required overlap.
     """

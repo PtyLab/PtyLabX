@@ -68,15 +68,10 @@ class aPIE(BaseEngine):
     def doReconstruction(self):
         self._prepareReconstruction()
 
-
         # linear search
-        thetaSearchRadiusList = np.linspace(
-            self.thetaSearchRadiusMax, self.thetaSearchRadiusMin, self.numIterations
-        )
+        thetaSearchRadiusList = np.linspace(self.thetaSearchRadiusMax, self.thetaSearchRadiusMin, self.numIterations)
 
-        self.pbar = tqdm.trange(
-            self.numIterations, desc="aPIE", file=sys.stdout, leave=True
-        )
+        self.pbar = tqdm.trange(self.numIterations, desc="aPIE", file=sys.stdout, leave=True)
         for loop in self.pbar:
             # save theta search history
             self.reconstruction.thetaHistory = np.append(
@@ -89,8 +84,7 @@ class aPIE(BaseEngine):
                 np.array(
                     [
                         self.reconstruction.theta,
-                        self.reconstruction.theta
-                        + thetaSearchRadiusList[loop] * (-1 + 2 * np.random.rand()),
+                        self.reconstruction.theta + thetaSearchRadiusList[loop] * (-1 + 2 * np.random.rand()),
                     ]
                 )
                 + self.reconstruction.thetaMomentum
@@ -101,9 +95,7 @@ class aPIE(BaseEngine):
             objectTemp = self.reconstruction.object.copy()
 
             # probe and object buffer (todo maybe there's more elegant way )
-            probeBuffer = jnp.zeros_like(
-                probeTemp
-            )  # shape=(np.array([probeTemp, probeTemp])).shape)
+            probeBuffer = jnp.zeros_like(probeTemp)  # shape=(np.array([probeTemp, probeTemp])).shape)
             probeBuffer = [probeBuffer, probeBuffer]
             objectBuffer = jnp.zeros_like(
                 objectTemp
@@ -160,9 +152,7 @@ class aPIE(BaseEngine):
                     self.experimentalData.ptychogram = jnp.fft.ifftshift(
                         self.experimentalData.ptychogram, axes=(-1, -2)
                     )
-                    self.experimentalData.W = jnp.fft.ifftshift(
-                        self.experimentalData.W, axes=(-1, -2)
-                    )
+                    self.experimentalData.W = jnp.fft.ifftshift(self.experimentalData.W, axes=(-1, -2))
 
                 # set position order
                 self.setPositionOrder()
@@ -210,21 +200,16 @@ class aPIE(BaseEngine):
                 self.reconstruction.theta = theta[1]
                 self.reconstruction.probe = probeBuffer[1]
                 self.reconstruction.object = objectBuffer[1]
-                self.reconstruction.error = np.append(
-                    self.reconstruction.error, errorTemp[1]
-                )
+                self.reconstruction.error = np.append(self.reconstruction.error, errorTemp[1])
             else:
                 dtheta = 0
                 self.reconstruction.theta = theta[0]
                 self.reconstruction.probe = probeBuffer[0]
                 self.reconstruction.object = objectBuffer[0]
-                self.reconstruction.error = np.append(
-                    self.reconstruction.error, errorTemp[0]
-                )
+                self.reconstruction.error = np.append(self.reconstruction.error, errorTemp[0])
 
             self.reconstruction.thetaMomentum = (
-                self.feedback * dtheta
-                + self.aPIEfriction * self.reconstruction.thetaMomentum
+                self.feedback * dtheta + self.aPIEfriction * self.reconstruction.thetaMomentum
             )
             # print updated theta
             self.pbar.set_description(
@@ -238,9 +223,7 @@ class aPIE(BaseEngine):
 
             # show reconstruction
             if loop == 0:
-                figure, ax = plt.subplots(
-                    1, 1, num=777, squeeze=True, clear=True, figsize=(5, 5)
-                )
+                figure, ax = plt.subplots(1, 1, num=777, squeeze=True, clear=True, figsize=(5, 5))
                 ax.set_title("Estimated angle")
                 ax.set_xlabel("iteration")
                 ax.set_ylabel("estimated theta [deg]")
@@ -269,7 +252,6 @@ class aPIE(BaseEngine):
                 figure.canvas.flush_events()
 
             self.showReconstruction(loop)
-
 
         # self.thetaSearchRadiusMax = thetaSearchRadiusList[loop]
 

@@ -33,7 +33,7 @@ def loadInputData(filename: Path, requiredFields, optionalFields):
     """
     filename = Path(filename)
     if not filename.exists():
-        raise FileNotFoundError(f'Could not find file {filename}.')
+        raise FileNotFoundError(f"Could not find file {filename}.")
     logger.debug("Loading input data: %s", filename)
 
     # sanity checks
@@ -47,7 +47,6 @@ def loadInputData(filename: Path, requiredFields, optionalFields):
     dataset = dict()
     try:
         with tables.open_file(str(filename), mode="r") as hdf5File:
-
             # load the required fields
             for key in requiredFields:
                 value = hdf5File.root[key].read()
@@ -65,13 +64,13 @@ def loadInputData(filename: Path, requiredFields, optionalFields):
     except Exception as e:
         logger.error("Error reading hdf5 file!")
         raise e
-    if 'encoder' in dataset:
-        print(f'Found encoder with shape {dataset["encoder"].shape}')
-        if dataset['encoder'].shape[0] < dataset['encoder'].shape[1]:
-            dataset['encoder'] = dataset['encoder'].T
-            print('Warning: Automatically changing the shape of encoder. ')
-            dataset['encoder'] -= dataset['encoder'].mean(axis=0, keepdims=True)
-            print(dataset['encoder'].shape, dataset['encoder'].mean(axis=0))
+    if "encoder" in dataset:
+        print(f"Found encoder with shape {dataset['encoder'].shape}")
+        if dataset["encoder"].shape[0] < dataset["encoder"].shape[1]:
+            dataset["encoder"] = dataset["encoder"].T
+            print("Warning: Automatically changing the shape of encoder. ")
+            dataset["encoder"] -= dataset["encoder"].mean(axis=0, keepdims=True)
+            print(dataset["encoder"].shape, dataset["encoder"].mean(axis=0))
             # dataset['encoder'] *= -1
     # dirty hack for now
 

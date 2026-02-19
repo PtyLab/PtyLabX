@@ -133,9 +133,7 @@ class zPIE(BaseEngine):
                         else:
                             nlambda = self.reconstruction.nlambda // 2
                             imProp, _ = aspw(
-                                jnp.squeeze(
-                                    self.reconstruction.probe[nlambda, ..., :, :]
-                                ),
+                                jnp.squeeze(self.reconstruction.probe[nlambda, ..., :, :]),
                                 dz[k],
                                 self.reconstruction.spectralDensity[nlambda],
                                 self.reconstruction.Lp,
@@ -145,9 +143,7 @@ class zPIE(BaseEngine):
                     aleph = 1e-2
                     gradx = jnp.roll(imProp, -1, axis=-1) - jnp.roll(imProp, 1, axis=-1)
                     grady = jnp.roll(imProp, -1, axis=-2) - jnp.roll(imProp, 1, axis=-2)
-                    merit.append(
-                        jnp.sum(jnp.sqrt(abs(gradx) ** 2 + abs(grady) ** 2 + aleph))
-                    )
+                    merit.append(jnp.sum(jnp.sqrt(abs(gradx) ** 2 + abs(grady) ** 2 + aleph)))
                     # take a tiny break, we may overask the GPU
                     # yield 0, 0
 
@@ -155,19 +151,12 @@ class zPIE(BaseEngine):
                 if not hasattr(self.reconstruction, "TV_history"):
                     self.reconstruction.TV_history = []
 
-                self.reconstruction.TV_history.append(
-                    float(merit[len(merit) // 2])
-                )
+                self.reconstruction.TV_history.append(float(merit[len(merit) // 2]))
                 merit = np.asarray(merit)
-                feedback = np.sum(dz * merit) / np.sum(
-                    merit
-                )  # at optimal z, feedback term becomes 0
+                feedback = np.sum(dz * merit) / np.sum(merit)  # at optimal z, feedback term becomes 0
 
                 print("Step size: ", feedback)
-                self.zMomentun = (
-                    self.zPIEfriction * self.zMomentun
-                    + self.zPIEgradientStepSize * feedback
-                )
+                self.zMomentun = self.zPIEfriction * self.zMomentun + self.zPIEgradientStepSize * feedback
                 zNew = self.reconstruction.zo + self.zMomentun
 
                 # asdlkcmasldk
@@ -176,8 +165,7 @@ class zPIE(BaseEngine):
 
             # print updated z
             self.pbar.set_description(
-                "zPIE: update z = %.3f mm (dz = %.1f um)"
-                % (self.reconstruction.zo * 1e3, self.zMomentun * 1e6)
+                "zPIE: update z = %.3f mm (dz = %.1f um)" % (self.reconstruction.zo * 1e3, self.zMomentun * 1e6)
             )
 
             # reset coordinates
@@ -186,9 +174,7 @@ class zPIE(BaseEngine):
             # re-sample is automatically done by using @property
             if self.params.propagatorType != "ASP":
                 self.reconstruction.dxp = (
-                    self.reconstruction.wavelength
-                    * self.reconstruction.zo
-                    / self.reconstruction.Ld
+                    self.reconstruction.wavelength * self.reconstruction.zo / self.reconstruction.Ld
                 )
                 # reset propagatorType
                 # self.reconstruction.quadraticPhase = jnp.array(np.exp(1.j * np.pi / (self.reconstruction.wavelength * self.reconstruction.zo)
@@ -240,9 +226,7 @@ class zPIE(BaseEngine):
             # show reconstruction
             if False:
                 if loop == 0:
-                    figure, axes = plt.subplots(
-                        1, 3, num=666, squeeze=True, clear=True, figsize=(5, 5)
-                    )
+                    figure, axes = plt.subplots(1, 3, num=666, squeeze=True, clear=True, figsize=(5, 5))
                     ax = axes[0]
                     ax_score = axes[1]
                     ax.set_title("Estimated distance (object-camera)")
@@ -280,7 +264,6 @@ class zPIE(BaseEngine):
                     figure.canvas.draw()
                     figure.canvas.flush_events()
             self.showReconstruction(loop)
-
 
     def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
         return epie_object_update(objectPatch, self.reconstruction.probe, DELTA, self.betaObject)

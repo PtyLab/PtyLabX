@@ -241,9 +241,7 @@ class Monitor(AbstractMonitor):
         self.defaultMonitor.drawNow()
 
         if self.screenshot_directory is not None:
-            self.defaultMonitor.figure.savefig(
-                Path(self.screenshot_directory) / f"frame_{len(error)}.png"
-            )
+            self.defaultMonitor.figure.savefig(Path(self.screenshot_directory) / f"frame_{len(error)}.png")
 
     def describe_parameters(self, *args, **kwargs):
         pass
@@ -253,9 +251,7 @@ class Monitor(AbstractMonitor):
         update the diffraction plots
         """
 
-        self.diffractionDataMonitor.update_view(
-            Iestimated, Imeasured, cmap=self.cmapDiffraction
-        )
+        self.diffractionDataMonitor.update_view(Iestimated, Imeasured, cmap=self.cmapDiffraction)
         # self.diffractionDataMonitor.updateIestimated(Iestimated, cmap=self.cmapDiffraction)
         # self.diffractionDataMonitor.updateImeasured(Imeasured, cmap=self.cmapDiffraction)
         self.diffractionDataMonitor.drawNow()
@@ -275,8 +271,6 @@ class DummyMonitor(object):
 
     def updateBeamWidth(self, *args, **kwargs):
         pass
-
-
 
     def updatePlot(self, object_estimate, probe_estimate):
         pass
@@ -298,4 +292,3 @@ class DummyMonitor(object):
 
     def writeEngineName(self, *args, **kwargs):
         pass
-

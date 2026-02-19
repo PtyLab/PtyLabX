@@ -18,7 +18,6 @@ from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 
 
 class mPIE_tv(BaseEngine):
-
     def __init__(
         self,
         reconstruction: Reconstruction,
@@ -63,9 +62,7 @@ class mPIE_tv(BaseEngine):
         self._prepareReconstruction()
 
         # actual reconstruction MPIE_engine
-        self.pbar = tqdm.trange(
-            self.numIterations, desc="mPIE", file=sys.stdout, leave=True
-        )
+        self.pbar = tqdm.trange(self.numIterations, desc="mPIE", file=sys.stdout, leave=True)
         for loop in self.pbar:
             # set position order
             self.setPositionOrder()
@@ -115,7 +112,6 @@ class mPIE_tv(BaseEngine):
             # show reconstruction
             self.showReconstruction(loop)
 
-
             # todo clearMemory implementation
 
     def objectMomentumUpdate(self):
@@ -130,14 +126,12 @@ class mPIE_tv(BaseEngine):
         )
 
     def probeMomentumUpdate(self):
-        self.reconstruction.probe, self.reconstruction.probeMomentum, self.reconstruction.probeBuffer = (
-            momentum_step(
-                self.reconstruction.probe,
-                self.reconstruction.probeBuffer,
-                self.reconstruction.probeMomentum,
-                self.frictionM,
-                self.feedbackM,
-            )
+        self.reconstruction.probe, self.reconstruction.probeMomentum, self.reconstruction.probeBuffer = momentum_step(
+            self.reconstruction.probe,
+            self.reconstruction.probeBuffer,
+            self.reconstruction.probeMomentum,
+            self.frictionM,
+            self.feedbackM,
         )
 
     def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
@@ -189,6 +183,4 @@ class mPIE_tv(BaseEngine):
         )
 
     def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
-        return mpie_probe_update(
-            self.reconstruction.probe, objectPatch, DELTA, self.betaProbe, self.alphaProbe, 1.0
-        )
+        return mpie_probe_update(self.reconstruction.probe, objectPatch, DELTA, self.betaProbe, self.alphaProbe, 1.0)
