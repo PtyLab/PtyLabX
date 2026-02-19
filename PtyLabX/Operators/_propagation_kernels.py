@@ -6,7 +6,7 @@ cache_size = 30
 
 
 @lru_cache(maxsize=cache_size)
-def __make_quad_phase(zo, wavelength, Np, dxp):
+def _make_quad_phase(zo, wavelength, Np, dxp):
     """
     Make a quadratic phase profile corresponding to distance zo at wavelength wl. The result is cached and can be
     called again with almost no time lost.

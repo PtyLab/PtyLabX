@@ -291,10 +291,10 @@ class Reconstruction(object):
 
     # initialize momentum, called in specific engines with momentum accelaration
     def initializeObjectMomentum(self):
-        self.objectMomentum = np.zeros_like(self.initialGuessObject)
+        self.objectMomentum = jnp.zeros(self.initialGuessObject.shape, dtype=jnp.complex64)
 
     def initializeProbeMomentum(self):
-        self.probeMomentum = np.zeros_like(self.initialGuessProbe)
+        self.probeMomentum = jnp.zeros(self.initialGuessProbe.shape, dtype=jnp.complex64)
 
     def load_object(self, filename):
         """

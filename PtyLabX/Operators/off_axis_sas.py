@@ -3,7 +3,7 @@ from functools import lru_cache
 import jax.numpy as jnp
 
 from PtyLabX import Params, Reconstruction
-from PtyLabX.Operators._propagation_kernels import __make_quad_phase
+from PtyLabX.Operators._propagation_kernels import _make_quad_phase
 from PtyLabX.Operators.propagator_utils import (
     complexexp,
     convolve2d,
@@ -145,7 +145,7 @@ def __sas_transfer_function(wavelength, Lp, Np, theta, z1, z2):
 
 
 @lru_cache(CACHE_SIZE)
-def __make_transferfunction_sas(
+def _make_transferfunction_sas(
     params: Params,
     reconstruction: Reconstruction,
     Np: int,
@@ -256,10 +256,10 @@ def _interface_sas(
     # quadratic phase Q2 (currently zo, but this can be z2 and z1 separated)
     dxp = float(reconstruction.dxp)
 
-    quad_phase_Q1 = __make_quad_phase(z2, wavelength, Np, dxp)
+    quad_phase_Q1 = _make_quad_phase(z2, wavelength, Np, dxp)
 
     # precompensated transfer function
-    H_precomp = __make_transferfunction_sas(params, reconstruction, Np, Lp, z1, z2)
+    H_precomp = _make_transferfunction_sas(params, reconstruction, Np, Lp, z1, z2)
 
     if with_quad_phase_Q2:
         # quadratic phase Q2 (mostly okay to ignore it!)

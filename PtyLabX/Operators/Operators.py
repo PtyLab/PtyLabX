@@ -13,9 +13,9 @@ import jax.numpy as jnp
 import numpy as np
 
 from PtyLabX import Params, Reconstruction
-from PtyLabX.Operators._propagation_kernels import __make_quad_phase
+from PtyLabX.Operators._propagation_kernels import _make_quad_phase
 from PtyLabX.Operators.off_axis_sas import (
-    __make_transferfunction_sas,
+    _make_transferfunction_sas,
     propagate_sas,
     propagate_sas_inv,
 )
@@ -104,7 +104,7 @@ def propagate_fresnel(fields, params: Params, reconstruction: Reconstruction, z=
     """
     if z is None:
         z = reconstruction.zo
-    quadratic_phase = __make_quad_phase(
+    quadratic_phase = _make_quad_phase(
         z,
         reconstruction.wavelength,
         fields.shape[-1],
@@ -141,7 +141,7 @@ def propagate_fresnel_inv(fields, params: Params, reconstruction: Reconstruction
     # make the quad phase if it's not available yet
     if z is None:
         z = reconstruction.zo
-    quadratic_phase = __make_quad_phase(
+    quadratic_phase = _make_quad_phase(
         z,
         reconstruction.wavelength,
         reconstruction.Np,
@@ -192,7 +192,7 @@ def propagate_ASP(
         raise ValueError("For multi-wavelength, set polychromeASP instead of ASP")
     if z is None:
         z = reconstruction.zo
-    transfer_function = __make_transferfunction_ASP(
+    transfer_function = _make_transferfunction_ASP(
         params.fftshiftSwitch,
         reconstruction.nosm,
         reconstruction.npsm,
@@ -250,7 +250,7 @@ def propagate_twoStepPolychrome(fields, params: Params, reconstruction: Reconstr
     """
     if z is None:
         z = reconstruction.zo
-    transfer_function, quadratic_phase = __make_cache_twoStepPolychrome(
+    transfer_function, quadratic_phase = _make_cache_twoStepPolychrome(
         params.fftshiftSwitch,
         reconstruction.nlambda,
         reconstruction.nosm,
@@ -312,7 +312,7 @@ def propagate_scaledASP(fields, params: Params, reconstruction: Reconstruction, 
     """
     if z is None:
         z = reconstruction.zo
-    Q1, Q2 = __make_transferfunction_scaledASP(
+    Q1, Q2 = _make_transferfunction_scaledASP(
         params.propagatorType,
         params.fftshiftSwitch,
         reconstruction.nlambda,
@@ -377,7 +377,7 @@ def propagate_scaledPolychromeASP(fields, params: Params, reconstruction: Recons
     """
     if z is None:
         z = reconstruction.zo
-    Q1, Q2 = __make_transferfunction_scaledPolychromeASP(
+    Q1, Q2 = _make_transferfunction_scaledPolychromeASP(
         params.fftshiftSwitch,
         reconstruction.nlambda,
         reconstruction.nosm,
@@ -449,7 +449,7 @@ def propagate_polychromeASP(fields, params: Params, reconstruction: Reconstructi
     """
     if z is None:
         z = reconstruction.zo
-    transfer_function = __make_transferfunction_polychrome_ASP(
+    transfer_function = _make_transferfunction_polychrome_ASP(
         params.propagatorType,
         params.fftshiftSwitch,
         reconstruction.nosm,
@@ -487,7 +487,7 @@ def propagate_identity(fields, params: Params, reconstruction: Reconstruction, i
     -------
 
     """
-    transfer_function = __make_quad_phase(1e-3, 532e-9, reconstruction.Np, reconstruction.dxp)
+    transfer_function = _make_quad_phase(1e-3, 532e-9, reconstruction.Np, reconstruction.dxp)
     transfer_function = transfer_function * 0 + 1
     return reconstruction.esw, fields * transfer_function
 
@@ -567,7 +567,7 @@ def aspw(u, z, wavelength, L, bandlimit=True, is_FT=True):
 
     """
     N = u.shape[-1]
-    phase_exp = __aspw_transfer_function(
+    phase_exp = _aspw_transfer_function(
         float(z),
         float(wavelength),
         int(N),
@@ -717,7 +717,7 @@ def fresnelPropagator(u, z, wavelength, L):
 
 
 @lru_cache(cache_size)
-def __aspw_transfer_function(z, wavelength, N, L, bandlimit=True):
+def _aspw_transfer_function(z, wavelength, N, L, bandlimit=True):
     """
     Angular spectrum optical transfer function. You likely don't need to use this directly.
 
@@ -766,7 +766,7 @@ def __aspw_transfer_function(z, wavelength, N, L, bandlimit=True):
 
 
 @lru_cache(cache_size)
-def __make_transferfunction_ASP(fftshiftSwitch, nosm, npsm, Np, zo, wavelength, Lp, nlambda):
+def _make_transferfunction_ASP(fftshiftSwitch, nosm, npsm, Np, zo, wavelength, Lp, nlambda):
     if fftshiftSwitch:
         raise ValueError("ASP propagatorType works only with fftshiftSwitch = False!")
     if nlambda > 1:
@@ -775,7 +775,7 @@ def __make_transferfunction_ASP(fftshiftSwitch, nosm, npsm, Np, zo, wavelength, 
     _transferFunction = jnp.array(
         [
             [
-                [[__aspw_transfer_function(zo, wavelength, Np, Lp) for nslice in range(1)] for npsm in range(npsm)]
+                [[_aspw_transfer_function(zo, wavelength, Np, Lp) for nslice in range(1)] for npsm in range(npsm)]
                 for nosm in range(nosm)
             ]
             for nlambda in range(nlambda)
@@ -788,14 +788,14 @@ def __make_transferfunction_ASP(fftshiftSwitch, nosm, npsm, Np, zo, wavelength, 
 
 def aspw_cached(u, z, wavelength, L):
     """Cached version of aspw."""
-    transferFunction = __aspw_transfer_function(z, wavelength, u.shape[-1], L)
+    transferFunction = _aspw_transfer_function(z, wavelength, u.shape[-1], L)
     U = fft2c(u)
     u_prime = ifft2c(U * transferFunction)
     return u_prime
 
 
 @lru_cache(cache_size)
-def __make_transferfunction_polychrome_ASP(
+def _make_transferfunction_polychrome_ASP(
     propagatorType,
     fftshiftSwitch,
     nosm,
@@ -815,7 +815,7 @@ def __make_transferfunction_polychrome_ASP(
             [
                 [
                     [
-                        __aspw_transfer_function(
+                        _aspw_transfer_function(
                             zo,
                             spectralDensity[nlambda],
                             Np,
@@ -834,7 +834,7 @@ def __make_transferfunction_polychrome_ASP(
 
 
 @lru_cache(cache_size)
-def __make_transferfunction_scaledASP(
+def _make_transferfunction_scaledASP(
     propagatorType,
     fftshiftSwitch,
     nlambda,
@@ -863,7 +863,7 @@ def __make_transferfunction_scaledASP(
 
 
 @lru_cache(cache_size)
-def __make_transferfunction_scaledPolychromeASP(
+def _make_transferfunction_scaledPolychromeASP(
     fftshiftSwitch,
     nlambda,
     nosm,
@@ -881,7 +881,7 @@ def __make_transferfunction_scaledPolychromeASP(
     Q1 = jnp.ones_like(dummy)
     Q2 = jnp.ones_like(dummy)
     for nlambda in range(nlambda):
-        Q1_candidate, Q2_candidate = __make_transferfunction_scaledASP(
+        Q1_candidate, Q2_candidate = _make_transferfunction_scaledASP(
             None,
             fftshiftSwitch,
             1,
@@ -899,7 +899,7 @@ def __make_transferfunction_scaledPolychromeASP(
 
 
 @lru_cache(cache_size)
-def __make_cache_twoStepPolychrome(
+def _make_cache_twoStepPolychrome(
     fftshiftSwitch,
     nlambda,
     nosm,
@@ -918,7 +918,7 @@ def __make_cache_twoStepPolychrome(
             [
                 [
                     [
-                        __aspw_transfer_function(
+                        _aspw_transfer_function(
                             z=zo * (1 - spectralDensity[0] / spectralDensity[nlambda]),
                             wavelength=spectralDensity[nlambda],
                             N=Np,
@@ -933,7 +933,7 @@ def __make_cache_twoStepPolychrome(
             for nlambda in range(nlambda)
         ]
     )
-    quadraticPhase = __make_quad_phase(zo, spectralDensity[0], Np, dxp)
+    quadraticPhase = _make_quad_phase(zo, spectralDensity[0], Np, dxp)
     return transferFunction, quadraticPhase
 
 
@@ -944,14 +944,14 @@ def clear_cache(logger: logging.Logger = None):
 
     Returns nothing"""
     list_of_methods = [
-        __aspw_transfer_function,
-        __make_quad_phase,
-        __make_transferfunction_ASP,
-        __make_transferfunction_scaledASP,
-        __make_cache_twoStepPolychrome,
-        __make_transferfunction_polychrome_ASP,
-        __make_transferfunction_scaledPolychromeASP,
-        __make_transferfunction_sas,
+        _aspw_transfer_function,
+        _make_quad_phase,
+        _make_transferfunction_ASP,
+        _make_transferfunction_scaledASP,
+        _make_cache_twoStepPolychrome,
+        _make_transferfunction_polychrome_ASP,
+        _make_transferfunction_scaledPolychromeASP,
+        _make_transferfunction_sas,
     ]
     for method in list_of_methods:
         if logger is not None:
