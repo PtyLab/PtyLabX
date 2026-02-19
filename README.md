@@ -18,10 +18,20 @@ To explore use cases of PtyLab, check the [example_scripts](example_scripts) and
 pip install git+https://github.com/ShantanuKodgirwar/PtyLabX.git
 ```
 
-### With GPU support (CUDA 12)
+### With GPU support
+
+#### CUDA 12
 
 ```bash
 pip install "ptylabx[cuda12]@git+https://github.com/ShantanuKodgirwar/PtyLabX.git"
+```
+> [!NOTE] 
+> We recommend using `cuda12` flag for older GPUs (SM version 7.5 or older). However, note that JAX will eventually discontinue support for `cuda12`. See [here](https://docs.jax.dev/en/latest/installation.html#nvidia-gpu) for more details.
+
+#### CUDA 13 (Recommended for newer GPUs)
+
+```bash
+pip install "ptylabx[cuda13]@git+https://github.com/ShantanuKodgirwar/PtyLabX.git"
 ```
 
 ### Development
@@ -44,8 +54,7 @@ To install with GPU support and dev dependencies:
 uv sync --extra cuda13,dev # alternatively `cuda12` for older GPUs
 ```
 
-> [!NOTE] 
-> We recommend using `cuda12` flag for older GPUs (SM version 7.5 or older). However, note that JAX will eventually discontinue support for `cuda12`. See [here](https://docs.jax.dev/en/latest/installation.html#nvidia-gpu) for more details.
+
 
 For testing whether GPU is being used correctly
 
