@@ -1,8 +1,7 @@
 import logging
-import sys
 
 import numpy as np
-import tqdm
+from tqdm.auto import trange
 from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
 from PtyLabX.Monitor.Monitor import Monitor
@@ -59,8 +58,8 @@ class pcPIE(BaseEngine):
 
         # actual reconstruction ePIE_engine
 
-        self.pbar = tqdm.trange(
-            self.numIterations, desc="pcPIE", file=sys.stdout, leave=True
+        self.pbar = trange(
+            self.numIterations, desc="pcPIE", leave=True
         )  # in order to change description to the tqdm progress bar
         for loop in self.pbar:
             # set position order

@@ -3,9 +3,8 @@ import jax.numpy as jnp
 
 
 import logging
-import sys
 
-import tqdm
+from tqdm.auto import tqdm, trange
 
 from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
@@ -96,11 +95,11 @@ class mPIE_mw(BaseEngine):
         self.reconstruction.objectBuffer = self.reconstruction.object.copy()
         self.reconstruction.probeBuffer = self.reconstruction.probe.copy()
         # actual reconstruction MPIE_engine
-        self.pbar = tqdm.trange(self.numIterations, desc="mPIE", file=sys.stdout, leave=True)
+        self.pbar = trange(self.numIterations, desc="mPIE", leave=True)
         for loop in self.pbar:
             # set position order
             self.setPositionOrder()
-            self.pbar_pos = tqdm.tqdm(self.positionIndices, leave=False, desc="ptychogram", file=sys.stdout)
+            self.pbar_pos = tqdm(self.positionIndices, leave=False, desc="ptychogram")
             for positionLoop, positionIndex in enumerate(self.pbar_pos):
                 # get object patch, stored as self.probe
                 # self.reconstruction.make_probe(positionIndex)

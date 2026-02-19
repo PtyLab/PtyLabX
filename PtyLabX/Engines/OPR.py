@@ -3,9 +3,8 @@ import jax.numpy as jnp
 
 
 import logging
-import sys
 
-import tqdm
+from tqdm.auto import trange
 
 from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
@@ -68,7 +67,7 @@ class OPR(BaseEngine):
             )
 
         # actual reconstruction ePIE_engine
-        self.pbar = tqdm.trange(self.numIterations, desc="OPR", file=sys.stdout, leave=True)
+        self.pbar = trange(self.numIterations, desc="OPR", leave=True)
         for loop in self.pbar:
             self.it = loop
             # set position order

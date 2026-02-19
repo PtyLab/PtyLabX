@@ -1,10 +1,9 @@
 import numpy as np
-import tqdm
+from tqdm.auto import trange
 from matplotlib import pyplot as plt
 
 import jax.numpy as jnp
 import logging
-import sys
 
 from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
@@ -89,8 +88,8 @@ class zPIE(BaseEngine):
         if not self.focusObject:
             n = self.reconstruction.Np
 
-        self.pbar = tqdm.trange(
-            self.numIterations, desc="zPIE", file=sys.stdout, leave=True
+        self.pbar = trange(
+            self.numIterations, desc="zPIE", leave=True
         )  # in order to change description to the tqdm progress bar
         for loop in self.pbar:
             # set position order
@@ -155,7 +154,7 @@ class zPIE(BaseEngine):
                 merit = np.asarray(merit)
                 feedback = np.sum(dz * merit) / np.sum(merit)  # at optimal z, feedback term becomes 0
 
-                print("Step size: ", feedback)
+                self.pbar.write(f"Step size: {feedback}")
                 self.zMomentun = self.zPIEfriction * self.zMomentun + self.zPIEgradientStepSize * feedback
                 zNew = self.reconstruction.zo + self.zMomentun
 

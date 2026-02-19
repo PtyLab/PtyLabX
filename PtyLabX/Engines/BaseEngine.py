@@ -91,6 +91,7 @@ class BaseEngine(object):
         self._initialProbePowerCorrection()
         self._probeWindow()
         self._initializeErrors()
+        self._transferDataToGPU()
         self._setObjectProbeROI()
         self._showInitialGuesses()
         self._initializePCParameters()
@@ -193,16 +194,29 @@ class BaseEngine(object):
                 )
         # initialize energy at each scan position
         if not hasattr(self.reconstruction, "errorAtPos"):
-            self.reconstruction.errorAtPos = np.zeros((self.experimentalData.numFrames, 1), dtype=np.float32)
+            self.reconstruction.errorAtPos = jnp.zeros((self.experimentalData.numFrames, 1), dtype=jnp.float32)
         # initialize final error
         if not hasattr(self.reconstruction, "error"):
             self.reconstruction.error = []
+
+    def _transferDataToGPU(self):
+        """Pre-transfer hot-path arrays to GPU device memory.
+
+        Without this, ptychogram[positionIndex] inside the position loop triggers a PCIe
+        CPU→GPU transfer on every single position, which is the dominant bottleneck.
+        energyAtPos is also accessed every iteration in getErrorMetrics.
+        """
+        if not isinstance(self.experimentalData.ptychogram, jnp.ndarray):
+            self.logger.info("Transferring ptychogram to GPU (%s frames)", self.experimentalData.numFrames)
+            self.experimentalData.ptychogram = jnp.array(self.experimentalData.ptychogram)
+        if not isinstance(self.experimentalData.energyAtPos, jnp.ndarray):
+            self.experimentalData.energyAtPos = jnp.array(self.experimentalData.energyAtPos)
 
     def _initialProbePowerCorrection(self):
         if self.params.probePowerCorrectionSwitch:
             self.reconstruction.probe = (
                 self.reconstruction.probe
-                / np.sqrt(np.sum(self.reconstruction.probe * self.reconstruction.probe.conj()))
+                / jnp.sqrt(jnp.sum(self.reconstruction.probe * self.reconstruction.probe.conj()))
                 * self.experimentalData.maxProbePower
             )
 
@@ -538,16 +552,15 @@ class BaseEngine(object):
         if not self.params.saveMemory:
             # Calculate mean error for all positions (make separate function for all of that)
             if self.params.FourierMaskSwitch:
-                self.reconstruction.errorAtPos = np.sum(
-                    np.abs(self.reconstruction.detectorError) * self.experimentalData.W,
+                self.reconstruction.errorAtPos = jnp.sum(
+                    jnp.abs(self.reconstruction.detectorError) * self.experimentalData.W,
                     axis=(-1, -2),
                 )
             else:
-                self.reconstruction.errorAtPos = np.sum(np.abs(self.reconstruction.detectorError), axis=(-1, -2))
-        self.reconstruction.errorAtPos = np.asarray(self.reconstruction.errorAtPos) / np.asarray(
-            self.experimentalData.energyAtPos + 1e-20
-        )
-        eAverage = np.sum(self.reconstruction.errorAtPos)
+                self.reconstruction.errorAtPos = jnp.sum(jnp.abs(self.reconstruction.detectorError), axis=(-1, -2))
+        self.reconstruction.errorAtPos = self.reconstruction.errorAtPos / (self.experimentalData.energyAtPos + 1e-20)
+        # float() forces one GPU sync per iteration to get the scalar — acceptable at iteration granularity
+        eAverage = float(jnp.sum(self.reconstruction.errorAtPos))
 
         # append to error vector (for plotting error as function of iteration)
         self.reconstruction.error = np.append(self.reconstruction.error, eAverage)
@@ -569,7 +582,7 @@ class BaseEngine(object):
                 raise NotImplementedError
             else:
                 self.reconstruction.errorAtPos = self.reconstruction.errorAtPos.at[positionIndex].set(
-                    float(jnp.sum(self.currentDetectorError))
+                    jnp.sum(self.currentDetectorError)
                 )
         else:
             self.reconstruction.detectorError = self.reconstruction.detectorError.at[positionIndex].set(
@@ -594,9 +607,10 @@ class BaseEngine(object):
             )[-1]
         else:
             self.reconstruction.Iestimated = jnp.sum(jnp.abs(self.reconstruction.ESW) ** 2, axis=(0, 1, 2))[-1]
-            self.logger.debug(
-                f"Estimated intensity: {self.reconstruction.Iestimated.sum()}, Measured: {self.experimentalData.ptychogram[positionIndex].sum()}"
-            )
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(
+                    f"Estimated intensity: {self.reconstruction.Iestimated.sum()}, Measured: {self.experimentalData.ptychogram[positionIndex].sum()}"
+                )
         if self.params.backgroundModeSwitch:
             self.reconstruction.Iestimated += self.reconstruction.background
 
@@ -1087,7 +1101,7 @@ class BaseEngine(object):
         if self.params.probePowerCorrectionSwitch:
             self.reconstruction.probe = (
                 self.reconstruction.probe
-                / np.sqrt(np.sum(self.reconstruction.probe * self.reconstruction.probe.conj()))
+                / jnp.sqrt(jnp.sum(self.reconstruction.probe * self.reconstruction.probe.conj()))
                 * self.experimentalData.maxProbePower
             )
         if self.params.probeSpectralPowerCorrectionSwitch:

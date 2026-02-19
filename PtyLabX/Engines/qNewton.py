@@ -2,9 +2,8 @@ import numpy as np
 
 # PtyLab imports
 import logging
-import sys
 
-import tqdm
+from tqdm.auto import trange
 
 from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
@@ -48,7 +47,7 @@ class qNewton(BaseEngine):
             self.experimentalData = experimentalData
         self._prepareReconstruction()
 
-        self.pbar = tqdm.trange(self.numIterations, desc="qNewton", file=sys.stdout, leave=True)
+        self.pbar = trange(self.numIterations, desc="qNewton", leave=True)
         for loop in self.pbar:
             # set position order
             self.setPositionOrder()

@@ -1,11 +1,9 @@
-import numpy as np
-
-
 import logging
-import sys
 
-import tqdm
+import numpy as np
+from tqdm.auto import trange
 
+from PtyLabX.Engines._jit_kernels import epie_object_update, epie_probe_update
 from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
 from PtyLabX.Monitor.Monitor import Monitor
@@ -13,7 +11,6 @@ from PtyLabX.Params.Params import Params
 
 # PtyLab imports
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.Engines._jit_kernels import epie_object_update, epie_probe_update
 
 
 class ePIE(BaseEngine):
@@ -48,7 +45,7 @@ class ePIE(BaseEngine):
         self._prepareReconstruction()
 
         # actual reconstruction ePIE_engine
-        self.pbar = tqdm.trange(self.numIterations, desc="ePIE", file=sys.stdout, leave=True)
+        self.pbar = trange(self.numIterations, desc="ePIE", leave=True)
         for loop in self.pbar:
             # set position order
             self.setPositionOrder()

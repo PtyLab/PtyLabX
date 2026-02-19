@@ -1,7 +1,7 @@
 from typing import Any
 
 import numpy as np
-import tqdm
+from tqdm.auto import trange
 from matplotlib import pyplot as plt
 from scipy.interpolate import interp2d
 
@@ -9,7 +9,6 @@ from scipy.interpolate import interp2d
 import jax.numpy as jnp
 
 import logging
-import sys
 
 from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
@@ -71,7 +70,7 @@ class aPIE(BaseEngine):
         # linear search
         thetaSearchRadiusList = np.linspace(self.thetaSearchRadiusMax, self.thetaSearchRadiusMin, self.numIterations)
 
-        self.pbar = tqdm.trange(self.numIterations, desc="aPIE", file=sys.stdout, leave=True)
+        self.pbar = trange(self.numIterations, desc="aPIE", leave=True)
         for loop in self.pbar:
             # save theta search history
             self.reconstruction.thetaHistory = np.append(

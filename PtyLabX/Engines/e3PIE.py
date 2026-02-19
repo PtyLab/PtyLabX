@@ -1,10 +1,9 @@
 import numpy as np
 import jax.numpy as jnp
-import tqdm
+from tqdm.auto import trange
 
 
 import logging
-import sys
 
 from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
@@ -74,7 +73,7 @@ class e3PIE(BaseEngine):
         self.reconstruction.esw = self.reconstruction.probe.copy()
         # get module
 
-        self.pbar = tqdm.trange(self.numIterations, desc="e3PIE", file=sys.stdout, leave=True)
+        self.pbar = trange(self.numIterations, desc="e3PIE", leave=True)
 
         # self.pbar = (1, 2)
 

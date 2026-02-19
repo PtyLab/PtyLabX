@@ -3,9 +3,8 @@ import jax.numpy as jnp
 
 # PtyLab imports
 import logging
-import sys
 
-import tqdm
+from tqdm.auto import trange
 
 from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
@@ -73,7 +72,7 @@ class mqNewton(BaseEngine):
         self._prepareReconstruction()
         self.initializeAdaptiveMomentum()
 
-        self.pbar = tqdm.trange(self.numIterations, desc="mqNewton", file=sys.stdout, leave=True)
+        self.pbar = trange(self.numIterations, desc="mqNewton", leave=True)
         for loop in self.pbar:
             # set position order
             self.setPositionOrder()
