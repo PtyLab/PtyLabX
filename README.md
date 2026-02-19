@@ -52,7 +52,7 @@ To install with GPU support and dev dependencies:
 uv sync --extra cuda13,dev # alternatively `cuda12` for older GPUs
 ```
 
-For testing and formatting (after a contribution), run:
+If a contribution is made (via a pull request), run all the tests and formatter:
 
 ```bash
 uv run python -m pytest tests/ -v -s   # run tests (add test_jax_device.py to check GPU)
@@ -60,8 +60,8 @@ uv run ruff check PtyLabX/             # check style
 uv run ruff format PtyLabX/            # auto-format
 ```
 
-> [!NOTE] 
-> Contributions are welcome such as new engines, bug fixes, example scripts, or documentation. If its a new implementation under the package, please add a test for it and run the above commands. CI also ensures this on every push and pull request via GitHub Actions.
+> [!NOTE]
+> Contributions are welcome (new engines, bug fixes, example scripts, documentation). For new implementations, please add a test and run the above commands; CI checks every PR via GitHub Actions.
 
 ## Citation
 
