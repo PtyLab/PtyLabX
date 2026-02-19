@@ -69,7 +69,6 @@ class ObjectProbeErrorPlot(object):
         self.ax_error_metric.set_ylabel("error")
         self.ax_error_metric.set_xscale("log")
         self.ax_error_metric.set_yscale("log")
-        self.ax_error_metric.axis("image")
         self.figure.tight_layout()
         self.firstrun = True
 
@@ -147,8 +146,6 @@ class ObjectProbeErrorPlot(object):
                 self.error_metric_plot.set_data(np.arange(len(error_estimate)) + 1, error_estimate)
                 self.ax_error_metric.set_xlim(1, len(error_estimate))
                 self.ax_error_metric.set_ylim(np.min(error_estimate), np.max(error_estimate))
-                data_aspect = np.log(np.max(error_estimate) / np.min(error_estimate)) / np.log(len(error_estimate))
-                self.ax_error_metric.set_aspect(1 / data_aspect)
                 self.ax_error_metric.set_title(f"Error metric (it {len(error_estimate)})")
 
     def drawNowScript(self):
