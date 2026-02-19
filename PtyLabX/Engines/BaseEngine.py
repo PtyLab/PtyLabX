@@ -184,7 +184,7 @@ class BaseEngine(object):
             self.reconstruction.detectorError = 0
         else:
             if not hasattr(self.reconstruction, "detectorError"):
-                self.reconstruction.detectorError = np.zeros(
+                self.reconstruction.detectorError = jnp.zeros(
                     (
                         self.experimentalData.numFrames,
                         self.reconstruction.Nd,

@@ -3,6 +3,7 @@ import time
 from copy import copy
 
 import h5py
+import jax.numpy as jnp
 import numpy as np
 
 from PtyLabX import Params
@@ -227,9 +228,9 @@ class Reconstruction(object):
         self.initializeObject(force=force)
         self.initializeProbe(force=force)
 
-        # set object and probe objects
-        self.object = self.initialGuessObject.copy()
-        self.probe = self.initialGuessProbe.copy()
+        # set object and probe objects as JAX arrays (required for .at[].set() in engines)
+        self.object = jnp.array(self.initialGuessObject)
+        self.probe = jnp.array(self.initialGuessProbe)
 
     def initializeObject(self, type_of_init=None, force=True):
         if not force:
@@ -319,7 +320,7 @@ class Reconstruction(object):
                 : self.shape_O[5],
             ]
             if np.all(np.array(obj.shape) == np.array(self.shape_O)):
-                self.object = obj
+                self.object = jnp.array(obj)
             else:
                 raise RuntimeError(
                     f"Shape of saved probe cannot be extended to shape of required probe. File: {archive['object'].shape}. Need: {self.shape_O}"
@@ -348,7 +349,7 @@ class Reconstruction(object):
             )
             probe = probe[: self.nlambda, :1, : self.npsm, : self.nslice, ss, ss]
             if np.all(np.array(probe.shape) == np.array(self.shape_P)):
-                self.probe = probe
+                self.probe = jnp.array(probe)
             else:
                 raise RuntimeError(
                     f"Shape of saved probe cannot be extended to shape of required probe. File: {archive['probe'].shape}. Need: {self.shape_P}"
@@ -369,8 +370,8 @@ class Reconstruction(object):
     def load(self, filename):
         """Load the results given by saveResults."""
         with h5py.File(filename, "r") as archive:
-            self.probe = np.array(archive["probe"])
-            self.object = np.array(archive["object"])
+            self.probe = jnp.array(archive["probe"])
+            self.object = jnp.array(archive["object"])
             self.error = np.array(archive["error"])
             self.wavelength = np.array(archive["wavelength"])
             self.dxp = np.array(archive["dxp"])

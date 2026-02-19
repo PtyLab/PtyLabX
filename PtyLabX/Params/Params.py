@@ -94,6 +94,8 @@ class Params(object):
         self.positionCorrectionSwitch = False  # position correction for encoder
         self.adaptiveDenoisingSwitch = False  # estimated noise floor to be clipped from raw data
 
+        self.saveMemory = False  # skip precomputing arrays to reduce memory usage
+
         self.l2reg = False  # l2 regularisation
         self.l2reg_probe_aleph = 0.01  # strength of the regularizer
         self.l2reg_object_aleph = 0.001
