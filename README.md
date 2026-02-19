@@ -41,8 +41,12 @@ uv sync
 To install with GPU support and dev dependencies:
 
 ```bash
-uv sync --extra cuda12,dev
+uv sync --extra cuda13,dev # alternatively `cuda12` for older GPUs
 ```
+
+> [!NOTE] 
+> We recommend using `cuda12` flag for older GPUs (SM version 7.5 or older). However, note that JAX will eventually discontinue support for `cuda12`. See [here](https://docs.jax.dev/en/latest/installation.html#nvidia-gpu) for more details.
+
 For testing whether GPU is being used correctly
 
 ```bash
