@@ -54,15 +54,11 @@ To install with GPU support and dev dependencies:
 uv sync --extra cuda13,dev # alternatively `cuda12` for older GPUs
 ```
 
-
-
 For testing whether GPU is being used correctly
 
 ```bash
 uv run python -m pytest tests/test_jax_device.py -v -s
 ```
-
-If you would like to contribute to this package, especially if it involves modifying dependencies, please checkout the [`CONTRIBUTING.md`](CONTRIBUTING.md) file.
 
 ## Citation
 
