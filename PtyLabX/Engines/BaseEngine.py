@@ -434,11 +434,11 @@ class BaseEngine(object):
                     self.experimentalData.ptychogramDownsampled = np.fft.fftshift(
                         self.experimentalData.ptychogramDownsampled, axes=(-1, -2)
                     )
-                if self.experimentalData.W != None:
+                if self.experimentalData.W is not None:
                     self.experimentalData.W = np.fft.fftshift(
                         self.experimentalData.W, axes=(-1, -2)
                     )
-                if self.experimentalData.emptyBeam != None:
+                if self.experimentalData.emptyBeam is not None:
                     self.experimentalData.emptyBeam = np.fft.fftshift(
                         self.experimentalData.emptyBeam, axes=(-1, -2)
                     )

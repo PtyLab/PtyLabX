@@ -36,15 +36,15 @@ pip install "ptylabx[cuda13]@git+https://github.com/ShantanuKodgirwar/PtyLabX.gi
 
 ### Development
 
-This project uses the (super-fast) package manager [uv](https://docs.astral.sh/uv/). Follow the below steps for cloning and installing in a dedicated virtual environment:
+This project uses the (super-fast) package manager [uv](https://docs.astral.sh/uv/). Follow the below steps:
 
 ```bash
 git clone https://github.com/ShantanuKodgirwar/PtyLabX.git
 cd PtyLabX
-uv venv .ptylabx-venv
-source .ptylabx-venv/bin/activate
-uv sync
+uv sync 
 ```
+
+The dependencies are installed in a virtual environment which can be activated within your IDE interpreter or in the terminal `source .venv/bin/activate`.
 
 To install with GPU support and dev dependencies:
 
