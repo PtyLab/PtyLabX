@@ -1,5 +1,5 @@
 import functools
-from typing import List, Tuple, Union
+from typing import Tuple, Union
 
 import jax
 import jax.numpy as jnp
@@ -144,9 +144,11 @@ def metric_at(
 
     OE_ff = fft2c(object_estimate[..., sy1, sx1])
     if intensity_only:
-        op = lambda x: abs(x).real ** 2
+        def op(x):
+            return abs(x).real ** 2
     else:
-        op = lambda x: x
+        def op(x):
+            return x
 
     scores = []
     OEs = []

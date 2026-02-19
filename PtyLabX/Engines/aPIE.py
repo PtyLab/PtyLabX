@@ -5,7 +5,6 @@ import tqdm
 from matplotlib import pyplot as plt
 from scipy.interpolate import interp2d
 
-from PtyLabX.utils.visualisation import hsvplot
 
 import jax.numpy as jnp
 
@@ -15,7 +14,6 @@ import sys
 from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
 from PtyLabX.Monitor.Monitor import Monitor
-from PtyLabX.Operators.Operators import aspw
 from PtyLabX.Params.Params import Params
 
 # PtyLab imports
@@ -64,7 +62,7 @@ class aPIE(BaseEngine):
         self.ptychogramUntransformed = self.experimentalData.ptychogram.copy()
         self.experimentalData.W = np.ones_like(self.reconstruction.Xd)
 
-        if self.reconstruction.theta == None:
+        if self.reconstruction.theta is None:
             raise ValueError("theta value is not given")
 
     def doReconstruction(self):
@@ -124,8 +122,8 @@ class aPIE(BaseEngine):
                     self.reconstruction.zo,
                     theta[k],
                 )  # todo check if 1D is enough to save time
-                for l in range(self.experimentalData.numFrames):
-                    temp = self.ptychogramUntransformed[l]
+                for li in range(self.experimentalData.numFrames):
+                    temp = self.ptychogramUntransformed[li]
                     f = interp2d(
                         self.reconstruction.xd,
                         self.reconstruction.xd,
@@ -136,7 +134,7 @@ class aPIE(BaseEngine):
                     temp2 = abs(f(Xq[0], self.reconstruction.xd))
                     temp2 = np.nan_to_num(temp2)
                     temp2[temp2 < 0] = 0
-                    self.experimentalData.ptychogram[l] = temp2
+                    self.experimentalData.ptychogram[li] = temp2
 
                 # renormalization(for energy conservation) # todo not layer by layer?
                 self.experimentalData.ptychogram = (

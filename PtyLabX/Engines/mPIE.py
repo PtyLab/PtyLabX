@@ -1,7 +1,5 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
-import jax.numpy as jnp
 
 import logging
 import sys
@@ -15,7 +13,6 @@ from PtyLabX.Params.Params import Params
 # PtyLab imports
 from PtyLabX.Engines._jit_kernels import momentum_step, mpie_object_update, mpie_probe_update
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.utils import fft2c, ifft2c
 
 
 class mPIE(BaseEngine):
@@ -162,10 +159,8 @@ class mPIE(BaseEngine):
                     # self.reconstruction.push_probe_update(self.reconstruction.probe, positionIndex, self.experimentalData.ptychogram.shape[0])
 
                 if self.params.positionCorrectionSwitch:
-                    shifter = self.positionCorrection(
-                        objectPatch, positionIndex, sy, sx
-                    )
-                    # self.pbar_pos.write(f'Corr: {shifter[0]*1e6:.2f} um x {shifter[1]*1e6:.2f} um')
+                    self.positionCorrection(objectPatch, positionIndex, sy, sx)
+                    # self.pbar_pos.write(f'Corr: ...')
 
                 # momentum updates
                 if np.random.rand(1) > 0.95:

@@ -1,7 +1,6 @@
 from functools import lru_cache
 
 import jax.numpy as jnp
-import numpy as np
 
 from PtyLabX import Params, Reconstruction
 from PtyLabX.Operators._propagation_kernels import __make_quad_phase

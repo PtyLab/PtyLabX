@@ -1,5 +1,4 @@
 import logging
-import warnings
 import os
 
 import numpy as np
@@ -11,7 +10,6 @@ from PtyLabX.Monitor.Monitor import Monitor
 from PtyLabX.Params.Params import Params
 from PtyLabX.Reconstruction.Reconstruction import (
     Reconstruction,
-    calculate_pixel_positions,
 )
 from PtyLabX.Regularizers import grad_TV
 
@@ -385,7 +383,7 @@ class BaseEngine(object):
 
         if self.params.CPSCswitch:
             if not hasattr(self.experimentalData, "ptychogramDownsampled"):
-                if self.params.CPSCupsamplingFactor == None:
+                if self.params.CPSCupsamplingFactor is None:
                     raise ValueError(
                         "CPSCswitch is on, CPSCupsamplingFactor need to be set"
                     )
@@ -1064,15 +1062,15 @@ class BaseEngine(object):
             cc = jnp.zeros((len(self.rowShifts), 1))
 
             # use the real-space object (FFT for FPM)
-            O = self.reconstruction.object
+            obj = self.reconstruction.object
             Opatch = objectPatch
             if self.experimentalData.operationMode == "FPM":
-                O = fft2c(self.reconstruction.object)
+                obj = fft2c(self.reconstruction.object)
                 Opatch = fft2c(objectPatch)
 
             if self.params.positionCorrectionSwitch_radius < 2:
                 # Vectorized cross-correlation over all shifts
-                O_slice = O[..., sy, sx]
+                O_slice = obj[..., sy, sx]
                 rowShifts = jnp.array(self.rowShifts)
                 colShifts = jnp.array(self.colShifts)
 
@@ -1092,8 +1090,8 @@ class BaseEngine(object):
                 rowShifts, colShifts = np.mgrid[ss, ss]
                 self.rowShifts = rowShifts.flatten()
                 self.colShifts = colShifts.flatten()
-                FT_O = jnp.fft.fft2(O[..., sy, sx] - O[..., sy, sx].mean())
-                FT_Op = jnp.fft.fft2(Opatch - O.mean())
+                FT_O = jnp.fft.fft2(obj[..., sy, sx] - obj[..., sy, sx].mean())
+                FT_Op = jnp.fft.fft2(Opatch - obj.mean())
                 xcor = jnp.fft.ifft2(FT_O * FT_Op.conj())
                 xcor = abs(jnp.fft.fftshift(xcor))
                 N = xcor.shape[-1]

@@ -401,7 +401,8 @@ class Reconstruction(object):
         if type not in allowed_save_types:
             raise NotImplementedError(f"Only {allowed_save_types} are allowed keywords for type")
         if not squeeze:
-            squeezefun = lambda x: x
+            def squeezefun(x):
+                return x
         else:
             squeezefun = np.squeeze
         if type == "all":
@@ -420,7 +421,7 @@ class Reconstruction(object):
                     hf.create_dataset("encoder_corrected", data=self.encoder_corrected)
 
                     if hasattr(self, "theta"):
-                        if self.theta != None:
+                        if self.theta is not None:
                             hf.create_dataset("theta", data=self.theta, dtype="f")
 
             if self.data.operationMode == "FPM":
@@ -561,7 +562,7 @@ class Reconstruction(object):
 
             try:
                 positions = positions + self.No // 2 - self.Np // 2
-            except:
+            except Exception:
                 pass
 
             return positions.astype(int)

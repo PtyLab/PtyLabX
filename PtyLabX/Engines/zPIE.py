@@ -89,9 +89,6 @@ class zPIE(BaseEngine):
         if not self.focusObject:
             n = self.reconstruction.Np
 
-        X, Y = jnp.meshgrid(jnp.arange(-n // 2, n // 2), jnp.arange(-n // 2, n // 2))
-        w = jnp.exp(-((jnp.sqrt(X**2 + Y**2) / self.reconstruction.Np) ** 4))
-
         self.pbar = tqdm.trange(
             self.numIterations, desc="zPIE", file=sys.stdout, leave=True
         )  # in order to change description to the tqdm progress bar

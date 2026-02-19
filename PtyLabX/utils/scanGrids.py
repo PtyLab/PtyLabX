@@ -63,8 +63,8 @@ def GenerateConcentricGrid(Nr, s, rend):
     for k in np.arange(1, Nr):
         dtheta = 2 * np.pi / nop[k]
         theta = np.arange(1, nop[k] + 1) * dtheta + 2 * np.pi / (k + 1)
-        for l in np.arange(nop[k]):
-            positions[ind, :] = r[k] * np.array([np.cos(theta[l]), np.sin(theta[l])])
+        for li in np.arange(nop[k]):
+            positions[ind, :] = r[k] * np.array([np.cos(theta[li]), np.sin(theta[li])])
             ind += 1
     positions = (np.floor(positions / dx)).astype(int)
 
@@ -85,9 +85,9 @@ def GenerateRasterGrid(n, ds, randomOffset=False, amplitude=1):
     R: row
     C: column
     """
-    I, J = np.meshgrid(np.arange(n), np.arange(n))
-    C = I.reshape(n**2) * ds
-    R = J.reshape(n**2) * ds
+    col_grid, row_grid = np.meshgrid(np.arange(n), np.arange(n))
+    C = col_grid.reshape(n**2) * ds
+    R = row_grid.reshape(n**2) * ds
 
     # center the scan grid at [0,0]
     # for even numbers
@@ -187,7 +187,7 @@ class tsp_ga:
                 city_b = random.choice(options)
                 try:
                     dist = self.hash_map[city_a][city_b]
-                except:
+                except KeyError:
                     dist = self.hash_map[city_b][city_a]
                 if (dist > self.meanDist / 4) & (loop < threshold):
                     loop += 1
@@ -230,7 +230,7 @@ class tsp_ga:
                         city_a = geneP[k - 1]
                         city_b = geneP[k]
                         dist = self.hash_map[city_a][city_b]
-                    except:
+                    except KeyError:
                         dist = self.hash_map[city_b][city_a]
                     d += dist
                 totalDist.append(d)
@@ -264,33 +264,33 @@ class tsp_ga:
                 routeInsertionPoints = np.transpose(
                     np.sort(np.ceil((len(geneP) - 2) * np.random.rand(1, 2)))
                 )
-                I = int(routeInsertionPoints[0])
-                J = int(routeInsertionPoints[1])
+                ins_i = int(routeInsertionPoints[0])
+                ins_j = int(routeInsertionPoints[1])
                 for k in range(4):  # Mutate the Best to get Three New Routes
                     tmpPop[k] = bestOf4Route.copy()
                     if k == 1:  # Flip
                         index_a = []
-                        for ii in range(I, J + 1):
-                            index_a.append(tmpPop[k][J + I - ii])
+                        for ii in range(ins_i, ins_j + 1):
+                            index_a.append(tmpPop[k][ins_j + ins_i - ii])
                         jj = 0
-                        for ii in range(I, J + 1):
+                        for ii in range(ins_i, ins_j + 1):
                             tmpPop[k][ii] = index_a[jj]
                             jj += 1
                     elif k == 2:  # Swap
-                        index_a = tmpPop[k][I]
-                        index_b = tmpPop[k][J]
-                        tmpPop[k][I] = index_b
-                        tmpPop[k][J] = index_a
+                        index_a = tmpPop[k][ins_i]
+                        index_b = tmpPop[k][ins_j]
+                        tmpPop[k][ins_i] = index_b
+                        tmpPop[k][ins_j] = index_a
                     elif k == 3:  # Slide
                         index_a = []
-                        for ii in range(I + 1, J + 1):
+                        for ii in range(ins_i + 1, ins_j + 1):
                             index_a.append(tmpPop[k][ii])
-                        index_b = tmpPop[k][I]
+                        index_b = tmpPop[k][ins_i]
                         jj = 0
-                        for ii in range(I, J):
+                        for ii in range(ins_i, ins_j):
                             tmpPop[k][ii] = index_a[jj]
                             jj += 1
-                        tmpPop[k][J] = index_b
+                        tmpPop[k][ins_j] = index_b
                     newPop.append(tmpPop[k])
             if iter % (self.iterations // self.plotUpdateFrequency) == 0:
                 print("distance: %i um, numIteration: %i, " % (globalMin, iter))
@@ -308,6 +308,5 @@ class tsp_ga:
 
     def converge(self):
         values = self.GA_Matlab()
-        current_score = values[0]
         current_best_gene = values[1]
         return np.array(current_best_gene).astype(int)

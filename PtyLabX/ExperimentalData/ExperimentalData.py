@@ -2,9 +2,8 @@ import numpy as np
 
 import logging
 
-import matplotlib.pyplot as plt
 from PtyLabX.io import readHdf5
-from PtyLabX.utils.visualisation import setColorMap, show3Dslider
+from PtyLabX.utils.visualisation import show3Dslider
 
 
 class ExperimentalData:

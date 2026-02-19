@@ -1,7 +1,5 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
-import jax.numpy as jnp
 
 import logging
 import sys
@@ -16,7 +14,6 @@ from PtyLabX.Params.Params import Params
 # PtyLab imports
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 from PtyLabX.Engines._jit_kernels import epie_object_update, epie_probe_update
-from PtyLabX.utils.utils import fft2c, ifft2c
 
 
 class ePIE(BaseEngine):

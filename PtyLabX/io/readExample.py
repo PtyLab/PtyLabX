@@ -1,8 +1,6 @@
 from PtyLabX.io.readHdf5 import loadInputData
 from PtyLabX.io import getExampleDataFolder
-from pathlib import Path
 import logging
-import sys
 
 logger = logging.getLogger(__file__)
 logger.setLevel(logging.INFO)

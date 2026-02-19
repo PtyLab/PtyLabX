@@ -1,1 +1,1 @@
-from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
+from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData as ExperimentalData

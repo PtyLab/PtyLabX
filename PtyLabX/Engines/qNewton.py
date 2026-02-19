@@ -1,6 +1,4 @@
 import numpy as np
-import jax.numpy as jnp
-from matplotlib import pyplot as plt
 
 # PtyLab imports
 import logging
@@ -14,7 +12,6 @@ from PtyLabX.Monitor.Monitor import Monitor
 from PtyLabX.Params.Params import Params
 from PtyLabX.Engines._jit_kernels import qnewton_object_update, qnewton_probe_update
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.utils import fft2c, ifft2c
 
 
 class qNewton(BaseEngine):

@@ -1,10 +1,7 @@
 import logging
 import numpy as np
-from PtyLabX.utils.utils import circ, fft2c, ifft2c
-from matplotlib import pyplot as plt
-from scipy.ndimage import gaussian_filter
+from PtyLabX.utils.utils import circ, ifft2c
 from scipy import ndimage
-from skimage.transform import rescale
 
 
 def initialProbeOrObject(shape, type_of_init, data, logger: logging.Logger = None):

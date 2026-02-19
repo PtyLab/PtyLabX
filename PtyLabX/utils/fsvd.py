@@ -64,10 +64,10 @@ def find_range(A, n_samples, n_subspace_iters=None, rng_key=None):
         rng_key = jax.random.PRNGKey(0)
     m, n = A.shape
     key1, key2 = jax.random.split(rng_key)
-    O = 1j * jax.random.normal(key1, shape=(n, n_samples))
-    O = O + jax.random.normal(key2, shape=(n, n_samples))
-    O = O.astype(jnp.complex64)
-    Y = A @ O
+    omega = 1j * jax.random.normal(key1, shape=(n, n_samples))
+    omega = omega + jax.random.normal(key2, shape=(n, n_samples))
+    omega = omega.astype(jnp.complex64)
+    Y = A @ omega
 
     if n_subspace_iters:
         return subspace_iter(A, Y, n_subspace_iters)

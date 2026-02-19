@@ -188,7 +188,7 @@ def absplot(u, ax=None, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1,
 
     if amplitudeScalingFactor != 1:
         U[U > amplitudeScalingFactor * np.max(U)] = amplitudeScalingFactor * np.max(U)
-    im = ax.imshow(U, extent=extent, interpolation=None, cmap=cmap)
+    ax.imshow(U, extent=extent, interpolation=None, cmap=cmap)
     ax.set_ylabel(axisUnit)
     ax.set_xlabel(axisUnit)
 

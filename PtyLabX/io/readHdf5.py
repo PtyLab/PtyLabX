@@ -2,7 +2,6 @@ from pathlib import Path
 import tables
 import numpy as np
 import logging
-from scipy.io import loadmat
 import h5py
 
 logger = logging.getLogger("readHdf5")
@@ -11,16 +10,16 @@ logger = logging.getLogger("readHdf5")
 allowed_extensions = [".h5", ".hdf5", ".mat"]
 
 
-def scalify(l):
+def scalify(val):
     """
     hdf5 file storing (especially when using matlab) can store integers as
     Numpy arrays of size [1,1]. Convert to scalar if that's the case
     """
-    l = l.squeeze()
+    val = val.squeeze()
     try:
-        return l.item()
+        return val.item()
     except ValueError:
-        return l
+        return val
 
 
 def loadInputData(filename: Path, requiredFields, optionalFields):
@@ -78,7 +77,6 @@ def loadInputData(filename: Path, requiredFields, optionalFields):
 
     # upsample
 
-    from PtyLabX.utils.utils import fft2c, ifft2c
     # dataset['dxd'] = dataset['dxd'] / 2
     # padwidth = dataset['ptychogram'].shape[-1]//2
     # padwidth = [[0,0], [padwidth, padwidth], [padwidth,padwidth]]
@@ -86,17 +84,6 @@ def loadInputData(filename: Path, requiredFields, optionalFields):
     # dataset['ptychogram'] = np.repeat(np.repeat(dataset['ptychogram'], axis=-2, repeats=2), axis=-1, repeats=2)
 
     return dataset
-
-
-def getOrientation(filename):
-    """
-    If orientation is given, return it. Otherwise, return None
-    """
-    orientation = None
-    with h5py.File(str(filename), "r") as archive:
-        if "orientation" in archive.keys():
-            orientation = np.array(archive["orientation"]).ravel()[0].astype(int)
-    return int(orientation)
 
 
 def checkDataFields(filename, requiredFields):

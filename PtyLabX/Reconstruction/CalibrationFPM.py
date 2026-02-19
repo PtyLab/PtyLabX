@@ -619,14 +619,14 @@ class IlluminationCalibration:
                     plt.imshow(image)
                     plt.scatter(initial_col, initial_row, label="initial guess", c="g", s=1)
                     plt.scatter(final_col, final_row, label="calibrated", c="r", s=1)
-                    legend = plt.legend(labels=["initial guess", "calibrated"], loc="upper right")
+                    plt.legend(labels=["initial guess", "calibrated"], loc="upper right")
                     plt.pause(1)
 
                     if not plt.fignum_exists(3):
                         break
                 if not plt.fignum_exists(3):
                     break
-        except:
+        except Exception:
             pass
         # plot the scattered positions
         plt.figure(4)

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
-from PtyLabX.utils.visualisation import complex2rgb, setColorMap
+from PtyLabX.utils.visualisation import setColorMap
 
 from .Plots import DiffractionDataPlot, ObjectProbeErrorPlot, is_inline
 

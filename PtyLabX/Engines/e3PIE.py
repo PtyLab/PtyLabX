@@ -82,8 +82,6 @@ class e3PIE(BaseEngine):
         # self.pbar = (1, 2)
 
         for loop in self.pbar:
-            if loop == self.numIterations - 1:
-                noreason = True
             self.setPositionOrder()
             for positionLoop, positionIndex in enumerate(self.positionIndices):
                 # get object patch

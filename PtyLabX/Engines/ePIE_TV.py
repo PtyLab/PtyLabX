@@ -1,6 +1,5 @@
 import numpy as np
 import jax.numpy as jnp
-from matplotlib import pyplot as plt
 
 
 import logging
@@ -16,7 +15,6 @@ from PtyLabX.Params.Params import Params
 # fracPy imports
 from PtyLabX.Engines._jit_kernels import epie_object_update, epie_probe_update
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
-from PtyLabX.utils.utils import fft2c, ifft2c
 
 
 class ePIE_TV(BaseEngine):
