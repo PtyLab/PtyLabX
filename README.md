@@ -58,6 +58,26 @@ For testing whether GPU is being used correctly
 uv run python -m pytest tests/test_jax_device.py -v -s
 ```
 
+## Contributing
+
+Contributions are welcome — new engines, bug fixes, example scripts, or documentation.
+
+Follow the [Development](#development) install steps, then:
+
+```bash
+uv run python -m pytest tests/ -v -s   # run tests
+uv run ruff check PtyLabX/             # check style
+uv run ruff format PtyLabX/            # auto-format
+```
+
+To have ruff run automatically on every commit, activate the included pre-commit config:
+
+```bash
+pre-commit install
+```
+
+CI runs linting and tests (CPU) on every push and pull request via GitHub Actions.
+
 ## Citation
 
 If you use this package in your work, cite us as below.
