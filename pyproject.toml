@@ -25,7 +25,7 @@ dependencies = [
 [project.optional-dependencies]
 cuda12 = ["jax[cuda12]"]
 cuda13 = ["jax[cuda13]"]
-dev = ["ruff", "pre-commit", "ipykernel", "ipython"]
+dev = ["ruff", "ipykernel", "ipython"]
 
 [build-system]
 requires = ["hatchling"]
