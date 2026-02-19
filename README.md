@@ -60,7 +60,7 @@ uv run python -m pytest tests/test_jax_device.py -v -s
 
 ## Contributing
 
-Contributions are welcome — new engines, bug fixes, example scripts, or documentation.
+Contributions are welcome — new engines, bug fixes, example scripts, or documentation. This is currently kept very minimal.
 
 Follow the [Development](#development) install steps, then:
 
@@ -70,13 +70,8 @@ uv run ruff check PtyLabX/             # check style
 uv run ruff format PtyLabX/            # auto-format
 ```
 
-To have ruff run automatically on every commit, activate the included pre-commit config:
-
-```bash
-pre-commit install
-```
-
-CI runs linting and tests (CPU) on every push and pull request via GitHub Actions.
+> [!NOTE] 
+> CI runs linting and tests (CPU) on every push and pull request via GitHub Actions. If pytest and ruff runs correctly on your device, CI should pass.
 
 ## Citation
 
