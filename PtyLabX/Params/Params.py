@@ -42,7 +42,7 @@ class Params(object):
         self.CPSCupsamplingFactor = None
 
         self.intensityConstraint = "standard"  # standard or sigmoid
-        self.propagatorType = "Fraunhofer"  # 'Fresnel' 'ASP'
+        self.propagatorType = "Fraunhofer"  # 'Fresnel'
         self.momentumAcceleration = False  # default False, it is turned on in the individual Engines that use momentum
         self.adaptiveMomentumAcceleration = (
             False  # default False, it is turned on in the individual Engines that use momentum
