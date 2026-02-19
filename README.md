@@ -52,26 +52,16 @@ To install with GPU support and dev dependencies:
 uv sync --extra cuda13,dev # alternatively `cuda12` for older GPUs
 ```
 
-For testing whether GPU is being used correctly
+For testing and formatting (after a contribution), run:
 
 ```bash
-uv run python -m pytest tests/test_jax_device.py -v -s
-```
-
-## Contributing
-
-Contributions are welcome — new engines, bug fixes, example scripts, or documentation. This is currently kept very minimal.
-
-Follow the [Development](#development) install steps, then:
-
-```bash
-uv run python -m pytest tests/ -v -s   # run tests
+uv run python -m pytest tests/ -v -s   # run tests (add test_jax_device.py to check GPU)
 uv run ruff check PtyLabX/             # check style
 uv run ruff format PtyLabX/            # auto-format
 ```
 
 > [!NOTE] 
-> CI runs linting and tests (CPU) on every push and pull request via GitHub Actions. If pytest and ruff runs correctly on your device, CI should pass.
+> Contributions are welcome such as new engines, bug fixes, example scripts, or documentation. If its a new implementation under the package, please add a test for it and run the above commands. CI also ensures this on every push and pull request via GitHub Actions.
 
 ## Citation
 
