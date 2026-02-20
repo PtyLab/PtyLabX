@@ -49,7 +49,7 @@ The dependencies are installed in a virtual environment which can be activated w
 To install with GPU support and dev dependencies:
 
 ```bash
-uv sync --extra cuda13,dev # alternatively `cuda12` for older GPUs
+uv sync --extra cuda13 # alternatively `cuda12` for older GPUs
 ```
 
 If a contribution is made (via a pull request), run all the tests and formatter:
