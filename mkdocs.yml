@@ -24,11 +24,13 @@ nav:
     - Engines: cpm/engines.md
     - Configuration Reference: cpm/configuration.md
   - Tutorials:
-    - Simulation & Reconstruction: tutorials/demo.ipynb
-    - CPM Introduction: tutorials/jupyter_tutorials_tutorial_CPM.ipynb
-    - CPM Simulation: tutorials/jupyter_tutorials_tutorial_CPM_sim.ipynb
-    - Multi-Wavelength CPM: tutorials/jupyter_tutorials_tutorial_CPM_multiWavelength.ipynb
-    - Position Correction: tutorials/jupyter_tutorials_tutorial_LateralPositionCorrection.ipynb
+    - CPM Example: tutorials/01_tutorial_CPM.ipynb
+    - FPM Example: tutorials/02_tutorial_FPM.ipynb
+    - CPM Synthetic: tutorials/03_tutorial_CPM_sim.ipynb
+    - CPM Multi-Wavelength : tutorials/04_tutorial_CPM_multiWavelength.ipynb
+    - CPM Position Correction: tutorials/05_tutorial_CPM_LateralPositionCorrection.ipynb
+    - CPM Reflection: tutorials/06_tutorial_CPM_Reflection.ipynb
+    - CPM Reflection with Intensity Constraint: tutorials/07_tutorial_CPM_Reflection_IntensityConstraint.ipynb
 
 markdown_extensions:
   - admonition
