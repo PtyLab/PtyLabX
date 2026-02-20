@@ -65,12 +65,17 @@ uv run ruff format PtyLabX/            # auto-format
 
 ### Documentation
 
-We can currently render the documentation of this package as webpage. To preview this
+We can currently render the documentation of this package as webpage. Start with installing `mkdocs`
 
+```bash
+uv sync --group docs
+```
+
+And build the documentation, which will generate a hyperlink for preview:
 ```bash
 uv run mkdocs serve
 ```
-This will generate a preview hyperlink. 
+
 
 ## Citation
 
