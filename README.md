@@ -1,10 +1,13 @@
-# PtyLab with JAX
+# PtyLabX
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)
 
-This is an experimental clone of [PtyLab.py](https://github.com/PtyLab/PtyLab.py) that is refactored to have a JAX backend. This is mainly done for adding new models flexibly for using AD and other cool features from JAX for speed-ups. 
+> [!WARNING]
+> This project is under active development. The documentation is incomplete and does not cover all use cases. APIs and features may change without notice.
+ 
+PtyLabX is an experimental JAX-based ptychographic reconstruction toolbox, forked from [PtyLab.py](https://github.com/PtyLab/PtyLab.py). It performs iterative phase retrieval for **Conventional Ptychographic Microscopy (CPM)** and **Fourier Ptychographic Microscopy (FPM)** in a unified framework. The computational backend is [JAX](https://github.com/jax-ml/jax), enabling automatic differentiation, GPU acceleration, and JIT compilation.
 
-PtyLab is an inverse modeling toolbox for Conventional (CP) and Fourier (FP) ptychography in a unified framework. For more information please check the [paper](https://opg.optica.org/oe/fulltext.cfm?uri=oe-31-9-13763&id=529026).
+For the original publication, see: [PtyLab.m/py/jl: a cross-platform, open-source inverse modeling toolbox for conventional and Fourier ptychography](https://opg.optica.org/oe/fulltext.cfm?uri=oe-31-9-13763&id=529026).
 
 ## Getting started
 
@@ -59,6 +62,15 @@ uv run ruff format PtyLabX/            # auto-format
 
 > [!NOTE]
 > Contributions are welcome (new engines, bug fixes, example scripts, documentation). For new implementations, please add a test and run the above commands; CI checks every PR via GitHub Actions.
+
+### Documentation
+
+We can currently render the documentation of this package as webpage. To preview this
+
+```bash
+uv run mkdocs serve
+```
+This will generate a preview hyperlink. 
 
 ## Citation
 
