@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
@@ -2813,16 +2813,14 @@ cuda13 = [
     { name = "jax", version = "0.6.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "jax", version = "0.9.0.1", source = { registry = "https://pypi.org/simple" }, extra = ["cuda13"], marker = "python_full_version >= '3.11'" },
 ]
+
+[package.dev-dependencies]
 dev = [
     { name = "ipykernel" },
     { name = "ipython", version = "8.38.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "ipython", version = "9.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "ruff" },
-]
-
-[package.dev-dependencies]
-dev = [
     { name = "pytest" },
+    { name = "ruff" },
 ]
 docs = [
     { name = "mkdocs" },
@@ -2833,8 +2831,6 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "h5py", specifier = ">=3.9" },
-    { name = "ipykernel", marker = "extra == 'dev'" },
-    { name = "ipython", marker = "extra == 'dev'" },
     { name = "jax", specifier = ">=0.4" },
     { name = "jax", extras = ["cuda12"], marker = "extra == 'cuda12'" },
     { name = "jax", extras = ["cuda13"], marker = "extra == 'cuda13'" },
@@ -2843,17 +2839,21 @@ requires-dist = [
     { name = "optax", specifier = ">=0.2.7" },
     { name = "pyqt5", specifier = ">=5.15" },
     { name = "pyqtgraph", specifier = ">=0.13" },
-    { name = "ruff", marker = "extra == 'dev'" },
     { name = "scikit-image", specifier = ">=0.21" },
     { name = "scikit-learn", specifier = ">=1.3" },
     { name = "scipy", specifier = ">=1.11" },
     { name = "tables", specifier = ">=3.8" },
     { name = "tqdm", specifier = ">=4.65" },
 ]
-provides-extras = ["cuda12", "cuda13", "dev"]
+provides-extras = ["cuda12", "cuda13"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=9.0.2" }]
+dev = [
+    { name = "ipykernel" },
+    { name = "ipython" },
+    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "ruff" },
+]
 docs = [
     { name = "mkdocs", specifier = ">=1.6,<2.0" },
     { name = "mkdocs-jupyter", specifier = ">=0.25" },
