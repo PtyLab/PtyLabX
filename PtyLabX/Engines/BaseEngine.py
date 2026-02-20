@@ -95,8 +95,42 @@ class BaseEngine(object):
         self._setObjectProbeROI()
         self._showInitialGuesses()
         self._initializePCParameters()
+        self._logActiveFeatures()
 
         # self.reconstruction.probe_storage.push(self.reconstruction.probe, 0, self.experimentalData.ptychogram.shape[0])
+
+    def _logActiveFeatures(self):
+        """Log a one-time summary of active reconstruction features."""
+        p = self.params
+        features = []
+        if p.comStabilizationSwitch:
+            features.append(f"comStabilization (every {int(p.comStabilizationSwitch)} iters)")
+        if p.positionCorrectionSwitch:
+            features.append("positionCorrection")
+        if p.orthogonalizationSwitch:
+            features.append(f"orthogonalization (every {p.orthogonalizationFrequency} iters)")
+        if p.probePowerCorrectionSwitch:
+            features.append("probePowerCorrection")
+        if p.modulusEnforcedProbeSwitch:
+            features.append("modulusEnforcedProbe")
+        if p.backgroundModeSwitch:
+            features.append("backgroundMode")
+        if p.objectTVregSwitch:
+            features.append("objectTVreg")
+        if p.absorbingProbeBoundary:
+            features.append("absorbingProbeBoundary")
+        if p.probeBoundary:
+            features.append("probeBoundary")
+        if p.l2reg:
+            features.append("l2reg")
+        if p.adaptiveDenoisingSwitch:
+            features.append("adaptiveDenoising")
+        if p.FourierMaskSwitch:
+            features.append("FourierMask")
+        if features:
+            self.logger.info("Active features: %s", ", ".join(features))
+        else:
+            self.logger.info("No optional features active")
 
     def _setCPSC(self):
         """
@@ -1008,7 +1042,7 @@ class BaseEngine(object):
         # update z
         new_z = self.reconstruction.zo / factor
         step = new_z - self.reconstruction.zo
-        self.logger.info(f"Naive estimate of new z: {new_z:.3f}, stepsize {step:.3f}")
+        self.logger.debug(f"Naive estimate of new z: {new_z:.3f}, stepsize {step:.3f}")
         step = 5 * step
         # check if the thing should be updated.
         if abs(step) < 1e-4:  # if it's too small, just truncate it,
@@ -1020,7 +1054,7 @@ class BaseEngine(object):
             self.optlib["params"] = optax.apply_updates(self.optlib["params"], updates)
             self.optlib["opt_state"] = opt_state
 
-            self.logger.info("Skipping update as step is too small")
+            self.logger.debug("Skipping update as step is too small")
             # as we're only updating it for sake of good measure, we don't have to update anything else.
             return
         # now, as we're actually updating, we can increase the step
@@ -1032,8 +1066,8 @@ class BaseEngine(object):
         # get the new value
         z_new = float(self.optlib["params"])
 
-        self.logger.info(f"Loop: {loop} step: {step}")
-        self.logger.info(
+        self.logger.debug(f"Loop: {loop} step: {step}")
+        self.logger.debug(
             f"old z: {self.reconstruction.zo:.3f}\n new z calculated: {z_new:.3f}\n diff: {self.reconstruction.zo - z_new}\n"
         )
         # scale the coordinates accordingly
@@ -1048,12 +1082,12 @@ class BaseEngine(object):
         msqdisplacement_a = np.linalg.norm(1e6 * new_encoder - self.experimentalData.encoder * 1e6)
 
         self.reconstruction.encoder_corrected = new_encoder
-        self.logger.info(f"Mean square displacement: before: {msqdisplacement:.3f} after: {msqdisplacement_a:.3f}")
+        self.logger.debug(f"Mean square displacement: before: {msqdisplacement:.3f} after: {msqdisplacement_a:.3f}")
 
     def positionCorrectionUpdate(self):
         # fit the scaling out, to put in the z
         if len(self.reconstruction.error) > self.startAtIteration:
-            self.logger.info("Updating positions")
+            self.logger.debug("Updating positions")
 
             # update positions
             if self.experimentalData.operationMode == "FPM":
@@ -1074,7 +1108,7 @@ class BaseEngine(object):
                 new_encoder = new_encoder + self.experimentalData.encoder.mean(axis=0, keepdims=True)
 
                 self.reconstruction.encoder_corrected = new_encoder
-                self.logger.info(f"Average update size: {abs(self.D).mean():.2f} pixels")
+                self.logger.debug(f"Average update size: {abs(self.D).mean():.2f} pixels")
 
     def applyConstraints(self, loop):
         """
@@ -1296,7 +1330,7 @@ class BaseEngine(object):
         Perform center of mass stabilization (center the probe)
         :return:
         """
-        self.logger.info("Doing probe com stabilization")
+        self.logger.debug("Doing probe com stabilization")
 
         # calculate center of mass of the probe (for multislice cases, the probe for the last slice is used)
         P2 = jnp.sum(abs(self.reconstruction.probe[:, :, :, -1, ...]) ** 2, axis=(0, 1, 2))
