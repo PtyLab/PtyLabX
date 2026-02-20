@@ -1,15 +1,30 @@
-site_name: PtyLabX Documentation
+site_name: PtyLabX
 site_description: JAX-based ptychographic reconstruction toolbox
+repo_url: https://github.com/ShantanuKodgirwar/PtyLabX
+repo_name: ShantanuKodgirwar/PtyLabX
+dev_addr: '127.0.0.1:8000'
 
 theme:
   name: material
+  logo: assets/ptylab_logo.svg
+  favicon: assets/ptylab_logo.svg
   palette:
-    scheme: default
-    primary: indigo
-    accent: indigo
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
   features:
     - navigation.sections
     - navigation.expand
+    - navigation.top
     - content.code.copy
     - toc.integrate
 
@@ -26,11 +41,11 @@ nav:
   - Tutorials:
     - CPM Example: tutorials/01_tutorial_CPM.ipynb
     - FPM Example: tutorials/02_tutorial_FPM.ipynb
-    - CPM Synthetic: tutorials/03_tutorial_CPM_sim.ipynb
+    - CPM Synthetic: tutorials/03_tutorial_CPM_synthetic.ipynb
     - CPM Multi-Wavelength : tutorials/04_tutorial_CPM_multiWavelength.ipynb
     - CPM Position Correction: tutorials/05_tutorial_CPM_LateralPositionCorrection.ipynb
-    - CPM Reflection: tutorials/06_tutorial_CPM_Reflection.ipynb
-    - CPM Reflection with Intensity Constraint: tutorials/07_tutorial_CPM_Reflection_IntensityConstraint.ipynb
+    - CPM Reflection: tutorials/06_tutorial_CPM_reflection.ipynb
+    - CPM Reflection with Intensity Constraint: tutorials/07_tutorial_CPM_reflection_with_interferometricIntensityConstraint.ipynb
 
 markdown_extensions:
   - admonition
