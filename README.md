@@ -53,17 +53,20 @@ To install with GPU support:
 ```bash
 uv sync --extra cuda13 # alternatively `cuda12` for older GPUs
 ```
-
-If a contribution is made (via a pull request), run all the tests and formatter:
+For a quick test if the GPU is detected correctly:
 
 ```bash
-uv run python -m pytest tests/ -v -s   # run tests (add test_jax_device.py to check GPU)
-uv run ruff check PtyLabX/             # check style
-uv run ruff format PtyLabX/            # auto-format
+uv run pytest tests/test_gpu_utils.py -v -s
 ```
 
 > [!NOTE]
-> Contributions are welcome (new engines, bug fixes, example scripts, documentation). For new implementations, please add a test and run the above commands; CI checks every PR via GitHub Actions.
+> Contributions are welcome (new engines, bug fixes, example scripts, documentation). For any new implementations, please add a test under [tests/](tests/) and run the below commands
+
+```bash
+uv run pytest tests/ -v -s   # run all tests 
+uv run ruff check PtyLabX/   # check style
+uv run ruff format PtyLabX/  # auto-format
+```
 
 ### Documentation
 
