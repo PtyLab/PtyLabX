@@ -8,8 +8,9 @@ from PtyLabX.utils.gpuUtils import asJaxArray, asNumpyArray, check_jax_backend
 
 
 def test_check_jax_backend():
-    """Backend should be one of cpu, gpu, tpu."""
+    """Backend should be one of cpu, gpu, tpu. Run with pytest -s to see the detected backend."""
     backend = check_jax_backend(verbose=False)
+    print(f"\n  Hardware detected: JAX is running on {backend.upper()}")
     assert backend in ("cpu", "gpu", "tpu")
 
 
