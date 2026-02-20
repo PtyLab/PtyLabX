@@ -30,6 +30,8 @@ pip install "ptylabx[cuda12]@git+https://github.com/ShantanuKodgirwar/PtyLabX.gi
 ```
 #### CUDA 13 (Recommended for newer GPUs)
 
+This is recommended for newer GPUs with SM version 7.5 or newer.
+
 ```bash
 pip install "ptylabx[cuda13]@git+https://github.com/ShantanuKodgirwar/PtyLabX.git"
 ```
@@ -46,7 +48,7 @@ uv sync
 
 The dependencies are installed in a virtual environment which can be activated within your IDE interpreter or in the terminal `source .venv/bin/activate`.
 
-To install with GPU support and dev dependencies:
+To install with GPU support:
 
 ```bash
 uv sync --extra cuda13 # alternatively `cuda12` for older GPUs
@@ -65,13 +67,14 @@ uv run ruff format PtyLabX/            # auto-format
 
 ### Documentation
 
-We can currently render the documentation of this package as webpage. Start with installing `mkdocs`
+We can render the documentation of this package as a webpage. This follows as:
 
 ```bash
 uv sync --group docs
 ```
 
-And build the documentation, which will generate a hyperlink for preview:
+and build the documentation, generating a hyperlink for preview:
+
 ```bash
 uv run mkdocs serve
 ```
