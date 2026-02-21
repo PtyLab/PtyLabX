@@ -1,6 +1,5 @@
 """Tests for PtyLabX.Engines._jit_kernels — shared JIT-compiled update functions."""
 
-import jax
 import jax.numpy as jnp
 import numpy as np
 from numpy.testing import assert_allclose
