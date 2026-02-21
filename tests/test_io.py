@@ -8,7 +8,6 @@ Migrated from:
 
 import os
 
-import numpy as np
 import pytest
 
 from PtyLabX.io import getExampleDataFolder
