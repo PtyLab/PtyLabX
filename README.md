@@ -1,13 +1,12 @@
 # PtyLabX
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)
+ 
+PtyLabX is an experimental JAX-based ptychographic reconstruction toolbox, forked from [PtyLab.py](https://github.com/PtyLab/PtyLab.py). It performs iterative phase retrieval for **Conventional Ptychographic Microscopy (CPM)** and **Fourier Ptychographic Microscopy (FPM)** in a unified framework. See the [original publication](https://opg.optica.org/oe/fulltext.cfm?uri=oe-31-9-13763&id=529026) for more details. The computational backend is [JAX](https://github.com/jax-ml/jax), enabling not just GPU acceleration, but also features such as JIT, XLA (amongst others) to speed-up existing PtyLab engines and flexibility of adding newer models to use AD and enable gradient-based optimization.
 
 > [!WARNING]
-> This project is under active development. The documentation is incomplete and does not cover all use cases. APIs and features may change without notice.
- 
-PtyLabX is an experimental JAX-based ptychographic reconstruction toolbox, forked from [PtyLab.py](https://github.com/PtyLab/PtyLab.py). It performs iterative phase retrieval for **Conventional Ptychographic Microscopy (CPM)** and **Fourier Ptychographic Microscopy (FPM)** in a unified framework. The computational backend is [JAX](https://github.com/jax-ml/jax), enabling automatic differentiation, GPU acceleration, and JIT compilation.
-
-For the original publication, see: [PtyLab.m/py/jl: a cross-platform, open-source inverse modeling toolbox for conventional and Fourier ptychography](https://opg.optica.org/oe/fulltext.cfm?uri=oe-31-9-13763&id=529026).
+> This project is under active development. The documentation is incomplete and does not cover all use cases. Some existing features might either be slow/unstable until everything is thoroughly tested. API would follow the existing PtyLab architecture and would not change.
+> 
 
 ## Getting started
 
@@ -81,7 +80,6 @@ and build the documentation, generating a hyperlink for preview:
 ```bash
 uv run mkdocs serve
 ```
-
 
 ## Citation
 
