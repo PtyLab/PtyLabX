@@ -78,17 +78,12 @@ Tests run automatically with CI on every PR and if they fail, please review your
 
 ## Documentation
 
-The documentation is a work-in-progress, but can be rendered as a webpage. Install the dependency:
-
-```bash
-uv sync --group docs
-```
-
-and build the documentation, generating a hyperlink for preview:
+The documentation is a work-in-progress, but can be rendered as a webpage:
 
 ```bash
 uv run mkdocs serve
 ```
+
 ## Acknowledgements
 
 Some of the new implementation ideas mainly follow the JAX-based differentiable wave optics library [chromatix](https://github.com/chromatix-team/chromatix/) and the recent electron ptychography package [phaser](https://github.com/hexane360/phaser), also based on JAX. Additionally some ideas have also been adapted from the pytorch-based [ptyrad](https://github.com/chiahao3/ptyrad) library.
