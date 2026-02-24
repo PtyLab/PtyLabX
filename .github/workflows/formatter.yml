@@ -28,7 +28,7 @@ jobs:
           python-version-file: "pyproject.toml"
 
       - name: Install the project
-        run: uv sync --extra dev
+        run: uv sync
 
       - name: Format and lint with ruff
         run: |
