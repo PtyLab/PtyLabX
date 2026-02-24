@@ -30,8 +30,8 @@ jobs:
 
       - name: Format and lint with ruff
         run: |
-          uv run ruff format .
-          uv run ruff check --fix .
+          uv run ruff format PtyLabX/ tests/
+          uv run ruff check --fix PtyLabX/ tests/
 
       - name: Commit fixes if needed
         run: |
