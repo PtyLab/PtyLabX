@@ -1,8 +1,8 @@
 # PtyLabX
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)
-![CI](https://github.com/ShantanuKodgirwar/PtyLabX/actions/workflows/ci.yml/badge.svg)
-![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)
+![Tests](https://github.com/ShantanuKodgirwar/PtyLabX/actions/workflows/test.yml/badge.svg)
+![Ruff](https://github.com/ShantanuKodgirwar/PtyLabX/actions/workflows/formatter.yml/badge.svg)
 
 > [!WARNING]
 > This project is under active development. The documentation is incomplete and does not cover all use cases. Some existing features might either be slow/unstable until everything is thoroughly tested. API could change mainly around making some interface immutable to allow gradient flow.
@@ -68,15 +68,13 @@ uv run python -c "import jax; print(jax.default_backend())"
 > [!NOTE]
 > Contributions are welcome (new engines, bug fixes, example scripts, documentation). For any new implementations,
 > 1. Add an appropriate test under [tests/](tests/) using [pytest](https://github.com/pytest-dev/pytest).
-> 2. Run the following checks locally before opening a PR:
+> 2. Run tests locally before opening a PR:
 
 ```bash
-uv run pytest tests/ -v -s   # run all tests 
-uv run ruff check PtyLabX/   # check style
-uv run ruff format PtyLabX/  # auto-format
+uv run pytest tests/ -v -s
 ```
 
-Also note continuous integration (CI) runs the same checks automatically for every PR. If CI fails, please review your tests and formatting.
+Code formatting is handled automatically by CI when a PR is opened. Tests also run automatically on every PR. If they fail, please review your changes.
 
 ## Documentation
 
