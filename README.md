@@ -1,6 +1,8 @@
 # PtyLabX
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)
+![CI](https://github.com/ShantanuKodgirwar/PtyLabX/actions/workflows/ci.yml/badge.svg)
+![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)
 
 > [!WARNING]
 > This project is under active development. The documentation is incomplete and does not cover all use cases. Some existing features might either be slow/unstable until everything is thoroughly tested. API could change mainly around making some interface immutable to allow gradient flow.
@@ -57,10 +59,10 @@ To install with GPU support:
 ```bash
 uv sync --extra cuda13 # alternatively `cuda12` for older GPUs
 ```
-For a quick test if the GPU is detected correctly:
+To test if GPU is detected:
 
 ```bash
-uv run pytest tests/test_gpu_utils.py -v -s
+uv run python -c "import jax; print(jax.default_backend())"
 ```
 
 > [!NOTE]
