@@ -74,7 +74,7 @@ uv run python -c "import jax; print(jax.default_backend())"
 uv run pytest tests/ -v -s
 ```
 
-Code formatting is handled automatically by CI when a PR is opened. Tests also run automatically on every PR. If they fail, please review your changes.
+Tests run automatically with CI on every PR and if they fail, please review your changes. Additionally, code formatting based on ruff is done automatically when a PR is opened.
 
 ## Documentation
 
