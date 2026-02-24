@@ -61,8 +61,10 @@ class TestGradTV:
     def test_grad_tv_shape_preservation(self):
         """grad_TV should return same shape as input."""
         rng = np.random.default_rng(2)
-        field = jnp.array(rng.standard_normal((1, 1, 1, 1, 32, 32)) + 1j * rng.standard_normal((1, 1, 1, 1, 32, 32)),
-                          dtype=jnp.complex64)
+        field = jnp.array(
+            rng.standard_normal((1, 1, 1, 1, 32, 32)) + 1j * rng.standard_normal((1, 1, 1, 1, 32, 32)),
+            dtype=jnp.complex64,
+        )
         result = grad_TV(field)
         assert result.shape == field.shape
 

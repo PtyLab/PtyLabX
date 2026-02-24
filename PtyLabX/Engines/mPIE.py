@@ -405,9 +405,7 @@ class mPIE(BaseEngine):
         for loop in self.pbar:
             # set position order
             self.setPositionOrder()
-            self.pbar_pos = tqdm(
-                self.positionIndices, leave=False, desc="ptychogram", mininterval=0.5
-            )
+            self.pbar_pos = tqdm(self.positionIndices, leave=False, desc="ptychogram", mininterval=0.5)
 
             # Determine TV flag for this iteration
             use_tv_this_iter = has_tv and (loop % tv_freq == 0)
