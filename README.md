@@ -1,12 +1,17 @@
 # PtyLabX
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)
- 
-PtyLabX is an experimental JAX-based ptychographic reconstruction toolbox, forked from [PtyLab.py](https://github.com/PtyLab/PtyLab.py). It performs iterative phase retrieval for **Conventional Ptychographic Microscopy (CPM)** and **Fourier Ptychographic Microscopy (FPM)** in a unified framework. See the [original publication](https://opg.optica.org/oe/fulltext.cfm?uri=oe-31-9-13763&id=529026) for more details. The computational backend is [JAX](https://github.com/jax-ml/jax), enabling not just GPU acceleration, but also features such as JIT, XLA (amongst others) to speed-up existing PtyLab engines and flexibility of adding newer models to use AD and enable gradient-based optimization.
 
 > [!WARNING]
-> This project is under active development. The documentation is incomplete and does not cover all use cases. Some existing features might either be slow/unstable until everything is thoroughly tested. API would follow the existing PtyLab architecture and would not change.
-> 
+> This project is under active development. The documentation is incomplete and does not cover all use cases. Some existing features might either be slow/unstable until everything is thoroughly tested. API could change mainly around making some interface immutable (drifting away from the original PtyLab architecture) to allow gradient flow.
+
+PtyLabX is an experimental JAX-based ptychographic reconstruction toolbox, forked from [PtyLab.py](https://github.com/PtyLab/PtyLab.py). It performs iterative phase retrieval for **Conventional Ptychographic Microscopy (CPM)** and **Fourier Ptychographic Microscopy (FPM)** in a unified framework. See the [original publication](https://opg.optica.org/oe/fulltext.cfm?uri=oe-31-9-13763&id=529026) for more details. 
+
+
+[Installation](#installation) | [Getting Started](#getting-started) | [PtyLabX Documentation](#documentation)
+
+The computational backend is [JAX](https://github.com/jax-ml/jax), enabling not just GPU acceleration, but also features such as JIT, XLA (amongst others) to speed-up existing PtyLab engines and flexibility of adding newer models to use AD and enable gradient-based optimization.
+
 
 ## Getting started
 
@@ -69,7 +74,7 @@ uv run ruff format PtyLabX/  # auto-format
 
 ### Documentation
 
-We can render the documentation of this package as a webpage. This follows as:
+The documentation is a work-in-progress, but can be rendered as a webpage. Install the dependency:
 
 ```bash
 uv sync --group docs
@@ -80,6 +85,9 @@ and build the documentation, generating a hyperlink for preview:
 ```bash
 uv run mkdocs serve
 ```
+## Acknowledgements
+
+Some of the new implementation ideas mainly follow the JAX-based differentiable wave optics library [chromatix](https://github.com/chromatix-team/chromatix/) and the recent electron ptychography package [phaser](https://github.com/hexane360/phaser), also based on JAX. Additionally some ideas have also been adapted from the pytorch-based [ptyrad](https://github.com/chiahao3/ptyrad) library.
 
 ## Citation
 
