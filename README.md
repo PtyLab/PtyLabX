@@ -3,7 +3,7 @@
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)
 
 > [!WARNING]
-> This project is under active development. The documentation is incomplete and does not cover all use cases. Some existing features might either be slow/unstable until everything is thoroughly tested. API could change mainly around making some interface immutable (drifting away from the original PtyLab architecture) to allow gradient flow.
+> This project is under active development. The documentation is incomplete and does not cover all use cases. Some existing features might either be slow/unstable until everything is thoroughly tested. API could change mainly around making some interface immutable to allow gradient flow.
 
 PtyLabX is an experimental JAX-based ptychographic reconstruction toolbox, forked from [PtyLab.py](https://github.com/PtyLab/PtyLab.py). It performs iterative phase retrieval for **Conventional Ptychographic Microscopy (CPM)** and **Fourier Ptychographic Microscopy (FPM)** in a unified framework. See the [original publication](https://opg.optica.org/oe/fulltext.cfm?uri=oe-31-9-13763&id=529026) for more details. 
 
