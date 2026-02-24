@@ -64,13 +64,17 @@ uv run pytest tests/test_gpu_utils.py -v -s
 ```
 
 > [!NOTE]
-> Contributions are welcome (new engines, bug fixes, example scripts, documentation). For any new implementations, please add a test under [tests/](tests/) and run the below commands
+> Contributions are welcome (new engines, bug fixes, example scripts, documentation). For any new implementations,
+> 1. Add an appropriate test under [tests/](tests/) using [pytest](https://github.com/pytest-dev/pytest).
+> 2. Run the following checks locally before opening a PR:
 
 ```bash
 uv run pytest tests/ -v -s   # run all tests 
 uv run ruff check PtyLabX/   # check style
 uv run ruff format PtyLabX/  # auto-format
 ```
+
+Also note continuous integration (CI) runs the same checks automatically for every PR. If CI fails, please review your tests and formatting.
 
 ## Documentation
 
