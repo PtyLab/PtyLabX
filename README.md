@@ -86,7 +86,7 @@ uv run mkdocs serve
 
 ## Acknowledgements
 
-Some of the new implementation ideas mainly follow the JAX-based differentiable wave optics library [chromatix](https://github.com/chromatix-team/chromatix/) and the recent electron ptychography package [phaser](https://github.com/hexane360/phaser), also based on JAX. Additionally some ideas have also been adapted from the pytorch-based [ptyrad](https://github.com/chiahao3/ptyrad) library.
+Some of the new implementation ideas mainly follow the very recent JAX-based electron ptychography package [phaser](https://github.com/hexane360/phaser) and the well established pytorch-based [ptyrad](https://github.com/chiahao3/ptyrad) library. Additionally, differentiable wave optics library [chromatix](https://github.com/chromatix-team/chromatix/) also provided us with new ideas.
 
 ## Citation
 
