@@ -9,12 +9,11 @@ logger = logging.getLogger("JAX")
 logging.getLogger("numexpr").setLevel(logging.WARNING)
 
 
-def check_jax_backend(verbose=True):
+def check_backend(verbose=True):
     """Report which JAX backend is active."""
     backend = jax.default_backend()
-    if verbose:
-        logger.info("JAX backend: %s", backend)
-    return backend
+    devices = jax.devices()
+    return backend, devices
 
 
 def asNumpyArray(ary) -> np.ndarray:
