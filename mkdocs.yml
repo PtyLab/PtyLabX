@@ -39,13 +39,13 @@ nav:
     - Engines: cpm/engines.md
     - Configuration Reference: cpm/configuration.md
   - Tutorials:
-    - CPM Example: tutorials/01_tutorial_CPM.ipynb
-    - FPM Example: tutorials/02_tutorial_FPM.ipynb
-    - CPM Synthetic: tutorials/03_tutorial_CPM_synthetic.ipynb
-    - CPM Multi-Wavelength : tutorials/04_tutorial_CPM_multiWavelength.ipynb
-    - CPM Position Correction: tutorials/05_tutorial_CPM_LateralPositionCorrection.ipynb
-    - CPM Reflection: tutorials/06_tutorial_CPM_reflection.ipynb
-    - CPM Reflection with Intensity Constraint: tutorials/07_tutorial_CPM_reflection_with_interferometricIntensityConstraint.ipynb
+    - CPM Synthetic: tutorials/01_tutorial_CPM_synthetic.ipynb
+    - CPM Example: tutorials/02_tutorial_CPM_example_data.ipynb
+    - CPM Multi-Wavelength : tutorials/03_tutorial_CPM_multiWavelength.ipynb
+    - CPM Position Correction: tutorials/04_tutorial_CPM_LateralPositionCorrection.ipynb
+    - CPM Reflection: tutorials/05_tutorial_CPM_reflection.ipynb
+    - CPM Reflection with Intensity Constraint: tutorials/06_tutorial_CPM_reflection_with_interferometricIntensityConstraint.ipynb
+    - FPM Example: tutorials/07_tutorial_FPM.ipynb
 
 markdown_extensions:
   - admonition
