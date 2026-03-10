@@ -44,7 +44,7 @@ pip install "ptylabx[cuda13]@git+https://github.com/ShantanuKodgirwar/PtyLabX.gi
 
 ## Development and Contribution
 
-This project uses the (super-fast) package manager [uv](https://docs.astral.sh/uv/). Follow the below steps:
+This project uses the (super-fast and very easy to install) package manager [uv](https://docs.astral.sh/uv/#installation). Follow the below steps:
 
 ```bash
 git clone https://github.com/ShantanuKodgirwar/PtyLabX.git
