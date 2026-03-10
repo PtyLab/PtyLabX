@@ -44,7 +44,7 @@ pip install "ptylabx[cuda13]@git+https://github.com/ShantanuKodgirwar/PtyLabX.gi
 
 ## Development and Contribution
 
-This project uses the (super-fast) package manager [uv](https://docs.astral.sh/uv/). Follow the below steps:
+This project uses the (super-fast and very easy to install) package manager [uv](https://docs.astral.sh/uv/#installation). Follow the below steps:
 
 ```bash
 git clone https://github.com/ShantanuKodgirwar/PtyLabX.git
@@ -74,24 +74,19 @@ uv run python -c "import jax; print(jax.default_backend())"
 uv run pytest tests/ -v -s
 ```
 
-Code formatting is handled automatically by CI when a PR is opened. Tests also run automatically on every PR. If they fail, please review your changes.
+Tests run automatically with CI on every PR and if they fail, please review your changes. Additionally, code formatting based on ruff is done automatically when a PR is opened.
 
 ## Documentation
 
-The documentation is a work-in-progress, but can be rendered as a webpage. Install the dependency:
-
-```bash
-uv sync --group docs
-```
-
-and build the documentation, generating a hyperlink for preview:
+The documentation is a work-in-progress, but can be rendered as a webpage:
 
 ```bash
 uv run mkdocs serve
 ```
+
 ## Acknowledgements
 
-Some of the new implementation ideas mainly follow the JAX-based differentiable wave optics library [chromatix](https://github.com/chromatix-team/chromatix/) and the recent electron ptychography package [phaser](https://github.com/hexane360/phaser), also based on JAX. Additionally some ideas have also been adapted from the pytorch-based [ptyrad](https://github.com/chiahao3/ptyrad) library.
+Some of the new implementation ideas mainly follow the very recent JAX-based electron ptychography package [phaser](https://github.com/hexane360/phaser) and the well established pytorch-based [ptyrad](https://github.com/chiahao3/ptyrad) library. Additionally, differentiable wave optics library [chromatix](https://github.com/chromatix-team/chromatix/) also provided us with new ideas.
 
 ## Citation
 

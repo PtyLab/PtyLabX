@@ -1,5 +1,7 @@
 name: Ruff
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -26,12 +28,12 @@ jobs:
           python-version-file: "pyproject.toml"
 
       - name: Install the project
-        run: uv sync --extra dev
+        run: uv sync
 
       - name: Format and lint with ruff
         run: |
-          uv run ruff format .
-          uv run ruff check --fix .
+          uv run ruff format PtyLabX/ tests/
+          uv run ruff check --fix PtyLabX/ tests/
 
       - name: Commit fixes if needed
         run: |

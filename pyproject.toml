@@ -3,7 +3,7 @@ name = "ptylabx"
 version = "0.1.0"
 description = "A cross-platform, open-source inverse modeling toolbox for conventional and Fourier ptychography"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "PtyLab Team" },
 ]
@@ -16,7 +16,7 @@ dependencies = [
     "scikit-learn>=1.3",
     "tqdm>=4.65",
     "pyqtgraph>=0.13",
-    "jax>=0.4",
+    "jax>=0.8",
     "PyQt5>=5.15",
     "optax>=0.2.7",
 ]
@@ -42,9 +42,8 @@ dev = [
     "ipython",
     "ipywidgets",
     "pytest>=9.0.2",
-]
-docs = [
     "mkdocs>=1.6,<2.0",
     "mkdocs-material>=9.5",
     "mkdocs-jupyter>=0.25",
 ]
+

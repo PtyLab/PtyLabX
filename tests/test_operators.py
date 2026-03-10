@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import numpy as np
 from numpy.testing import assert_allclose
 
-from PtyLabX.Operators.Operators import aspw, scaledASP, scaledASPinv, fresnelPropagator
+from PtyLabX.Operators.Operators import aspw, scaledASP
 from PtyLabX.Operators.propagator_utils import complexexp, convolve2d
 from PtyLabX.utils.utils import circ
 
