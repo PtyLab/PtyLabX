@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 import logging
 import time
 from copy import copy
+from pathlib import Path
 
 import h5py
+import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -10,12 +14,15 @@ from PtyLabX import Params
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
 
 # logging.basicConfig(level=logging.DEBUG)
+from PtyLabX._types import ExitWave, ObjectArray, ObjectPatch, Probe
 from PtyLabX.Regularizers import TV, metric_at
 from PtyLabX.utils.initializationFunctions import initialProbeOrObject
 from PtyLabX.utils.visualisation import plot_alignment
 
 
-def calculate_pixel_positions(encoder_corrected, dxo, No, Np, asint):
+def calculate_pixel_positions(
+    encoder_corrected: np.ndarray, dxo: float, No: int, Np: int, asint: bool
+) -> np.ndarray:
     """
     Calculate the pixel positions.
     """
@@ -37,7 +44,61 @@ class Reconstruction(object):
     are defined in the listOfReconstructionProperties
     """
 
-    _Nd = None
+    _Nd: int | None = None
+
+    # --- Scalar reconstruction state ---
+    zMomentum: float
+    wavelength: float | None
+    _zo: float | None
+    dxd: float | None
+    dxp: float
+    theta: float | None
+    spectralDensity: np.ndarray | None
+    entrancePupilDiameter: float | None
+    zled: float | None
+    NA: float | None
+    No: int
+    # --- Incoherent mode counts ---
+    nlambda: int
+    nosm: int
+    npsm: int
+    nslice: int
+    # --- Purity ---
+    purityProbe: float
+    purityObject: float
+    purityProbeHist: list[float]
+    # --- Positions ---
+    positions0: np.ndarray
+    encoder_corrected: np.ndarray | None
+    # --- Init type ---
+    initialObject: str
+    initialProbe: str
+    # --- 6D shapes ---
+    shape_O: tuple[int, int, int, int, int, int]
+    shape_P: tuple[int, int, int, int, int, int]
+    initialGuessObject: np.ndarray
+    initialGuessProbe: np.ndarray
+    # --- JAX arrays (set by initializeObjectProbe) ---
+    object: ObjectArray      # shape: (nlambda, nosm, 1, nslice, No, No)
+    probe: Probe             # shape: (nlambda, 1, npsm, nslice, Np, Np)
+    objectMomentum: ObjectArray
+    probeMomentum: Probe
+    # --- Engine working arrays (set during reconstruction) ---
+    esw: ExitWave            # current exit surface wave
+    ESW: ExitWave            # current detector-plane field (after forward propagation)
+    eswUpdate: ExitWave      # updated exit surface wave
+    objectBuffer: ObjectArray
+    probeBuffer: Probe
+    errorAtPos: jax.Array
+    detectorError: jax.Array | float
+    beamWidthX: float
+    beamWidthY: float
+    linearOverlap: float
+    areaOverlap: float
+    # --- Error metric ---
+    error: list[float]
+    # --- Logger ---
+    logger: logging.Logger
 
     # Note: zo, the sample-detector distance, is always read.
     listOfReconstructionPropertiesCPM = [
@@ -56,7 +117,7 @@ class Reconstruction(object):
         "NA",
     ]
 
-    def __init__(self, data: ExperimentalData, params: Params):
+    def __init__(self, data: ExperimentalData, params: Params) -> None:
 
         self.zMomentum = 0
         self.wavelength = None
@@ -88,7 +149,7 @@ class Reconstruction(object):
     #     # self._probe = new_probe
     #     # self.probe_storage.set_temporary(new_probe)
 
-    def copyAttributesFromExperiment(self, data: ExperimentalData):
+    def copyAttributesFromExperiment(self, data: ExperimentalData) -> None:
         """
         Copy all the attributes from the experiment that are in listOfReconstructionProperties (CPM or FPM)
         """
@@ -113,17 +174,17 @@ class Reconstruction(object):
         if self.encoder_corrected is None:
             self.encoder_corrected = data.encoder.copy()
 
-    def reset_positioncorrection(self):
+    def reset_positioncorrection(self) -> None:
         """Reset the position corrections."""
         self.encoder_corrected = self.data.encoder.copy()
 
     @property
-    def zo(self):
+    def zo(self) -> float | None:
         """Distance from sample to detector. Also updates all derived qualities."""
         return self._zo
 
     @zo.setter
-    def zo(self, new_value):
+    def zo(self, new_value: float) -> None:
         self._zo = new_value
         if self.data.operationMode == "CPM":
             self.logger.debug(f"Changing sample-detector distance to {new_value}")
@@ -132,7 +193,7 @@ class Reconstruction(object):
             self.logger.debug(f"Changing illumination-to-sample distance to {new_value}")
             self.zled = self._zo
 
-    def computeParameters(self):
+    def computeParameters(self) -> None:
         """
         compute parameters that can be altered by the user later.
         """
@@ -175,10 +236,10 @@ class Reconstruction(object):
                 range_pixels += 1
             self.No = np.max([self.Np, range_pixels])
 
-    def make_alignment_plot(self, saveit=False):
+    def make_alignment_plot(self, saveit: bool = False):
         return plot_alignment(self, saveit=saveit)
 
-    def initializeSettings(self):
+    def initializeSettings(self) -> None:
         """
         Initialize the attributes that have to do with a reconstruction
         or experimentalData fields which will become "reconstruction"
@@ -215,14 +276,14 @@ class Reconstruction(object):
             self.initialProbe = "circ"
             self.initialObject = "ones"
 
-    def prepare_probe(self, i):
+    def prepare_probe(self, i: int) -> None:
         """Replace probe with the i-th TSVD estimate.
 
         This function is used in OPRP
         """
         raise NotImplementedError()
 
-    def initializeObjectProbe(self, force=True):
+    def initializeObjectProbe(self, force: bool = True) -> None:
 
         # initialize object and probe
         self.initializeObject(force=force)
@@ -232,7 +293,7 @@ class Reconstruction(object):
         self.object = jnp.array(self.initialGuessObject)
         self.probe = jnp.array(self.initialGuessProbe)
 
-    def initializeObject(self, type_of_init=None, force=True):
+    def initializeObject(self, type_of_init: str | None = None, force: bool = True) -> None:
         if not force:
             raise NotImplementedError()
         if type_of_init is not None:
@@ -257,7 +318,7 @@ class Reconstruction(object):
         # self.initialGuessObject *= 1e-2
 
     @staticmethod
-    def loadResults(fileName, datatype="probe"):
+    def loadResults(fileName: str | Path, datatype: str = "probe") -> np.ndarray:
         """
         Loads data from a ptylab reconstruction file.
         """
@@ -265,7 +326,7 @@ class Reconstruction(object):
             data = np.copy(np.array(archive[datatype]))
         return data
 
-    def initializeProbe(self, force=False):
+    def initializeProbe(self, force: bool = False) -> None:
         if self.data.entrancePupilDiameter is None:
             # if it is not set, set it to something reasonable
             self.logger.warning("entrancePupilDiameter not set. Setting to one third of the FoV of the probe.")
@@ -290,13 +351,13 @@ class Reconstruction(object):
             self.initialGuessProbe = initialProbeOrObject(self.shape_P, self.initialProbe, self).astype(np.complex64)
 
     # initialize momentum, called in specific engines with momentum accelaration
-    def initializeObjectMomentum(self):
+    def initializeObjectMomentum(self) -> None:
         self.objectMomentum = jnp.zeros(self.initialGuessObject.shape, dtype=jnp.complex64)
 
-    def initializeProbeMomentum(self):
+    def initializeProbeMomentum(self) -> None:
         self.probeMomentum = jnp.zeros(self.initialGuessProbe.shape, dtype=jnp.complex64)
 
-    def load_object(self, filename):
+    def load_object(self, filename: str | Path) -> None:
         """
         Load the object from a previous reconstruction
 
@@ -326,7 +387,7 @@ class Reconstruction(object):
                     f"Shape of saved probe cannot be extended to shape of required probe. File: {archive['object'].shape}. Need: {self.shape_O}"
                 )
 
-    def load_probe(self, filename, expand_npsm=False, center_phase=False):
+    def load_probe(self, filename: str | Path, expand_npsm: bool = False, center_phase: bool = False) -> None:
         """
         Load the probe from a previous reconstruction.
 
@@ -357,7 +418,7 @@ class Reconstruction(object):
         if center_phase:
             self._center_probe_angle()
 
-    def _center_probe_angle(self):
+    def _center_probe_angle(self) -> None:
         """Center the angle of propagation for the probe."""
         from scipy.ndimage import fourier_shift
         from skimage.registration import phase_cross_correlation
@@ -367,7 +428,7 @@ class Reconstruction(object):
         phexp = np.fft.fftshift(fourier_shift(0 * p0 + 1j, -shift / 2))
         self.probe *= phexp
 
-    def load(self, filename):
+    def load(self, filename: str | Path) -> None:
         """Load the results given by saveResults."""
         with h5py.File(filename, "r") as archive:
             self.probe = jnp.array(archive["probe"])
@@ -381,7 +442,7 @@ class Reconstruction(object):
             if "theta" in archive.keys():
                 self.theta = np.array(archive["theta"])
 
-    def saveResults(self, fileName="recent", type="all", squeeze=False):
+    def saveResults(self, fileName: str | Path = "recent", type: str = "all", squeeze: bool = False) -> None:
         """
         Save reconstruction results.
 
@@ -447,46 +508,46 @@ class Reconstruction(object):
 
     # detector coordinates
     @property
-    def Nd(self):
+    def Nd(self) -> int:
         return self.data.ptychogram.shape[1]
 
     @property
-    def xd(self):
+    def xd(self) -> np.ndarray:
         """Detector coordinates 1D"""
-        return np.linspace(-self.Nd / 2, self.Nd / 2, np.int(self.Nd)) * self.dxd
+        return np.linspace(-self.Nd / 2, self.Nd / 2, int(self.Nd)) * self.dxd
 
     @property
-    def Xd(self):
+    def Xd(self) -> np.ndarray:
         """Detector coordinates 2D"""
         Xd, Yd = np.meshgrid(self.xd, self.xd)
         return Xd
 
     @property
-    def Yd(self):
+    def Yd(self) -> np.ndarray:
         """Detector coordinates 2D"""
         Xd, Yd = np.meshgrid(self.xd, self.xd)
         return Yd
 
     @property
-    def Ld(self):
+    def Ld(self) -> float:
         """Detector size in SI units."""
         return self.Nd * self.dxd
 
     # probe coordinates
     @property
-    def Np(self):
+    def Np(self) -> int:
         """Probe pixel numbers"""
         Np = self.Nd
         return Np
 
     @property
-    def Lp(self):
+    def Lp(self) -> float:
         """probe size in SI units"""
         Lp = self.Np * self.dxp
         return Lp
 
     @property
-    def xp(self):
+    def xp(self) -> np.ndarray:
         """Probe coordinates 1D"""
         try:
             return np.linspace(-self.Np / 2, self.Np / 2, int(self.Np)) * self.dxp
@@ -494,52 +555,52 @@ class Reconstruction(object):
             raise AttributeError(e, 'probe pixel number "Np" and/or probe sampling "dxp" not defined yet')
 
     @property
-    def Xp(self):
+    def Xp(self) -> np.ndarray:
         """Probe coordinates 2D"""
         Xp, Yp = np.meshgrid(self.xp, self.xp)
         return Xp
 
     @property
-    def Yp(self):
+    def Yp(self) -> np.ndarray:
         """Probe coordinates 2D"""
         Xp, Yp = np.meshgrid(self.xp, self.xp)
         return Yp
 
     # Object coordinates
     @property
-    def dxo(self):
+    def dxo(self) -> float:
         """object pixel size, always equal to probe pixel size."""
         dxo = self.dxp
         return dxo
 
     @property
-    def Lo(self):
+    def Lo(self) -> float:
         """Field of view (entrance pupil plane)"""
         return self.No * self.dxo
 
     @property
-    def xo(self):
+    def xo(self) -> np.ndarray:
         """object coordinates 1D"""
         try:
-            return np.linspace(-self.No / 2, self.No / 2, np.int(self.No)) * self.dxo
+            return np.linspace(-self.No / 2, self.No / 2, int(self.No)) * self.dxo
         except AttributeError as e:
             raise AttributeError(e, 'object pixel number "No" and/or pixel size "dxo" not defined yet')
 
     @property
-    def Xo(self):
+    def Xo(self) -> np.ndarray:
         """Object coordinates 2D"""
         Xo, Yo = np.meshgrid(self.xo, self.xo)
         return Xo
 
     @property
-    def Yo(self):
+    def Yo(self) -> np.ndarray:
         """Object coordinates 2D"""
         Xo, Yo = np.meshgrid(self.xo, self.xo)
         return Yo
 
     # scan positions in pixel
     @property
-    def positions(self):
+    def positions(self) -> np.ndarray:
         """estimated positions in pixel numbers(real space for CPM, Fourier space for FPM)
         note: Positions are given in row-column order and refer to the
         pixel in the upper left corner of the respective data matrix;
@@ -573,19 +634,19 @@ class Reconstruction(object):
 
     # system property list
     @property
-    def NAd(self):
+    def NAd(self) -> float:
         """Detection NA"""
         NAd = self.Ld / (2 * self.zo)
         return NAd
 
     @property
-    def DoF(self):
+    def DoF(self) -> float:
         """expected Depth of field"""
         DoF = self.wavelength / self.NAd**2
         # self.Dof2 = 5.2 *self.dxp**2 /self.wavelength
         return DoF
 
-    def describe_reconstruction(self):
+    def describe_reconstruction(self) -> str:
         minmax_tv = ""
         try:
             minmax_tv = f"(min: {self.params.TV_autofocus_min_z * 1e3}, max: {self.params.TV_autofocus_max_z * 1e3}.)"
@@ -632,7 +693,7 @@ class Reconstruction(object):
     def Q2(self):
         raise NotImplementedError("Q2 is no longer available")
 
-    def TV_autofocus(self, params: Params, loop):
+    def TV_autofocus(self, params: Params, loop: int | None) -> tuple[float | None, np.ndarray | None, tuple | None]:
         """Perform an autofocusing step based on optimizing the total variation.
 
         If not required, returns none. Otherwise, returns the value of the TV at the current z0."""
@@ -721,11 +782,11 @@ class Reconstruction(object):
             (scores, self.zo),
         )
 
-    def reset_TV_autofocus(self):
+    def reset_TV_autofocus(self) -> None:
         """Reset the settings of TV autofocus. Can be useful to reset the memory effect if the steps are getting really large."""
         self.zMomentum = 0
 
     @property
-    def TV(self):
+    def TV(self) -> float:
         """Return the TV of the object"""
         return TV(self.object, 1e-2)

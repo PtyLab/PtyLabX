@@ -10,6 +10,7 @@ from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
 from PtyLabX.Monitor.Monitor import Monitor
 from PtyLabX.Params.Params import Params
+from PtyLabX._types import ExitWave, ObjectPatch, Probe
 from PtyLabX.Engines._jit_kernels import qnewton_object_update, qnewton_probe_update
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 
@@ -21,7 +22,7 @@ class mqNewton(BaseEngine):
         experimentalData: ExperimentalData,
         params: Params,
         monitor: Monitor,
-    ):
+    ) -> None:
         # This contains reconstruction parameters that are specific to the reconstruction
         # but not necessarily to ePIE reconstruction
         super().__init__(reconstruction, experimentalData, params, monitor)
@@ -38,7 +39,7 @@ class mqNewton(BaseEngine):
         self.reconstruction.probeBuffer = self.reconstruction.probe.copy()
         self.params.momentumAcceleration = True
 
-    def initializeReconstructionParams(self):
+    def initializeReconstructionParams(self) -> None:
         """
         Set parameters that are specific to the qNewton settings.
         :return:
@@ -65,7 +66,7 @@ class mqNewton(BaseEngine):
             self.reconstruction.objectMomentum_v = self.reconstruction.objectMomentum.copy()
             self.reconstruction.probeMomentum_v = self.reconstruction.probeMomentum.copy()
 
-    def reconstruct(self, experimentalData: ExperimentalData = None):
+    def reconstruct(self, experimentalData: ExperimentalData | None = None) -> None:
         if experimentalData is not None:
             self.experimentalData = experimentalData
             self.reconstruction.data = experimentalData
@@ -197,8 +198,8 @@ class mqNewton(BaseEngine):
         self.reconstruction.probe = self.reconstruction.probe - self.betaProbe_m * update
         self.reconstruction.probeBuffer = self.reconstruction.probe.copy()
 
-    def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def objectPatchUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> ObjectPatch:
         return qnewton_object_update(objectPatch, self.reconstruction.probe, DELTA, self.betaObject, self.regObject)
 
-    def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def probeUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> Probe:
         return qnewton_probe_update(self.reconstruction.probe, objectPatch, DELTA, self.betaProbe, self.regProbe)

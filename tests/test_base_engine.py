@@ -4,6 +4,9 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from numpy.testing import assert_allclose
+from scipy.ndimage import fourier_gaussian
+
+from PtyLabX.Engines.BaseEngine import _fourier_gaussian_jax
 
 
 class TestSpectralPowerCorrection:
@@ -89,3 +92,49 @@ class TestPositionCorrectionVmap:
         cc_vmap = jax.vmap(_cc_at_shift)(jnp.arange(9)).reshape(-1, 1)
 
         assert_allclose(np.asarray(cc_loop), np.asarray(cc_vmap), atol=1e-5)
+
+
+class TestFourierGaussianJax:
+    """Tests for the pure-JAX Fourier Gaussian replacement."""
+
+    def test_matches_scipy_2d(self):
+        """Pure JAX implementation should match per-axis scipy fourier_gaussian on 2D input."""
+        rng = np.random.default_rng(42)
+        data = rng.standard_normal((64, 64)) + 1j * rng.standard_normal((64, 64))
+        data = data.astype(np.complex64)
+        sigma = 3.0
+
+        F_field = np.fft.fft2(data)
+
+        # scipy reference: apply per-axis (sigma only on spatial dims)
+        F_scipy = fourier_gaussian(F_field, [sigma, sigma])
+
+        # JAX implementation
+        F_jax = _fourier_gaussian_jax(jnp.array(F_field), sigma)
+
+        assert_allclose(np.asarray(F_jax), F_scipy, atol=1e-5)
+
+    def test_matches_scipy_6d(self):
+        """Should work on 6D arrays, applying only along last 2 (spatial) axes."""
+        rng = np.random.default_rng(0)
+        shape = (1, 1, 1, 1, 32, 32)
+        data = rng.standard_normal(shape) + 1j * rng.standard_normal(shape)
+        data = data.astype(np.complex64)
+        sigma = 2.0
+
+        F_field = np.fft.fft2(data)
+
+        # scipy reference: sigma only on last 2 axes, 0 on batch dims
+        sigmas = [0] * (len(shape) - 2) + [sigma, sigma]
+        F_scipy = fourier_gaussian(F_field, sigmas)
+
+        F_jax = _fourier_gaussian_jax(jnp.array(F_field), sigma)
+
+        assert_allclose(np.asarray(F_jax), F_scipy, atol=1e-5)
+
+    def test_identity_at_zero_sigma(self):
+        """sigma=0 should return the input unchanged."""
+        rng = np.random.default_rng(1)
+        data = jnp.array(rng.standard_normal((16, 16)) + 1j * rng.standard_normal((16, 16)), dtype=jnp.complex64)
+        result = _fourier_gaussian_jax(data, 0.0)
+        assert_allclose(np.asarray(result), np.asarray(data), atol=1e-7)

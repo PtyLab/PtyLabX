@@ -16,24 +16,28 @@ from PtyLabX.Regularizers import grad_TV
 import jax
 import jax.numpy as jnp
 
+from PtyLabX._types import ExitWave, ObjectPatch
 from PtyLabX.utils.utils import circ, fft2c, ifft2c, orthogonalizeModes
-from scipy.ndimage import fourier_gaussian
 
 
-def smooth_amplitude(field, width: float, aleph: float, amplitude_only: bool = True):
+def _fourier_gaussian_jax(F_field: jax.Array, sigma: float) -> jax.Array:
+    """Apply Gaussian smoothing in Fourier domain, pure JAX (no scipy, no CPU roundtrip).
+
+    Equivalent to applying ``scipy.ndimage.fourier_gaussian`` along the last two axes.
+    Multiplies each axis by exp(-2 * pi^2 * sigma^2 * f^2).
     """
-    Smooth the amplitude of a field. Optional phase can be smoothed as well.
-    Parameters
-    ----------
-    field
-    width
-    aleph
-    amplitude_only
+    for ax in [-2, -1]:
+        n = F_field.shape[ax]
+        freq = jnp.fft.fftfreq(n)
+        bcast_shape = [1] * F_field.ndim
+        bcast_shape[ax] = n
+        gauss_filter = jnp.exp(-2.0 * jnp.pi**2 * sigma**2 * freq**2).reshape(bcast_shape)
+        F_field = F_field * gauss_filter
+    return F_field
 
-    Returns
-    -------
 
-    """
+def smooth_amplitude(field: jax.Array, width: float, aleph: float, amplitude_only: bool = True) -> jax.Array:
+    """Smooth the amplitude of a field. Optional phase can be smoothed as well."""
     gimmel = 1e-5
     if amplitude_only:
         ph_field = field / (jnp.abs(field) + gimmel)
@@ -41,11 +45,10 @@ def smooth_amplitude(field, width: float, aleph: float, amplitude_only: bool = T
     else:
         ph_field = 1
         A_field = field
-    # fourier_gaussian operates on numpy arrays
-    F_field = np.asarray(jnp.fft.fft2(A_field))
-    for ax in [-2, -1]:
-        F_field = fourier_gaussian(F_field, width, axis=ax)
-    field_smooth = jnp.fft.ifft2(jnp.array(F_field))
+
+    F_field = jnp.fft.fft2(A_field)
+    F_field = _fourier_gaussian_jax(F_field, width)
+    field_smooth = jnp.fft.ifft2(F_field)
 
     if amplitude_only:
         field_smooth = abs(field_smooth) * ph_field
@@ -67,7 +70,7 @@ class BaseEngine(object):
         experimentalData: ExperimentalData,
         params: Params,
         monitor: Monitor,
-    ):
+    ) -> None:
         # These statements don't copy any data, they just keep a reference to the object
         self.betaObject = 0.25
         self.reconstruction: Reconstruction = reconstruction
@@ -79,7 +82,7 @@ class BaseEngine(object):
         # datalogger
         self.logger = logging.getLogger("BaseEngine")
 
-    def _prepareReconstruction(self):
+    def _prepareReconstruction(self) -> None:
         """
         Initialize everything that depends on user changeable attributes.
         :return:
@@ -99,7 +102,7 @@ class BaseEngine(object):
 
         # self.reconstruction.probe_storage.push(self.reconstruction.probe, 0, self.experimentalData.ptychogram.shape[0])
 
-    def _logActiveFeatures(self):
+    def _logActiveFeatures(self) -> None:
         """Log a one-time summary of active reconstruction features."""
         p = self.params
         features = []
@@ -132,7 +135,7 @@ class BaseEngine(object):
         else:
             self.logger.info("No optional features active")
 
-    def _setCPSC(self):
+    def _setCPSC(self) -> None:
         """
         set constrained-pixel-sum constraint:
         -save measured diffraction patterns into ptychograpmDownsampled
@@ -182,13 +185,13 @@ class BaseEngine(object):
 
         self.logger.info("CPSCswitch is on, coordinates(dxd,dxp,dxo) have been updated")
 
-    def update_data(self, experimentalData, reconstruction=None):
+    def update_data(self, experimentalData: ExperimentalData, reconstruction: Reconstruction | None = None) -> None:
         """Update the experimentalData if necessary"""
         self.experimentalData = experimentalData
         if reconstruction is not None:
             self.reconstruction = reconstruction
 
-    def _initializePCParameters(self):
+    def _initializePCParameters(self) -> None:
         if self.params.positionCorrectionSwitch:
             # additional pcPIE parameters as they appear in Matlab
             self.daleth = 0.5  # feedback
@@ -207,7 +210,7 @@ class BaseEngine(object):
             self.meanEncoder00 = np.mean(self.experimentalData.encoder[:, 0]).copy()
             self.meanEncoder01 = np.mean(self.experimentalData.encoder[:, 1]).copy()
 
-    def _initializeErrors(self):
+    def _initializeErrors(self) -> None:
         """
         initialize all kinds of errors:
         detectorError is a matrix calculated at each iteration (numFrames,Nd,Nd);
@@ -233,20 +236,20 @@ class BaseEngine(object):
         if not hasattr(self.reconstruction, "error"):
             self.reconstruction.error = []
 
-    def _transferDataToGPU(self):
+    def _transferDataToGPU(self) -> None:
         """Pre-transfer hot-path arrays to GPU device memory.
 
         Without this, ptychogram[positionIndex] inside the position loop triggers a PCIe
         CPU→GPU transfer on every single position, which is the dominant bottleneck.
         energyAtPos is also accessed every iteration in getErrorMetrics.
         """
-        if not isinstance(self.experimentalData.ptychogram, jnp.ndarray):
+        if not isinstance(self.experimentalData.ptychogram, jax.Array):
             self.logger.info("Transferring ptychogram to GPU (%s frames)", self.experimentalData.numFrames)
             self.experimentalData.ptychogram = jnp.array(self.experimentalData.ptychogram)
-        if not isinstance(self.experimentalData.energyAtPos, jnp.ndarray):
+        if not isinstance(self.experimentalData.energyAtPos, jax.Array):
             self.experimentalData.energyAtPos = jnp.array(self.experimentalData.energyAtPos)
 
-    def _initialProbePowerCorrection(self):
+    def _initialProbePowerCorrection(self) -> None:
         if self.params.probePowerCorrectionSwitch:
             self.reconstruction.probe = (
                 self.reconstruction.probe
@@ -254,7 +257,7 @@ class BaseEngine(object):
                 * self.experimentalData.maxProbePower
             )
 
-    def _probeWindow(self):
+    def _probeWindow(self) -> None:
         # absorbing probe boundary: filter probe with super-gaussian window function
         if not self.params.saveMemory or self.params.absorbingProbeBoundary:
             self.probeWindow = np.exp(
@@ -274,7 +277,7 @@ class BaseEngine(object):
                 self.experimentalData.entrancePupilDiameter + self.experimentalData.entrancePupilDiameter * 0.2,
             )
 
-    def _setObjectProbeROI(self, update=False):
+    def _setObjectProbeROI(self, update: bool = False) -> None:
         """
         Set object/probe ROI for monitoring
         """
@@ -331,7 +334,7 @@ class BaseEngine(object):
                     ),
                 ]
 
-    def _showInitialGuesses(self):
+    def _showInitialGuesses(self) -> None:
         self.monitor.initializeMonitors()
         objectEstimate = np.squeeze(
             self.reconstruction.object[..., self.monitor.objectROI[0], self.monitor.objectROI[1]]
@@ -350,7 +353,7 @@ class BaseEngine(object):
 
         # self.monitor.updateObjectProbeErrorMonitor()
 
-    def _checkMISC(self):
+    def _checkMISC(self) -> None:
         """
         checks miscellaneous quantities specific certain Engines
         """
@@ -383,7 +386,7 @@ class BaseEngine(object):
                 else:
                     self._setCPSC()
 
-    def _checkFFT(self):
+    def _checkFFT(self) -> None:
         """
         shift arrays to accelerate fft
         """
@@ -421,7 +424,7 @@ class BaseEngine(object):
                     self.experimentalData.emptyBeam = np.fft.fftshift(self.experimentalData.emptyBeam, axes=(-1, -2))
                 self.params.fftshiftFlag = 0
 
-    def setPositionOrder(self):
+    def setPositionOrder(self) -> None:
         if self.params.positionOrder == "sequential":
             self.positionIndices = np.arange(self.experimentalData.numFrames)
 
@@ -461,7 +464,7 @@ class BaseEngine(object):
                 raise TypeError(f"Argument should be an subclass of Reconstruction, but it is {type(optimizable)}")
             self.reconstruction = optimizable
 
-    def convert2single(self):
+    def convert2single(self) -> None:
         """
         Convert the datasets to single precision. Matches: convert2single.m
         :return:
@@ -471,10 +474,10 @@ class BaseEngine(object):
         self._match_dtypes_complex()
         self._match_dtypes_real()
 
-    def _match_dtypes_complex(self):
+    def _match_dtypes_complex(self) -> None:
         raise NotImplementedError()
 
-    def _match_dtypes_real(self):
+    def _match_dtypes_real(self) -> None:
         raise NotImplementedError()
 
     def object2detector(self, esw=None):
@@ -1084,7 +1087,7 @@ class BaseEngine(object):
         self.reconstruction.encoder_corrected = new_encoder
         self.logger.debug(f"Mean square displacement: before: {msqdisplacement:.3f} after: {msqdisplacement_a:.3f}")
 
-    def positionCorrectionUpdate(self):
+    def positionCorrectionUpdate(self) -> None:
         # fit the scaling out, to put in the z
         if len(self.reconstruction.error) > self.startAtIteration:
             self.logger.debug("Updating positions")
@@ -1110,7 +1113,7 @@ class BaseEngine(object):
                 self.reconstruction.encoder_corrected = new_encoder
                 self.logger.debug(f"Average update size: {abs(self.D).mean():.2f} pixels")
 
-    def applyConstraints(self, loop):
+    def applyConstraints(self, loop: int) -> None:
         """
         Apply constraints.
         :param loop: loop number
@@ -1239,7 +1242,7 @@ class BaseEngine(object):
         # if self.params.OPRP and loop % self.params.OPRP_tsvd_interval == 0:
         #     self.reconstruction.probe_storage.tsvd()
 
-    def orthogonalization(self):
+    def orthogonalization(self) -> None:
         """
         Perform orthogonalization
         :return:
@@ -1325,7 +1328,7 @@ class BaseEngine(object):
         else:
             pass
 
-    def comStabilization(self):
+    def comStabilization(self) -> None:
         """
         Perform center of mass stabilization (center the probe)
         :return:
@@ -1365,7 +1368,7 @@ class BaseEngine(object):
                 )
                 self.reconstruction.objectBuffer = jnp.roll(self.reconstruction.objectBuffer, (-yc, -xc), axis=(-2, -1))
 
-    def modulusEnforcedProbe(self):
+    def modulusEnforcedProbe(self) -> None:
         # propagate probe to detector
 
         self.reconstruction.esw = self.reconstruction.probe
@@ -1390,7 +1393,7 @@ class BaseEngine(object):
 
         self.reconstruction.probe = self.reconstruction.esw
 
-    def adaptiveDenoising(self):
+    def adaptiveDenoising(self) -> None:
         """
         Use the difference of mean intensities between the low-resolution
         object estimate and the low-resolution raw data to estimate the
@@ -1416,7 +1419,7 @@ class BaseEngine(object):
         """
         self.reconstruction.TV_autofocus()
 
-    def objectPatchUpdate_TV(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def objectPatchUpdate_TV(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> ObjectPatch:
         """
         Update the object patch with a TV regularization.
 

@@ -9,6 +9,7 @@ import functools
 import jax
 import jax.numpy as jnp
 
+from PtyLabX._types import ExitWave, ObjectPatch, Probe
 from PtyLabX.Regularizers import grad_TV
 
 
@@ -18,7 +19,7 @@ from PtyLabX.Regularizers import grad_TV
 
 
 @jax.jit
-def epie_object_update(objectPatch, probe, DELTA, betaObject):
+def epie_object_update(objectPatch: ObjectPatch, probe: Probe, DELTA: ExitWave, betaObject: float) -> ObjectPatch:
     """Standard ePIE object patch update.
 
     Used by: ePIE, ePIE_mw, zPIE, aPIE, OPR, pcPIE
@@ -28,7 +29,7 @@ def epie_object_update(objectPatch, probe, DELTA, betaObject):
 
 
 @jax.jit
-def epie_probe_update(probe, objectPatch, DELTA, betaProbe):
+def epie_probe_update(probe: Probe, objectPatch: ObjectPatch, DELTA: ExitWave, betaProbe: float) -> Probe:
     """Standard ePIE probe update.
 
     Used by: ePIE, ePIE_mw, zPIE, aPIE, OPR, pcPIE
@@ -43,7 +44,14 @@ def epie_probe_update(probe, objectPatch, DELTA, betaProbe):
 
 
 @functools.partial(jax.jit, static_argnames=("fpm_mode",))
-def mpie_object_update(objectPatch, probe, DELTA, betaObject, alphaObject, fpm_mode=False):
+def mpie_object_update(
+    objectPatch: ObjectPatch,
+    probe: Probe,
+    DELTA: ExitWave,
+    betaObject: float,
+    alphaObject: float,
+    fpm_mode: bool = False,
+) -> ObjectPatch:
     """Momentum-accelerated PIE object update with regularization.
 
     Used by: mPIE, mPIE_mw, mPIE_tv, pcPIE, mqNewton
@@ -58,7 +66,9 @@ def mpie_object_update(objectPatch, probe, DELTA, betaObject, alphaObject, fpm_m
 
 
 @jax.jit
-def mpie_probe_update(probe, objectPatch, DELTA, betaProbe, alphaProbe, weight):
+def mpie_probe_update(
+    probe: Probe, objectPatch: ObjectPatch, DELTA: ExitWave, betaProbe: float, alphaProbe: float, weight: float
+) -> Probe:
     """Momentum-accelerated PIE probe update with regularization.
 
     Used by: mPIE, mPIE_mw, mPIE_tv, pcPIE, mqNewton
@@ -75,7 +85,9 @@ def mpie_probe_update(probe, objectPatch, DELTA, betaProbe, alphaProbe, weight):
 
 
 @jax.jit
-def qnewton_object_update(objectPatch, probe, DELTA, betaObject, regObject):
+def qnewton_object_update(
+    objectPatch: ObjectPatch, probe: Probe, DELTA: ExitWave, betaObject: float, regObject: float
+) -> ObjectPatch:
     """Quasi-Newton object patch update.
 
     Used by: qNewton, mqNewton
@@ -86,7 +98,9 @@ def qnewton_object_update(objectPatch, probe, DELTA, betaObject, regObject):
 
 
 @jax.jit
-def qnewton_probe_update(probe, objectPatch, DELTA, betaProbe, regProbe):
+def qnewton_probe_update(
+    probe: Probe, objectPatch: ObjectPatch, DELTA: ExitWave, betaProbe: float, regProbe: float
+) -> Probe:
     """Quasi-Newton probe update.
 
     Used by: qNewton, mqNewton
@@ -102,7 +116,9 @@ def qnewton_probe_update(probe, objectPatch, DELTA, betaProbe, regProbe):
 
 
 @jax.jit
-def momentum_step(current, buffer, momentum, frictionM, feedbackM):
+def momentum_step(
+    current: jax.Array, buffer: jax.Array, momentum: jax.Array, frictionM: float, feedbackM: float
+) -> tuple[jax.Array, jax.Array, jax.Array]:
     """Apply momentum gradient update. Returns (updated_current, updated_momentum, updated_buffer).
 
     Used by: mPIE, pcPIE, mqNewton for both object and probe momentum updates.
@@ -110,7 +126,7 @@ def momentum_step(current, buffer, momentum, frictionM, feedbackM):
     gradient = buffer - current
     momentum = gradient + frictionM * momentum
     current = current - feedbackM * momentum
-    buffer = current.copy()
+    buffer = current  # JAX arrays are immutable; rebinding is sufficient inside JIT
     return current, momentum, buffer
 
 
@@ -120,7 +136,9 @@ def momentum_step(current, buffer, momentum, frictionM, feedbackM):
 
 
 @jax.jit
-def epie_object_update_tv(objectPatch, probe, DELTA, betaObject, tv_step_size):
+def epie_object_update_tv(
+    objectPatch: ObjectPatch, probe: Probe, DELTA: ExitWave, betaObject: float, tv_step_size: float
+) -> ObjectPatch:
     """ePIE object update with TV regularization.
 
     Used by: ePIE_TV, mPIE_tv

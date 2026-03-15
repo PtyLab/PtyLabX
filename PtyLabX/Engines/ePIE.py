@@ -1,8 +1,8 @@
 import logging
 
-import numpy as np
 from tqdm.auto import trange
 
+from PtyLabX._types import ExitWave, ObjectPatch, Probe
 from PtyLabX.Engines._jit_kernels import epie_object_update, epie_probe_update
 from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
@@ -20,7 +20,7 @@ class ePIE(BaseEngine):
         experimentalData: ExperimentalData,
         params: Params,
         monitor: Monitor,
-    ):
+    ) -> None:
         # This contains reconstruction parameters that are specific to the reconstruction
         # but not necessarily to ePIE reconstruction
         super().__init__(reconstruction, experimentalData, params, monitor)
@@ -29,7 +29,7 @@ class ePIE(BaseEngine):
         self.logger.info("Wavelength attribute: %s", self.reconstruction.wavelength)
         self.initializeReconstructionParams()
 
-    def initializeReconstructionParams(self):
+    def initializeReconstructionParams(self) -> None:
         """
         Set parameters that are specific to the ePIE settings.
         :return:
@@ -38,7 +38,7 @@ class ePIE(BaseEngine):
         self.betaObject = 0.25
         self.numIterations = 50
 
-    def reconstruct(self, experimentalData: ExperimentalData = None):
+    def reconstruct(self, experimentalData: ExperimentalData | None = None) -> None:
         if experimentalData is not None:
             self.reconstruction.data = experimentalData
             self.experimentalData = experimentalData
@@ -96,8 +96,8 @@ class ePIE(BaseEngine):
             # apply Constraints
             self.applyConstraints(loop)
 
-    def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def objectPatchUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> ObjectPatch:
         return epie_object_update(objectPatch, self.reconstruction.probe, DELTA, self.betaObject)
 
-    def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def probeUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> Probe:
         return epie_probe_update(self.reconstruction.probe, objectPatch, DELTA, self.betaProbe)

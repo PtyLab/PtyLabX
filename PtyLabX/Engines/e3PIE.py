@@ -12,6 +12,7 @@ from PtyLabX.Operators.Operators import aspw
 from PtyLabX.Params.Params import Params
 
 # fracPy imports
+from PtyLabX._types import ExitWave, ObjectPatch, Probe
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 
 
@@ -22,7 +23,7 @@ class e3PIE(BaseEngine):
         experimentalData: ExperimentalData,
         params: Params,
         monitor: Monitor,
-    ):
+    ) -> None:
         # This contains reconstruction parameters that are specific to the reconstruction
         # but not necessarily to e3PIE reconstruction
         super().__init__(reconstruction, experimentalData, params, monitor)
@@ -33,7 +34,7 @@ class e3PIE(BaseEngine):
 
         self.initializeReconstructionParams()
 
-    def initializeReconstructionParams(self):
+    def initializeReconstructionParams(self) -> None:
         """
         Set parameters that are specific to the e3PIE settings.
         :return:
@@ -173,7 +174,7 @@ class e3PIE(BaseEngine):
             # show reconstruction
             self.showReconstruction(loop)
 
-    def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray, localProbe: np.ndarray):
+    def objectPatchUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave, localProbe: Probe) -> ObjectPatch:
         """
         Todo add docstring
         :param objectPatch:
@@ -183,7 +184,7 @@ class e3PIE(BaseEngine):
         frac = localProbe.conj() / jnp.max(jnp.sum(jnp.abs(localProbe) ** 2, axis=(0, 1, 2)))
         return objectPatch + self.betaObject * jnp.sum(frac * DELTA, axis=(0, 2), keepdims=True)
 
-    def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray, localProbe: np.ndarray, beth):
+    def probeUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave, localProbe: Probe, beth: float) -> Probe:
         """
         Todo add docstring
         :param objectPatch:

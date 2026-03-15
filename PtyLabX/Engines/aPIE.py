@@ -10,6 +10,7 @@ import jax.numpy as jnp
 
 import logging
 
+from PtyLabX._types import ExitWave, ObjectPatch, Probe
 from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
 from PtyLabX.Monitor.Monitor import Monitor
@@ -31,7 +32,7 @@ class aPIE(BaseEngine):
         experimentalData: ExperimentalData,
         params: Params,
         monitor: Monitor,
-    ):
+    ) -> None:
         # This contains reconstruction parameters that are specific to the reconstruction
         # but not necessarily to aPIE reconstruction
         super().__init__(reconstruction, experimentalData, params, monitor)
@@ -40,7 +41,7 @@ class aPIE(BaseEngine):
         self.logger.info("Wavelength attribute: %s", self.reconstruction.wavelength)
         self.initializeReconstructionParams()
 
-    def initializeReconstructionParams(self):
+    def initializeReconstructionParams(self) -> None:
         """
         Set parameters that are specific to the ePIE settings.
         :return:
@@ -254,10 +255,10 @@ class aPIE(BaseEngine):
 
         # self.thetaSearchRadiusMax = thetaSearchRadiusList[loop]
 
-    def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def objectPatchUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> ObjectPatch:
         return epie_object_update(objectPatch, self.reconstruction.probe, DELTA, self.betaObject)
 
-    def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def probeUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> Probe:
         return epie_probe_update(self.reconstruction.probe, objectPatch, DELTA, self.betaProbe)
 
 

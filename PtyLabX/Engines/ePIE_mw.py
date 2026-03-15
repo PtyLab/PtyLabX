@@ -12,6 +12,7 @@ from PtyLabX.Monitor.Monitor import Monitor
 from PtyLabX.Params.Params import Params
 
 # fracPy imports
+from PtyLabX._types import ExitWave, ObjectPatch, Probe
 from PtyLabX.Engines._jit_kernels import epie_object_update
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 
@@ -23,7 +24,7 @@ class ePIE_mw(BaseEngine):
         experimentalData: ExperimentalData,
         params: Params,
         monitor: Monitor,
-    ):
+    ) -> None:
         # This contains reconstruction parameters that are specific to the reconstruction
         # but not necessarily to ePIE reconstruction
         super().__init__(reconstruction, experimentalData, params, monitor)
@@ -32,7 +33,7 @@ class ePIE_mw(BaseEngine):
         self.logger.info("Wavelength attribute: %s", self.reconstruction.wavelength)
         self.initializeReconstructionParams()
 
-    def initializeReconstructionParams(self):
+    def initializeReconstructionParams(self) -> None:
         """
         Set parameters that are specific to the ePIE settings.
         :return:
@@ -83,10 +84,10 @@ class ePIE_mw(BaseEngine):
             # show reconstruction
             self.showReconstruction(loop)
 
-    def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def objectPatchUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> ObjectPatch:
         return epie_object_update(objectPatch, self.reconstruction.probe, DELTA, self.betaObject)
 
-    def objectPatchUpdate_TV(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def objectPatchUpdate_TV(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> ObjectPatch:
         """
         Todo add docstring
         :param objectPatch:
@@ -117,7 +118,7 @@ class ePIE_mw(BaseEngine):
             + lam * self.betaObject * TV_update
         )
 
-    def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def probeUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> Probe:
         """
         Todo add docstring
         :param objectPatch:
@@ -135,7 +136,7 @@ class ePIE_mw(BaseEngine):
         """
         return r
 
-    def probeUpdate_new(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def probeUpdate_new(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> None:
         """
         Todo add docstring
         :param objectPatch:

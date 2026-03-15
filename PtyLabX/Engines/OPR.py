@@ -12,6 +12,7 @@ from PtyLabX.Monitor.Monitor import Monitor
 from PtyLabX.Params.Params import Params
 
 # fracPy imports
+from PtyLabX._types import ExitWave, ObjectPatch, Probe
 from PtyLabX.Engines._jit_kernels import epie_object_update
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 from PtyLabX.utils.fsvd import rsvd
@@ -24,7 +25,7 @@ class OPR(BaseEngine):
         experimentalData: ExperimentalData,
         params: Params,
         monitor: Monitor,
-    ):
+    ) -> None:
         # This contains reconstruction parameters that are specific to the reconstruction
         # but not necessarily to ePIE reconstruction
         super().__init__(reconstruction, experimentalData, params, monitor)
@@ -33,7 +34,7 @@ class OPR(BaseEngine):
         self.logger.info("Wavelength attribute: %s", self.reconstruction.wavelength)
         self.initializeReconstructionParams()
 
-    def initializeReconstructionParams(self):
+    def initializeReconstructionParams(self) -> None:
         """
         Set parameters that are specific to the ePIE/OPR engine
         """
@@ -207,10 +208,10 @@ class OPR(BaseEngine):
 
         return probe_stack
 
-    def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def objectPatchUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> ObjectPatch:
         return epie_object_update(objectPatch, self.reconstruction.probe, DELTA, self.betaObject)
 
-    def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray, weight: float, gimmel=0.1):
+    def probeUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave, weight: float, gimmel: float = 0.1) -> Probe:
         """
         Update the probe
         :param objectPatch: Slice of the object array

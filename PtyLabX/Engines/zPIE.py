@@ -12,6 +12,7 @@ from PtyLabX.Operators.Operators import aspw
 from PtyLabX.Params.Params import Params
 
 # PtyLab imports
+from PtyLabX._types import ExitWave, ObjectPatch, Probe
 from PtyLabX.Engines._jit_kernels import epie_object_update, epie_probe_update
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 
@@ -23,7 +24,7 @@ class zPIE(BaseEngine):
         experimentalData: ExperimentalData,
         params: Params,
         monitor: Monitor,
-    ):
+    ) -> None:
         # This contains reconstruction parameters that are specific to the reconstruction
         # but not necessarily to ePIE reconstruction
         super().__init__(reconstruction, experimentalData, params, monitor)
@@ -33,7 +34,7 @@ class zPIE(BaseEngine):
         self.initializeReconstructionParams()
         self.name = "zPIE"
 
-    def initializeReconstructionParams(self):
+    def initializeReconstructionParams(self) -> None:
         """
         Set parameters that are specific to the ePIE settings.
         :return:
@@ -264,10 +265,10 @@ class zPIE(BaseEngine):
                     figure.canvas.flush_events()
             self.showReconstruction(loop)
 
-    def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def objectPatchUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> ObjectPatch:
         return epie_object_update(objectPatch, self.reconstruction.probe, DELTA, self.betaObject)
 
-    def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def probeUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> Probe:
         return epie_probe_update(self.reconstruction.probe, objectPatch, DELTA, self.betaProbe)
 
     #

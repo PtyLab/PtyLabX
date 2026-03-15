@@ -12,6 +12,7 @@ from PtyLabX.Monitor.Monitor import Monitor
 from PtyLabX.Params.Params import Params
 
 # PtyLab imports
+from PtyLabX._types import ExitWave, ObjectPatch, Probe
 from PtyLabX.Engines._jit_kernels import momentum_step, mpie_object_update
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 
@@ -23,7 +24,7 @@ class multiPIE(BaseEngine):
         experimentalData: ExperimentalData,
         params: Params,
         monitor: Monitor,
-    ):
+    ) -> None:
         # This contains reconstruction parameters that are specific to the reconstruction
         # but not necessarily to ePIE reconstruction
         super().__init__(reconstruction, experimentalData, params, monitor)
@@ -34,7 +35,7 @@ class multiPIE(BaseEngine):
         self.initializeReconstructionParams()
         self.params.momentumAcceleration = True
 
-    def initializeReconstructionParams(self):
+    def initializeReconstructionParams(self) -> None:
         """
         Set parameters that are specific to the multiPIE settings.
         :return:
@@ -126,7 +127,7 @@ class multiPIE(BaseEngine):
             self.betaM,
         )
 
-    def objectPatchUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def objectPatchUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> ObjectPatch:
         return mpie_object_update(
             objectPatch,
             self.reconstruction.probe,
@@ -136,7 +137,7 @@ class multiPIE(BaseEngine):
             fpm_mode=(self.experimentalData.operationMode == "FPM"),
         )
 
-    def probeUpdate(self, objectPatch: np.ndarray, DELTA: np.ndarray):
+    def probeUpdate(self, objectPatch: ObjectPatch, DELTA: ExitWave) -> Probe:
         """
         Todo add docstring
         :param objectPatch:
