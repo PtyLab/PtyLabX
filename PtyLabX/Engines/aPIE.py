@@ -60,7 +60,7 @@ class aPIE(BaseEngine):
         self.thetaSearchRadiusMin = 0.01
         self.thetaSearchRadiusMax = 0.1
         self.ptychogramUntransformed = self.experimentalData.ptychogram.copy()
-        self.experimentalData.W = np.ones_like(self.reconstruction.Xd)
+        self.experimentalData.W = np.ones((int(self.reconstruction.Nd), int(self.reconstruction.Nd)))
 
         if self.reconstruction.theta is None:
             raise ValueError("theta value is not given")
@@ -135,7 +135,7 @@ class aPIE(BaseEngine):
                     * np.linalg.norm(self.ptychogramUntransformed)
                 )
 
-                self.experimentalData.W = np.ones_like(self.reconstruction.Xd)
+                self.experimentalData.W = np.ones((int(self.reconstruction.Nd), int(self.reconstruction.Nd)))
                 fw = interp2d(
                     self.reconstruction.xd,
                     self.reconstruction.xd,
