@@ -657,13 +657,13 @@ def scaledASP(
     k = 2 * jnp.pi / wavelength
     # assume square grid
     N = u.shape[-1]
-    # source plane coordinates
+    # source plane coordinates (ogrid: avoid materializing full 2D grids)
     x1 = jnp.arange(-N // 2, N // 2) * dx
-    X1, Y1 = jnp.meshgrid(x1, x1)
+    X1, Y1 = x1.reshape(1, -1), x1.reshape(-1, 1)
     r1sq = X1**2 + Y1**2
     # spatial frequencies(of source plane)
     f = jnp.arange(-N // 2, N // 2) / (N * dx)
-    FX, FY = jnp.meshgrid(f, f)
+    FX, FY = f.reshape(1, -1), f.reshape(-1, 1)
     fsq = FX**2 + FY**2
     # scaling parameter
     m = dq / dx
@@ -685,7 +685,7 @@ def scaledASP(
     if exactSolution:  # if only intensities matter, leave it out
         # observation plane coordinates
         x2 = jnp.arange(-N // 2, N // 2) * dq
-        X2, Y2 = jnp.meshgrid(x2, x2)
+        X2, Y2 = x2.reshape(1, -1), x2.reshape(-1, 1)
         r2sq = X2**2 + Y2**2
         Q3 = jnp.exp(1.0j * k / 2 * (m - 1) / (m * z) * r2sq)
         # compute the propagated field
@@ -712,13 +712,13 @@ def scaledASPinv(u: jax.Array, z: float, wavelength: float, dx: float, dq: float
     k = 2 * jnp.pi / wavelength
     # assume square grid
     N = u.shape[-1]
-    # source-plane coordinates
+    # source-plane coordinates (ogrid: avoid materializing full 2D grids)
     x1 = jnp.arange(-N / 2, N / 2) * dx
-    Y1, X1 = jnp.meshgrid(x1, x1)
+    X1, Y1 = x1.reshape(1, -1), x1.reshape(-1, 1)
     r1sq = X1**2 + Y1**2
     # spatial frequencies(of source plane)
     f = jnp.arange(-N / 2, N / 2) / (N * dx)
-    FX, FY = jnp.meshgrid(f, f)
+    FX, FY = f.reshape(1, -1), f.reshape(-1, 1)
     fsq = FX**2 + FY**2
     # scaling parameter
     m = dq / dx
@@ -754,12 +754,12 @@ def fresnelPropagator(
     N = u.shape[-1]
     dx = L / N  # source-plane pixel size
     x = jnp.arange(-N // 2, N // 2) * dx
-    [Y, X] = jnp.meshgrid(x, x)
+    X, Y = x.reshape(1, -1), x.reshape(-1, 1)
 
     # observation coordinates
     dq = wavelength * z / L  # observation-plane pixel size
     q = jnp.arange(-N // 2, N // 2) * dq
-    [Qy, Qx] = jnp.meshgrid(q, q)
+    Qx, Qy = q.reshape(1, -1), q.reshape(-1, 1)
 
     # quadratic phase terms
     Q1 = jnp.exp(1j * k / (2 * z) * (X**2 + Y**2))  # quadratic phase inside the integral
@@ -802,7 +802,7 @@ def _aspw_transfer_function(z: float, wavelength: float, N: int, L: float, bandl
     a_z = abs(z)
     k = 2 * jnp.pi / wavelength
     X = jnp.arange(-N / 2, N / 2) / L
-    Fx, Fy = jnp.meshgrid(X, X)
+    Fx, Fy = X.reshape(1, -1), X.reshape(-1, 1)
     f_max = L / (wavelength * jnp.sqrt(L**2 + 4 * a_z**2))
     # note: see the paper above if you are not sure what this bandlimit has to do here
     # W = rect(Fx/(2*f_max)) .* rect(Fy/(2*f_max));

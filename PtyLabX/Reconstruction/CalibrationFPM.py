@@ -39,7 +39,7 @@ class IlluminationCalibration:
         self.apertRadiusPixel_init = self.apertRadiusPixel
 
         lens_range = np.linspace(-self.img_size / 2, self.img_size / 2, self.img_size)
-        xlens, ylens = np.meshgrid(lens_range, lens_range)
+        xlens, ylens = lens_range.reshape(1, -1), lens_range.reshape(-1, 1)
         self.CTF = np.abs(np.sqrt(xlens**2 + ylens**2) <= self.apertRadiusPixel)
         self.OTF = np.abs(np.sqrt(xlens**2 + ylens**2) <= 2 * self.apertRadiusPixel)
 

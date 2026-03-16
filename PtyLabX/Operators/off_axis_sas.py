@@ -86,7 +86,7 @@ def __sas_transfer_function(wavelength, Lp, Np, theta, z1, z2):
     # Fourier grid
     df = 1 / Lp
     f = jnp.linspace(-Np / 2, Np / 2, int(Np)) * df
-    Fx, Fy = jnp.meshgrid(f, f)
+    Fx, Fy = f.reshape(1, -1), f.reshape(-1, 1)
 
     # off-axis sines and tangents (theta in degrees)
     theta_x, theta_y = theta
@@ -266,7 +266,7 @@ def _interface_sas(
         dxq = wavelength * z1 / Lp
         k = 2 * jnp.pi / wavelength
         x_q = jnp.linspace(-Np / 2, Np / 2, int(Np)) * dxq
-        Xq, Yq = jnp.meshgrid(x_q, x_q)
+        Xq, Yq = x_q.reshape(1, -1), x_q.reshape(-1, 1)
 
         quad_phase_Q2 = jnp.exp(1j * k * z1) * jnp.exp(1.0j * k / (2 * z1) * (Xq**2 + Yq**2))
 

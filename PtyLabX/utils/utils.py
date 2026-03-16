@@ -6,7 +6,7 @@ import numpy as np
 
 
 @functools.partial(jax.jit, static_argnums=(1,))
-def fft2c(field, fftshiftSwitch=False, *args, **kwargs):
+def fft2c(field: jax.Array, fftshiftSwitch: bool = False) -> jax.Array:
     """
     performs 2 - dimensional unitary Fourier transformation, where energy is preserved sum( abs(g)**2 ) == sum( abs(fft2c(g))**2 )
     if g is two - dimensional, fft2c(g) yields the 2D DFT of g
@@ -22,7 +22,7 @@ def fft2c(field, fftshiftSwitch=False, *args, **kwargs):
 
 
 @functools.partial(jax.jit, static_argnums=(1,))
-def ifft2c(field, fftshiftSwitch=False):
+def ifft2c(field: jax.Array, fftshiftSwitch: bool = False) -> jax.Array:
     """
     performs 2 - dimensional inverse Fourier transformation, where energy is preserved sum( abs(G)**2 ) == sum( abs(fft2c(g))**2 )
     if G is two - dimensional, fft2c(G) yields the 2D iDFT of G
@@ -38,11 +38,11 @@ def ifft2c(field, fftshiftSwitch=False):
 
 
 @jax.jit
-def circ(x, y, D):
+def circ(x: jax.Array, y: jax.Array, D: float) -> jax.Array:
     """
     generate a binary array containing a circle on a 2D grid
-    :param x: 2D x coordinate, normally calculated from meshgrid: x,y = np.meshgird((,))
-    :param y: 2D y coordinate, normally calculated from meshgrid: x,y = np.meshgird((,))
+    :param x: x coordinate array, may be 1D/2D (supports broadcasting from ogrid)
+    :param y: y coordinate array, may be 1D/2D (supports broadcasting from ogrid)
     :param D: diameter
     :return: a binary 2D array
     """
@@ -51,7 +51,7 @@ def circ(x, y, D):
 
 
 @jax.jit
-def rect(arr, threshold=0.5):
+def rect(arr: jax.Array, threshold: float = 0.5) -> jax.Array:
     """
     generate a binary array containing a rectangle on a 2D grid
     :param x: 2D x coordinate, normally calculated from meshgrid: x,y = np.meshgird((,))
@@ -63,7 +63,7 @@ def rect(arr, threshold=0.5):
 
 
 @jax.jit
-def posit(x):
+def posit(x: jax.Array) -> jax.Array:
     """
     returns 0 when x negative
     """
@@ -73,7 +73,7 @@ def posit(x):
 
 
 @jax.jit
-def fraccircshift(A, shiftsize):
+def fraccircshift(A: jax.Array, shiftsize: jax.Array) -> jax.Array:
     """
     fraccircshift expands jnp.roll to fractional shifts values, using linear interpolation.
     :param A: ndarray
@@ -90,7 +90,7 @@ def fraccircshift(A, shiftsize):
     return A
 
 
-def cart2pol(x, y):
+def cart2pol(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
     Transform Cartesian to polar coordinates
     :param x:
@@ -102,10 +102,10 @@ def cart2pol(x, y):
     return th, r
 
 
-def gaussian2D(n, std):
+def gaussian2D(n: int, std: float) -> np.ndarray:
     # create the grid of (x,y) values
     n = (n - 1) // 2
-    x, y = np.meshgrid(np.arange(-n, n + 1), np.arange(-n, n + 1))
+    x, y = np.ogrid[-n : n + 1, -n : n + 1]
     # analytic function
     h = np.exp(-(x**2 + y**2) / (2 * std**2))
     # truncate very small values to zero
@@ -119,7 +119,7 @@ def gaussian2D(n, std):
 
 
 @functools.partial(jax.jit, static_argnames=("method",))
-def orthogonalizeModes(p, method=None):
+def orthogonalizeModes(p: jax.Array, method: str | None = None) -> tuple[jax.Array, jax.Array, jax.Array]:
     """
     Imposes orthogonality through singular value decomposition
     :return:
@@ -149,7 +149,7 @@ def orthogonalizeModes(p, method=None):
         return p, normalizedEigenvalues, U.T.conj()
 
 
-def zernikeAberrations(Xp, Yp, D, z_coeff):
+def zernikeAberrations(Xp: np.ndarray, Yp: np.ndarray, D: float, z_coeff: np.ndarray) -> np.ndarray:
     """
     Compute the first 19 Zernike aberrations based on Zernike polynomials
     Based on https://en.wikipedia.org/wiki/Zernike_polynomials#OSA/ANSI_standard_indices
@@ -220,7 +220,7 @@ def zernikeAberrations(Xp, Yp, D, z_coeff):
     return aperture * np.exp(1j * np.sum(list(Z.values())))
 
 
-def p2bin(im, binningFactor):
+def p2bin(im: np.ndarray, binningFactor: int) -> tuple[np.ndarray, range, range]:
     """
     perform binning at a factor of power of 2, return binned image and the indices for before and after binning.
     :Params im: input image for binning
@@ -246,7 +246,7 @@ def p2bin(im, binningFactor):
     return im_binned, im_ind, im_binned_ind
 
 
-def bin2(X):
+def bin2(X: np.ndarray) -> np.ndarray:
     """
     perform 2-by-2 binning.
     :Params X: input 2D image for binning

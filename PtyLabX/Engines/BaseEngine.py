@@ -565,7 +565,7 @@ class BaseEngine(object):
         df = 1 / (self.reconstruction.Np * self.reconstruction.dxp)
         # spatial frequency meshgrid
         fx = np.arange(-self.reconstruction.Np // 2, self.reconstruction.Np // 2) * df
-        Fx, Fy = np.meshgrid(fx, fx)
+        Fx, Fy = fx.reshape(1, -1), fx.reshape(-1, 1)
         # absolute value of probe and 2D fft
         P = abs(np.asarray(self.reconstruction.probe[:, 0, 0, -1, ...]))
         Q = fft2c(P)

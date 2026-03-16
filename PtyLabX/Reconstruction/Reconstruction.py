@@ -518,15 +518,13 @@ class Reconstruction(object):
 
     @property
     def Xd(self) -> np.ndarray:
-        """Detector coordinates 2D"""
-        Xd, Yd = np.meshgrid(self.xd, self.xd)
-        return Xd
+        """Detector coordinates — shape (1, Nd), broadcasts with Yd."""
+        return self.xd.reshape(1, -1)
 
     @property
     def Yd(self) -> np.ndarray:
-        """Detector coordinates 2D"""
-        Xd, Yd = np.meshgrid(self.xd, self.xd)
-        return Yd
+        """Detector coordinates — shape (Nd, 1), broadcasts with Xd."""
+        return self.xd.reshape(-1, 1)
 
     @property
     def Ld(self) -> float:
@@ -556,15 +554,13 @@ class Reconstruction(object):
 
     @property
     def Xp(self) -> np.ndarray:
-        """Probe coordinates 2D"""
-        Xp, Yp = np.meshgrid(self.xp, self.xp)
-        return Xp
+        """Probe coordinates — shape (1, Np), broadcasts with Yp."""
+        return self.xp.reshape(1, -1)
 
     @property
     def Yp(self) -> np.ndarray:
-        """Probe coordinates 2D"""
-        Xp, Yp = np.meshgrid(self.xp, self.xp)
-        return Yp
+        """Probe coordinates — shape (Np, 1), broadcasts with Xp."""
+        return self.xp.reshape(-1, 1)
 
     # Object coordinates
     @property
@@ -588,15 +584,13 @@ class Reconstruction(object):
 
     @property
     def Xo(self) -> np.ndarray:
-        """Object coordinates 2D"""
-        Xo, Yo = np.meshgrid(self.xo, self.xo)
-        return Xo
+        """Object coordinates — shape (1, No), broadcasts with Yo."""
+        return self.xo.reshape(1, -1)
 
     @property
     def Yo(self) -> np.ndarray:
-        """Object coordinates 2D"""
-        Xo, Yo = np.meshgrid(self.xo, self.xo)
-        return Yo
+        """Object coordinates — shape (No, 1), broadcasts with Xo."""
+        return self.xo.reshape(-1, 1)
 
     # scan positions in pixel
     @property
