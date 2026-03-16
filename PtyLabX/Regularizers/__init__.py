@@ -1,5 +1,5 @@
 import functools
-from typing import Tuple, Union
+from collections.abc import Callable
 
 import jax
 import jax.numpy as jnp
@@ -9,7 +9,7 @@ from PtyLabX.Operators.Operators import aspw
 from PtyLabX.utils.utils import fft2c
 
 
-def std(field, aleph=1e-2):
+def std(field: jax.Array, aleph: float = 1e-2) -> float:
     """
     Return the standard deviation of a field.
 
@@ -27,7 +27,7 @@ def std(field, aleph=1e-2):
     return np.asarray(jnp.std(field))
 
 
-def min_std(*args, **kwargs):
+def min_std(*args: object, **kwargs: object) -> float:
     """
     Return minus the standard deviation of a field. See ``Ptylab.Regularizers.std''  for more info
 
@@ -48,14 +48,14 @@ def min_std(*args, **kwargs):
 
 
 @jax.jit
-def _TV_jit(field, aleph=1e-3):
+def _TV_jit(field: jax.Array, aleph: float = 1e-3) -> jax.Array:
     """JIT-compiled TV computation core."""
     grad_x = jnp.roll(field, -1, axis=-1) - jnp.roll(field, 1, axis=-1)
     grad_y = jnp.roll(field, -1, axis=-2) - jnp.roll(field, 1, axis=-2)
     return jnp.sum(jnp.sqrt(abs(grad_x * grad_x.conj()) + abs(grad_y * grad_y.conj()) + aleph))
 
 
-def TV(field, aleph=1e-3):
+def TV(field: jax.Array, aleph: float = 1e-3) -> float:
     """
     Calculate Total Variation of a field.
 
@@ -75,17 +75,17 @@ def TV(field, aleph=1e-3):
 
 
 def metric_at(
-    object_estimate,
-    dz,
-    dx,
-    wavelength,
-    ss=(slice(None, None), slice(None, None)),
-    intensity_only=False,
-    return_propagated=False,
-    average_by_power=True,
-    metric: str = TV,
-    savemem=True,
-) -> Union[Tuple[np.ndarray, np.ndarray], np.ndarray]:
+    object_estimate: jax.Array,
+    dz: np.ndarray,
+    dx: float,
+    wavelength: float,
+    ss: tuple[slice, slice] = (slice(None, None), slice(None, None)),
+    intensity_only: bool = False,
+    return_propagated: bool = False,
+    average_by_power: bool = True,
+    metric: str | Callable[..., float] = "TV",
+    savemem: bool = True,
+) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
     """
     Return the value of a metric function over a range of distances given by dz.
 
@@ -180,12 +180,12 @@ def metric_at(
 
 
 @functools.partial(jax.jit, static_argnums=(1,))
-def _finite_diff_gradient(f, axis):
+def _finite_diff_gradient(f: jax.Array, axis: int) -> jax.Array:
     """Central finite difference approximation of gradient along a single axis."""
     return (jnp.roll(f, -1, axis=axis) - jnp.roll(f, 1, axis=axis)) / 2
 
 
-def divergence(f):
+def divergence(f: jax.Array) -> jax.Array:
     """
     Calculate the divergence of a vector field.
 
@@ -201,14 +201,14 @@ def divergence(f):
 
 
 @jax.jit
-def divergence_new(f):
+def divergence_new(f: jax.Array) -> jax.Array:
     grad_y = _finite_diff_gradient(f[0], axis=-2)
     grad_x = _finite_diff_gradient(f[1], axis=-1)
     return grad_y + grad_x
 
 
 @jax.jit
-def grad_TV(field, epsilon=1e-2):
+def grad_TV(field: jax.Array, epsilon: float = 1e-2) -> jax.Array:
     gradient_y = _finite_diff_gradient(field, axis=-2)
     gradient_x = _finite_diff_gradient(field, axis=-1)
     gradient = jnp.array([gradient_y, gradient_x])
