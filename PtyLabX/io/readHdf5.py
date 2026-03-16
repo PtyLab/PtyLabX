@@ -9,7 +9,7 @@ logger = logging.getLogger("readHdf5")
 allowed_extensions = [".h5", ".hdf5", ".mat"]
 
 
-def scalify(val):
+def scalify(val: np.ndarray) -> np.ndarray | float | int:
     """
     hdf5 file storing (especially when using matlab) can store integers as
     Numpy arrays of size [1,1]. Convert to scalar if that's the case
@@ -21,7 +21,7 @@ def scalify(val):
         return val
 
 
-def loadInputData(filename: Path, requiredFields, optionalFields):
+def loadInputData(filename: Path, requiredFields: list[str], optionalFields: list[str]) -> dict[str, np.ndarray | float | int | None]:
     """
     Load all values from an hdf5 file into a dictionary, but only with the required fields
     :param filename: the .hdf5 file that has to be loaded. If it's a .mat file it will attempt to load it
@@ -84,7 +84,7 @@ def loadInputData(filename: Path, requiredFields, optionalFields):
     return dataset
 
 
-def checkDataFields(filename, requiredFields):
+def checkDataFields(filename: Path, requiredFields: list[str]) -> None:
     """
     Make sure that all the fields in a given .hdf5 file are supported and do some sanity checks.
 
@@ -106,7 +106,7 @@ def checkDataFields(filename, requiredFields):
     return None
 
 
-def getOrientation(filename):
+def getOrientation(filename: Path) -> int | None:
     """
     Get the orientation from the hdf5 file. If not available, set to None
     """

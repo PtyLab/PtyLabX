@@ -14,7 +14,10 @@ def is_inline():
 
 
 class ObjectProbeErrorPlot(object):
-    def __init__(self, figNum=1):
+    figNum: int
+    firstrun: bool
+
+    def __init__(self, figNum: int = 1) -> None:
         """Create a monitor.
 
         In principle, to use this method all you have to do is initialize the monitor and then call
@@ -31,7 +34,7 @@ class ObjectProbeErrorPlot(object):
         self.canvas = self.figure.canvas
         self.display_id = None
 
-    def update_z(self, *args, **kwargs):
+    def update_z(self, *args: object, **kwargs: object) -> None:
         """Update the sample-detector distance. Does nothing at the moment."""
         pass
 
@@ -74,12 +77,12 @@ class ObjectProbeErrorPlot(object):
 
     def updateObject(
         self,
-        object_estimate,
-        optimizable,
-        objectPlot,
-        amplitudeScalingFactor=1,
-        **kwargs,
-    ):
+        object_estimate: np.ndarray,
+        optimizable: object,
+        objectPlot: str,
+        amplitudeScalingFactor: float = 1,
+        **kwargs: object,
+    ) -> None:
         OE = modeTile(object_estimate, normalize=True)
         if objectPlot == "complex":
             OE = complex2rgb(OE, amplitudeScalingFactor=amplitudeScalingFactor)
@@ -110,7 +113,7 @@ class ObjectProbeErrorPlot(object):
 
         self.im_object.autoscale()
 
-    def updateProbe(self, probe_estimate, optimizable, amplitudeScalingFactor=1, **kwargs):
+    def updateProbe(self, probe_estimate: np.ndarray, optimizable: object, amplitudeScalingFactor: float = 1, **kwargs: object) -> None:
 
         # from PtyLabX.Operators.Operators import fft2c
         #
@@ -148,7 +151,7 @@ class ObjectProbeErrorPlot(object):
                 self.ax_error_metric.set_ylim(np.min(error_estimate), np.max(error_estimate))
                 self.ax_error_metric.set_title(f"Error metric (it {len(error_estimate)})")
 
-    def drawNowScript(self):
+    def drawNowScript(self) -> None:
         """
         Forces the image to be drawn
         :return:
@@ -164,7 +167,7 @@ class ObjectProbeErrorPlot(object):
         self.canvas.draw_idle()
         self.canvas.flush_events()
 
-    def drawNowIpython(self):
+    def drawNowIpython(self) -> None:
         if self.firstrun:
             self.display_id = display(self.figure, display_id=True)
             self.firstrun = False
@@ -174,7 +177,7 @@ class ObjectProbeErrorPlot(object):
         self.canvas.draw_idle()
         self.canvas.flush_events()
 
-    def drawNow(self):
+    def drawNow(self) -> None:
         if is_inline():
             self.drawNowIpython()
         else:
@@ -182,7 +185,10 @@ class ObjectProbeErrorPlot(object):
 
 
 class DiffractionDataPlot(object):
-    def __init__(self, figNum=2):
+    figNum: int
+    firstrun: bool
+
+    def __init__(self, figNum: int = 2) -> None:
         """Create a monitor.
 
         In principle, to use this method all you have to do is initialize the monitor and then call
@@ -215,7 +221,7 @@ class DiffractionDataPlot(object):
         self.figure.tight_layout()
         self.firstrun = True
 
-    def updateIestimated(self, Iestimate, cmap="gray", **kwargs):
+    def updateIestimated(self, Iestimate: np.ndarray, cmap: str = "gray", **kwargs: object) -> None:
         # move it to CPU if it's on the GPU
         Iestimate = np.asarray(Iestimate)
 
@@ -234,7 +240,7 @@ class DiffractionDataPlot(object):
         # self.im_Iestimated.autoscale()
         # self.im_Iestimated.set_
 
-    def updateImeasured(self, Imeasured, cmap="gray", **kwargs):
+    def updateImeasured(self, Imeasured: np.ndarray, cmap: str = "gray", **kwargs: object) -> None:
         Imeasured = np.asarray(Imeasured)
         if self.firstrun:
             self.im_Imeasured: AxesImage = self.ax_Imeasured.imshow(
@@ -249,7 +255,7 @@ class DiffractionDataPlot(object):
             self.im_Imeasured.set_data(np.log10(np.squeeze(Imeasured + 1)))
         self.im_Imeasured.autoscale()
 
-    def drawNowScript(self):
+    def drawNowScript(self) -> None:
         """
         Forces the image to be drawn
         :return:
@@ -265,7 +271,7 @@ class DiffractionDataPlot(object):
         self.canvas.draw_idle()
         self.canvas.flush_events()
 
-    def drawNowIpython(self):
+    def drawNowIpython(self) -> None:
         if self.firstrun:
             self.display_id = display(self.figure, display_id=True)
             self.firstrun = False
@@ -275,19 +281,19 @@ class DiffractionDataPlot(object):
         self.canvas.draw_idle()
         self.canvas.flush_events()
 
-    def drawNow(self):
+    def drawNow(self) -> None:
         if is_inline():
             self.drawNowIpython()
         else:
             self.drawNowScript()
 
-    def update_view(self, Iestimated, Imeasured, cmap):
+    def update_view(self, Iestimated: np.ndarray, Imeasured: np.ndarray, cmap: str) -> None:
         """Update the I measured and I estimated and make sure that the colormaps have the same limits"""
         self.updateImeasured(Imeasured, cmap=cmap)
         self.updateIestimated(Iestimated, cmap=cmap)
         self._equalize_contrast()
 
-    def _equalize_contrast(self):
+    def _equalize_contrast(self) -> None:
         """Adopt the contrast limits from the measured data and apply them to the predicted"""
         clims = self.im_Imeasured.get_clim()
         self.im_Iestimated.set_clim(*clims)

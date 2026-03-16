@@ -1,16 +1,18 @@
+from collections.abc import Generator, Iterator
+
 import jax
 import jax.numpy as jnp
 import numpy as np
 
 
 @jax.jit
-def complexexp(angle):
+def complexexp(angle: jax.Array) -> jax.Array:
     """
     Faster way of implementing np.exp(1j*something_unitary)
 
     Parameters
     ----------
-    angle: np.ndarray
+    angle: jax.Array
         Angle of the exponent
 
     Returns
@@ -22,7 +24,7 @@ def complexexp(angle):
     return jnp.cos(angle) + 1j * jnp.sin(angle)
 
 
-def iterate_6d_fields(fields):
+def iterate_6d_fields(fields: jax.Array) -> Generator[tuple[int, ...], None, None]:
     """
     Iterate over the first four dimensions of a 6D field array. (nlambda, nosm, npsm, nslice, Np, Np)
     corresponding to multi-wavelengths, object modes, probe modes, multislice, diffraction pattern (2d)
@@ -31,15 +33,15 @@ def iterate_6d_fields(fields):
         yield idx
 
 
-def convolve2d(in1, in2, mode="same"):
+def convolve2d(in1: jax.Array, in2: jax.Array, mode: str = "same") -> jax.Array:
     """2D convolution using FFT."""
     return _fft_convolve2d(in1, in2, mode=mode)
 
 
-def gaussian2D(n, std):
+def gaussian2D(n: int, std: float) -> jax.Array:
     """Creates a 2D gaussian"""
     n = (n - 1) // 2
-    x, y = jnp.meshgrid(jnp.arange(-n, n + 1), jnp.arange(-n, n + 1))
+    x, y = jnp.ogrid[-n : n + 1, -n : n + 1]
     h = jnp.exp(-(x**2 + y**2) / (2 * std**2))
     mask = h < jnp.finfo(float).eps * jnp.max(h)
     h = h * (1 - mask)
@@ -48,7 +50,7 @@ def gaussian2D(n, std):
     return h
 
 
-def _fft_convolve2d(x, y, mode="same"):
+def _fft_convolve2d(x: jax.Array, y: jax.Array, mode: str = "same") -> jax.Array:
     """2D convolution using FFT."""
     s1 = x.shape
     s2 = y.shape
@@ -65,11 +67,11 @@ def _fft_convolve2d(x, y, mode="same"):
         return result
 
 
-def _centered(arr, newsize):
+def _centered(arr: jax.Array, newsize: tuple[int, ...]) -> jax.Array:
     # Return the center newsize portion of the array.
-    newsize = jnp.asarray(newsize)
+    newsize_arr = jnp.asarray(newsize)
     currsize = jnp.array(arr.shape)
-    startind = (currsize - newsize) // 2
-    endind = startind + newsize
+    startind = (currsize - newsize_arr) // 2
+    endind = startind + newsize_arr
     myslice = [slice(int(startind[k]), int(endind[k])) for k in range(len(endind))]
     return arr[tuple(myslice)]

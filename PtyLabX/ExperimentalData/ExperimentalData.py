@@ -1,7 +1,7 @@
-import numpy as np
-
 import logging
-from typing import Optional
+from pathlib import Path
+
+import numpy as np
 
 from PtyLabX.io import readHdf5
 from PtyLabX.utils.visualisation import show3Dslider
@@ -21,15 +21,15 @@ class ExperimentalData:
     # --- CPM-specific fields ---
     dxd: float  # detector pixel size (meters)
     zo: float  # sample-to-detector distance (meters)
-    entrancePupilDiameter: Optional[float]  # probe aperture diameter (meters)
-    spectralDensity: Optional[np.ndarray]  # wavelength spectrum for polychromatic ptychography
-    theta: Optional[float]  # tilt angle for reflection geometry (radians)
-    emptyBeam: Optional[np.ndarray]  # reference image of the probe beam
+    entrancePupilDiameter: float | None  # probe aperture diameter (meters)
+    spectralDensity: np.ndarray | None  # wavelength spectrum for polychromatic ptychography
+    theta: float | None  # tilt angle for reflection geometry (radians)
+    emptyBeam: np.ndarray | None  # reference image of the probe beam
 
     # --- FPM-specific fields ---
-    zled: Optional[float]  # LED-to-sample distance (meters)
-    magnification: Optional[float]  # objective magnification
-    NA: Optional[float]  # numerical aperture of the objective
+    zled: float | None  # LED-to-sample distance (meters)
+    magnification: float | None  # objective magnification
+    NA: float | None  # numerical aperture of the objective
 
     # --- Derived fields set by _setData() ---
     Nd: int  # detector array size (pixels)
@@ -41,7 +41,7 @@ class ExperimentalData:
     energyAtPos: np.ndarray  # integrated intensity at each scan position
     maxProbePower: float  # maximum probe power across all positions
 
-    def __init__(self, filename=None, operationMode="CPM"):
+    def __init__(self, filename: str | Path | None = None, operationMode: str = "CPM") -> None:
         self.logger = logging.getLogger("ExperimentalData")
         self.logger.debug("Initializing ExperimentalData object")
 
@@ -50,7 +50,7 @@ class ExperimentalData:
         if filename is not None:
             self.loadData(filename)
 
-    def _setFields(self):
+    def _setFields(self) -> None:
         """
         Set the required and optional fields for ptyLab to work.
         ALL VALUES MUST BE IN METERS.
@@ -88,7 +88,7 @@ class ExperimentalData:
         else:
             raise ValueError('operationMode is not properly set, choose "CPM" or "FPM"')
 
-    def loadData(self, filename=None):
+    def loadData(self, filename: str | Path | None = None) -> None:
         """
         Load data specified in filename.
         :type filename: str or Path
@@ -132,14 +132,14 @@ class ExperimentalData:
         # depending on the orientation
         self.setOrientation(readHdf5.getOrientation(self.filename))
 
-    def reduce_positions(self, start, end):
+    def reduce_positions(self, start: int, end: int) -> None:
         """
         Reduce the number of positions for the reconstruction
         """
         self.ptychogram = self.ptychogram[start:end]
         self.encoder = self.encoder[start:end]
 
-    def cropCenter(self, size):
+    def cropCenter(self, size: int) -> None:
         """
         The parameter size corresponds to the finale size of the diffraction patterns
         """
@@ -153,7 +153,7 @@ class ExperimentalData:
 
         self.ptychogram = self.ptychogram[..., startx : startx + size, startx : startx + size]
 
-    def binData(self, binning):
+    def binData(self, binning: int) -> None:
         """
         :param binning: Binning parameter (int, e.g. 2)
         :return:
@@ -172,7 +172,7 @@ class ExperimentalData:
             temp_binning = reshaped_temp.mean(axis=(1, 3))
             self.ptychogram[i] = np.copy(temp_binning)
 
-    def setOrientation(self, orientation, force_contiguous=True):
+    def setOrientation(self, orientation: int | None, force_contiguous: bool = True) -> None:
         """
         Sets the correct orientation. This function follows the ptypy convention.
 
@@ -213,14 +213,14 @@ class ExperimentalData:
         if force_contiguous:
             self.ptychogram = np.ascontiguousarray(self.ptychogram)
 
-    def _setData(self):
+    def _setData(self) -> None:
 
         # Set the detector coordinates
         self.Nd = self.ptychogram.shape[-1]
         # Detector coordinates 1D
         self.xd = np.linspace(-self.Nd / 2, self.Nd / 2, int(self.Nd)) * self.dxd
-        # Detector coordinates 2D
-        self.Xd, self.Yd = np.meshgrid(self.xd, self.xd)
+        # Detector coordinates (ogrid: 1D views that broadcast to 2D)
+        self.Xd, self.Yd = self.xd.reshape(1, -1), self.xd.reshape(-1, 1)
         # Detector size in SI units
         self.Ld = self.Nd * self.dxd
 
@@ -231,7 +231,7 @@ class ExperimentalData:
         # maximum probe power
         self.maxProbePower = np.sqrt(np.max(np.sum(self.ptychogram, (-1, -2))))
 
-    def showPtychogram(self):
+    def showPtychogram(self) -> None:
         """
         show ptychogram.
         """
@@ -241,7 +241,7 @@ class ExperimentalData:
         print(f"Min max ptychogram: {np.min(log_ptychogram)}, {log_ptychogram.max()}")
         show3Dslider(log_ptychogram)
 
-    def relative_intensity(self, index):
+    def relative_intensity(self, index: int) -> float:
         """
         Return the relative intensity of the ptychogram at index compared to the brightest one
         """

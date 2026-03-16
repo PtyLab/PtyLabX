@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Callable
 
 import jax
 import numpy as np
@@ -18,7 +19,97 @@ class Params(object):
     optimizer1 = optimizers.
     """
 
-    def __init__(self):
+    # --- Position correction ---
+    positionCorrectionSwitch_radius: int
+    # --- Total variation regularization ---
+    objectTVfreq: int
+    objectTVregSwitch: bool
+    objectTVregStepSize: float
+    # --- General ---
+    weigh_probe_updates_by_intensity: bool
+    logger: logging.Logger
+    dump_obj: bool
+    # --- FFT / propagator settings ---
+    fftshiftSwitch: bool
+    fftshiftFlag: bool
+    FourierMaskSwitch: bool
+    CPSCswitch: bool
+    CPSCupsamplingFactor: int | None
+    intensityConstraint: str
+    propagatorType: str
+    momentumAcceleration: bool
+    adaptiveMomentumAcceleration: bool
+    # --- Backend ---
+    gpuFlag: int
+    # --- Iteration control ---
+    probeUpdateStart: int
+    objectUpdateStart: int
+    positionOrder: str
+    # --- Constraint switches ---
+    orthogonalizationSwitch: bool
+    orthogonalizationFrequency: int
+    objectSmoothenessSwitch: bool
+    objectSmoothenessWidth: int
+    objectSmoothnessAleph: float
+    absObjectSwitch: bool
+    absObjectBeta: float
+    objectContrastSwitch: bool
+    probeSmoothenessSwitch: bool
+    probeSmoothnessAleph: float
+    probeSmoothenessWidth: int
+    probeBoundary: bool
+    absorbingProbeBoundary: bool
+    absorbingProbeBoundaryAleph: float
+    probePowerCorrectionSwitch: bool
+    probeSpectralPowerCorrectionSwitch: bool
+    modulusEnforcedProbeSwitch: bool
+    absProbeSwitch: bool
+    absProbeBeta: float
+    couplingSwitch: bool
+    couplingAleph: float
+    binaryProbeSwitch: bool
+    binaryProbeThreshold: float
+    binaryProbeAleph: float
+    backgroundModeSwitch: bool
+    comStabilizationSwitch: bool
+    PSDestimationSwitch: bool
+    positionCorrectionSwitch: bool
+    adaptiveDenoisingSwitch: bool
+    saveMemory: bool
+    # --- L2 regularization ---
+    l2reg: bool
+    l2reg_probe_aleph: float
+    l2reg_object_aleph: float
+    # --- TV autofocus ---
+    TV_autofocus: bool
+    TV_autofocus_metric: str | Callable[..., float]
+    TV_autofocus_intensityonly: bool
+    TV_autofocus_stepsize: float
+    TV_autofocus_aleph: float
+    TV_autofocus_roi: list[float]
+    TV_autofocus_range_dof: int
+    TV_autofocus_friction: float
+    TV_autofocus_what: str
+    TV_autofocus_run_every: int
+    TV_autofocus_min_z: float | None
+    TV_autofocus_max_z: float | None
+    TV_autofocus_nplanes: int
+    map_position_to_z_change: bool
+    # --- OPR parameters ---
+    OPR_modes: np.ndarray
+    OPR_subspace: int
+    OPR_alpha: float
+    OPR_tv_freq: int
+    OPR_tv: bool
+    OPR_tsvd_type: str
+    OPR_orthogonalize_modes: bool
+    OPR_neighbor_constraint: bool
+    # --- SHG ---
+    SHG_probe: bool
+    # --- OPRP ---
+    OPRP: bool
+
+    def __init__(self) -> None:
         # datalogger
         # Total variation regularizerion options
         self.positionCorrectionSwitch_radius = 1

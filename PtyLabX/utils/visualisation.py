@@ -1,11 +1,16 @@
 # This file contains utilities required for Monitor
 import math
+from typing import Any
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pyqtgraph as pg
-from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.axes import Axes
+from matplotlib.cm import ScalarMappable, get_cmap
+from matplotlib.colors import LinearSegmentedColormap, Normalize
+from matplotlib.figure import Figure
+from matplotlib.image import AxesImage
 from matplotlib.widgets import Slider
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -36,7 +41,7 @@ def hsv2rgb(hsv: np.ndarray) -> np.ndarray:
     return rgb.astype("uint8")
 
 
-def complex2rgb(u, amplitudeScalingFactor=1, center_phase=False):
+def complex2rgb(u: np.ndarray, amplitudeScalingFactor: float | str = 1, center_phase: bool = False) -> np.ndarray:
     """
     Preparation function for a complex plot, converting a 2D complex array into an rgb array
     :param u: a 2D complex array
@@ -72,7 +77,7 @@ def complex2rgb(u, amplitudeScalingFactor=1, center_phase=False):
     return rgb
 
 
-def complex2rgb_vectorized(probe, **kwargs):
+def complex2rgb_vectorized(probe: np.ndarray, **kwargs: Any) -> np.ndarray:
     """Turn complex image into rgb for every line.
 
     The individual images are all autoscaled, so you cannot compare them.
@@ -85,7 +90,7 @@ def complex2rgb_vectorized(probe, **kwargs):
     return probe_rgb
 
 
-def complexPlot(rgb, ax=None, pixelSize=1, axisUnit="pixel"):
+def complexPlot(rgb: np.ndarray, ax: Axes | None = None, pixelSize: float = 1, axisUnit: str = "pixel") -> AxesImage:
     """
     Plot a 2D complex plot (hue for phase, brightness for amplitude). Input array need to be prepared by using
     the complex2rgb function.
@@ -109,15 +114,15 @@ def complexPlot(rgb, ax=None, pixelSize=1, axisUnit="pixel"):
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.1)
 
-    norm = mpl.colors.Normalize(vmin=-np.pi, vmax=np.pi)
-    scalar_mappable = mpl.cm.ScalarMappable(norm=norm, cmap=mpl.cm.hsv)
+    norm = Normalize(vmin=-np.pi, vmax=np.pi)
+    scalar_mappable = ScalarMappable(norm=norm, cmap=mpl.cm.hsv)
     scalar_mappable.set_array([])
     cbar = plt.colorbar(scalar_mappable, ax=ax, cax=cax, ticks=[-np.pi, 0, np.pi])
     cbar.ax.set_yticklabels([r"$-\pi$", "0", r"$\pi$"])
     return im
 
 
-def modeTile(P, normalize=True):
+def modeTile(P: np.ndarray, normalize: bool = True) -> np.ndarray:
     """
     Tile 3D data into a single 2D array
     :param P: A complex np.ndarray
@@ -146,7 +151,13 @@ def modeTile(P, normalize=True):
     return P
 
 
-def hsvplot(u, ax=None, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1):
+def hsvplot(
+    u: np.ndarray,
+    ax: Axes | None = None,
+    pixelSize: float = 1.0,
+    axisUnit: str = "pixel",
+    amplitudeScalingFactor: float = 1,
+) -> None:
     """
     perform complex plot
     :param ax
@@ -159,7 +170,14 @@ def hsvplot(u, ax=None, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1)
     complexPlot(rgb, ax, pixelSize, axisUnit)
 
 
-def hsvmodeplot(P, ax=None, normalize=True, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1):
+def hsvmodeplot(
+    P: np.ndarray,
+    ax: Axes | None = None,
+    normalize: bool = True,
+    pixelSize: float = 1,
+    axisUnit: str = "pixel",
+    amplitudeScalingFactor: float = 1,
+) -> None:
     """
     Place multi complex images in a square grid and use hsvplot to display
     :param P: A complex np.ndarray
@@ -178,7 +196,14 @@ def hsvmodeplot(P, ax=None, normalize=True, pixelSize=1, axisUnit="pixel", ampli
     )
 
 
-def absplot(u, ax=None, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1, cmap="gray"):
+def absplot(
+    u: np.ndarray,
+    ax: Axes | None = None,
+    pixelSize: float = 1.0,
+    axisUnit: str = "pixel",
+    amplitudeScalingFactor: float = 1,
+    cmap: str = "gray",
+) -> None:
     U = np.abs(np.asarray(u))
     if not ax:
         fig, ax = plt.subplots()
@@ -195,8 +220,8 @@ def absplot(u, ax=None, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1,
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.1)
 
-    norm = mpl.colors.Normalize(vmin=0, vmax=amplitudeScalingFactor)
-    scalar_mappable = mpl.cm.ScalarMappable(norm=norm, cmap=cmap)
+    norm = Normalize(vmin=0, vmax=amplitudeScalingFactor)
+    scalar_mappable = ScalarMappable(norm=norm, cmap=cmap)
     scalar_mappable.set_array([])
     cbar = plt.colorbar(
         scalar_mappable,
@@ -207,12 +232,19 @@ def absplot(u, ax=None, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1,
     cbar.ax.set_yticklabels(["0", str(amplitudeScalingFactor / 2), str(amplitudeScalingFactor)])
 
 
-def absmodeplot(P, ax=None, normalize=True, pixelSize=1, axisUnit="pixel", amplitudeScalingFactor=1):
+def absmodeplot(
+    P: np.ndarray,
+    ax: Axes | None = None,
+    normalize: bool = True,
+    pixelSize: float = 1,
+    axisUnit: str = "pixel",
+    amplitudeScalingFactor: float = 1,
+) -> None:
     Q = modeTile(abs(P), normalize=normalize)
     absplot(Q, ax=ax, pixelSize=pixelSize, axisUnit=axisUnit)
 
 
-def setColorMap():
+def setColorMap() -> LinearSegmentedColormap:
     """
     create the colormap for diffraction data (the same as matlab)
     return: customized matplotlib colormap
@@ -234,7 +266,7 @@ def setColorMap():
     return cm
 
 
-def show3Dslider(A, colormap="diffraction"):
+def show3Dslider(A: np.ndarray, colormap: str = "diffraction") -> None:
     """
     show a 3D plot with a slider using pyqtgraph.
     :param A: a 3D array
@@ -252,7 +284,7 @@ def show3Dslider(A, colormap="diffraction"):
     if colormap == "diffraction":
         cmap = setColorMap()
     else:
-        cmap = mpl.cm.get_cmap(colormap)
+        cmap = get_cmap(colormap)
 
     # set the colormap
     positions = np.linspace(0, 1, cmap.N)
@@ -262,7 +294,7 @@ def show3Dslider(A, colormap="diffraction"):
     app.exec_()
 
 
-def plot_alignment(reconstruction, saveit=False):
+def plot_alignment(reconstruction: Any, saveit: bool = False) -> Figure:
     """
     Plot position alignment (before vs after correction) and optional history metrics.
 
@@ -341,7 +373,7 @@ def plot_alignment(reconstruction, saveit=False):
     return fig
 
 
-def plot_defocus_stack(defocii, z_values):
+def plot_defocus_stack(defocii: np.ndarray, z_values: np.ndarray) -> Figure:
     """
     Browse a stack of defocus images interactively using a matplotlib slider.
 
