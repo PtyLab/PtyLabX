@@ -3,7 +3,7 @@ from functools import lru_cache
 import jax
 import jax.numpy as jnp
 
-cache_size = 30
+cache_size = 5
 
 
 @lru_cache(maxsize=cache_size)
