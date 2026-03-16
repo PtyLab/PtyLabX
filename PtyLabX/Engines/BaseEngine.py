@@ -563,21 +563,21 @@ class BaseEngine(object):
         # task 2: get area overlap
         # spatial frequency pixel size
         df = 1 / (self.reconstruction.Np * self.reconstruction.dxp)
-        # spatial frequency meshgrid
-        fx = np.arange(-self.reconstruction.Np // 2, self.reconstruction.Np // 2) * df
+        # spatial frequency coordinates (stay on device)
+        fx = jnp.arange(-self.reconstruction.Np // 2, self.reconstruction.Np // 2) * df
         Fx, Fy = fx.reshape(1, -1), fx.reshape(-1, 1)
-        # absolute value of probe and 2D fft
-        P = abs(np.asarray(self.reconstruction.probe[:, 0, 0, -1, ...]))
+        # absolute value of probe and 2D fft — no D2H round-trip
+        P = jnp.abs(self.reconstruction.probe[:, 0, 0, -1, ...])
         Q = fft2c(P)
         # calculate overlap between positions
-        self.reconstruction.areaOverlap = np.mean(
-            abs(
-                np.sum(
-                    Q**2 * np.exp(-1.0j * 2 * np.pi * (Fx * sx + Fy * sy)),
+        self.reconstruction.areaOverlap = jnp.mean(
+            jnp.abs(
+                jnp.sum(
+                    Q**2 * jnp.exp(-1j * 2 * jnp.pi * (Fx * sx + Fy * sy)),
                     axis=(-1, -2),
                 )
             )
-            / np.sum(abs(Q) ** 2, axis=(-1, -2)),
+            / jnp.sum(jnp.abs(Q) ** 2, axis=(-1, -2)),
             axis=0,
         )
 
