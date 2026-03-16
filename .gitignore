@@ -1,4 +1,3 @@
-.python-version
 *.pyc
 *.egg-info
 *.ipynb_checkpoints
@@ -8,5 +7,4 @@
 .ptylabx-venv
 *.hdf5
 .DS_Store
-.claude
 site/
