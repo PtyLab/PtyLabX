@@ -42,6 +42,8 @@ uv run ruff format PtyLabX/
 - Use `optax` for optimizers (not `jax.experimental.optimizers`, which is removed).
 - For random numbers in computational code, use `jax.random` with explicit PRNG keys. Numpy random is fine for initialization/shuffling.
 - `ruff` line length is 120 characters.
+- When adding or changing modules/APIs, update the `docs/` directory accordingly (API docs, examples, tutorials). The docs use mkdocs (see `mkdocs.yml`). Keep docs in sync with code.
+- For `PtyLabX/AutoDiff/` changes specifically, see `.claude/DESIGN.md` for the architecture plan and development roadmap.
 
 ## Architecture
 
