@@ -139,3 +139,14 @@ reconstructor.reconstruct(num_iterations=200)
 **New regularizer** → Create `PtyLabX/AutoDiff/regularizers/my_reg.py`, write `(state, static) -> scalar`. Add to regularizers list.
 
 **New optimizable parameter** → Add field to `PtychographyState`, update `state_from_reconstruction`/`state_to_reconstruction`, add LR to `build_optimizer`.
+
+## Documentation Checklist
+
+When adding or changing AutoDiff modules, update `docs/` accordingly:
+
+- [ ] **API reference** in `docs/autodiff/` — document new forward models, losses, regularizers, optimizer options
+- [ ] **Tutorials** in `docs/tutorials/` — Jupyter notebooks showing AD reconstruction (object-only, blind, multislice, etc.)
+- [ ] **`docs/cpm/engines.md`** — add GradientEngine alongside existing engine docs
+- [ ] **`docs/getting-started/quickstart.md`** — add AD example if it becomes a recommended workflow
+
+Docs use **mkdocs** (`mkdocs.yml` + `mkdocs-material`). Keep docs in sync with code changes.
