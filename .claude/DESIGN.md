@@ -140,6 +140,47 @@ reconstructor.reconstruct(num_iterations=200)
 
 **New optimizable parameter** → Add field to `PtychographyState`, update `state_from_reconstruction`/`state_to_reconstruction`, add LR to `build_optimizer`.
 
+## Learned Priors & Plug-and-Play (Future Extension)
+
+The architecture naturally supports learned priors (denoisers, generative models, neural network regularizers) without structural changes:
+
+### As a frozen regularizer (pre-trained network)
+A trained denoiser/prior is just a pure function `(state, net_params) → scalar`. It plugs into the existing `regularizers` list:
+```python
+# net_params loaded from checkpoint, frozen (not in PtychographyState)
+reg = lambda state, static: learned_prior(state.object, net_params, weight=1e-3)
+loss_fn = build_loss(forward_model=..., data_loss=..., regularizers=[object_tv, reg])
+```
+The network weights live outside `PtychographyState`, so `jax.grad` only differentiates through the forward pass of the network (backprop through the prior), not its weights.
+
+### As jointly-optimized parameters
+If fine-tuning the prior alongside reconstruction, extend the state or use a paired pytree. `optax.multi_transform` handles separate learning rates:
+```python
+optimizer = optax.multi_transform(
+    {"physics": optax.adam(1e-3), "network": optax.adam(1e-5)},
+    param_labels=label_fn,  # maps each leaf to "physics" or "network"
+)
+```
+
+### Library compatibility
+- **equinox** modules are pytrees → compose directly with `jax.grad` and `optax`
+- **flax.linen** `Module.apply()` is a pure function → same composition
+- No architecture changes needed; the network is just another function in the loss graph
+
+### Plug-and-play / unrolled optimization
+For algorithms where a network is called *inside* each iteration (PnP-ADMM, RED, unrolled networks), the forward model can accept an optional `prior_fn` kwarg:
+```python
+def single_slice_forward_pnp(state, indices, positions, static, prior_fn=None):
+    I_pred = ...  # standard forward
+    if prior_fn is not None:
+        state = state._replace(object=prior_fn(state.object))
+    return I_pred
+```
+This is a one-line signature addition when needed — no refactoring of existing forward models.
+
+### Separate project option
+If learned priors grow into a large codebase (custom architectures, training loops, datasets), consider a sibling package (e.g., `PtyLabX-Priors`) that imports `PtyLabX.AutoDiff` types. The pure-function + pytree interfaces make cross-package composition trivial.
+
 ## Documentation Checklist
 
 When adding or changing AutoDiff modules, update `docs/` accordingly:
