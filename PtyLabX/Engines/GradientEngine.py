@@ -12,13 +12,9 @@ from collections.abc import Generator
 from tqdm.auto import trange
 
 from PtyLabX.AutoDiff import GradientReconstructor, build_loss, build_optimizer
-from PtyLabX.AutoDiff._state import (
-    state_from_reconstruction,
-    state_to_reconstruction,
-    static_from_reconstruction,
-)
 from PtyLabX.AutoDiff.forward_models import single_slice_forward
 from PtyLabX.AutoDiff.losses import amplitude_loss
+from PtyLabX.AutoDiff.state import state_from_reconstruction, state_to_reconstruction, static_from_reconstruction
 from PtyLabX.Engines.BaseEngine import BaseEngine
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
 from PtyLabX.Monitor.Monitor import Monitor

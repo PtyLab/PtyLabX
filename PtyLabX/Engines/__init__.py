@@ -17,3 +17,4 @@ from .qNewton import qNewton as qNewton
 from .zPIE import zPIE as zPIE
 from .ePIE_mw import ePIE_mw as ePIE_mw
 from .mPIE_mw import mPIE_mw as mPIE_mw
+from .GradientEngine import GradientEngine as GradientEngine
