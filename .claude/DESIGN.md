@@ -16,10 +16,12 @@ Incremental feature plan, each building on the previous:
 | **2** | Blind reconstruction (object + probe) | Same code, both LRs > 0 |
 | **3** | Multislice | New `forward_models/multi_slice.py` — loop over `nslice` with inter-slice propagation |
 | **4** | Mixed states (object & probe modes) | Forward model sums over `nosm`/`npsm` dims (already in 6D array convention) |
-| **5** | OPR (Orthogonal Probe Relaxation) | New forward model with per-position probe decomposition |
-| **6** | Future extensions | New forward models, losses, regularizers, state fields as research evolves |
+| **5** | Multiwavelength | This is the multiwavelength part|
+| **6** | OPR (Orthogonal Probe Relaxation) | New forward model with per-position probe decomposition |
+| **7** | Future extensions | New forward models, losses, regularizers, state fields as research evolves |
 
-Each phase adds a file or adjusts optimizer config — no refactoring of previous work.
+The first 5 steps would result in the standard PtyLab array shape `(nlambda, nosm, npsm, nslice, No, No)`. However, right now OPR and mixed probe is important. Maybe we can copy some implementations as a differentiable variant into the AutoDiff module. 
+
 
 ## Design Principles
 
@@ -36,8 +38,8 @@ Each phase adds a file or adjusts optimizer config — no refactoring of previou
 ```
 PtyLabX/AutoDiff/
 ├── __init__.py              build_loss(), GradientReconstructor
-├── _state.py                PtychographyState, StaticConfig, conversion fns
-├── _propagators.py          Pure propagation (reuses Operators internals)
+├── state.py                PtychographyState, StaticConfig, conversion fns
+├── propagators.py          Pure propagation (reuses Operators internals)
 ├── reconstructor.py         GradientReconstructor (JIT-compiled optimization loop)
 ├── optimizers.py            build_optimizer() — per-parameter LR via optax
 ├── losses.py                amplitude_loss, poisson_loss, mad_loss (all ~2 lines each)
@@ -137,17 +139,19 @@ reconstructor.reconstruct(num_iterations=200)
 
 **New optimizable parameter** → Add field to `PtychographyState`, update `state_from_reconstruction`/`state_to_reconstruction`, add LR to `build_optimizer`.
 
-## More corrections (Future Extension)
+## Future Extension
+
+### More corrections
 
 - Not as important, but possible correction (equivalent to pcPIE) and distance correction (equivalent to zPIE) would be good.
 - Tilt correction (aPIE-like) potentially useful for multi-angle imaging.
 - Hyperparameter optimization like `PtyRAD` and `phaser`. 
 
-## Learned Priors & Plug-and-Play (Future Extension)
+### Learned Priors & Plug-and-Play
 
 The architecture naturally supports learned priors (denoisers, generative models, neural network regularizers) without structural changes:
 
-### As a frozen regularizer (pre-trained network)
+#### As a frozen regularizer (pre-trained network)
 A trained denoiser/prior is just a pure function `(state, net_params) → scalar`. It plugs into the existing `regularizers` list:
 ```python
 # net_params loaded from checkpoint, frozen (not in PtychographyState)
@@ -156,7 +160,7 @@ loss_fn = build_loss(forward_model=..., data_loss=..., regularizers=[object_tv, 
 ```
 The network weights live outside `PtychographyState`, so `jax.grad` only differentiates through the forward pass of the network (backprop through the prior), not its weights.
 
-### As jointly-optimized parameters
+#### As jointly-optimized parameters
 If fine-tuning the prior alongside reconstruction, extend the state or use a paired pytree. `optax.multi_transform` handles separate learning rates:
 ```python
 optimizer = optax.multi_transform(
