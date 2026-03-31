@@ -16,7 +16,7 @@ from dataclasses import fields
 
 import optax
 
-from PtyLabX.AutoDiff._state import PtychographyState
+from PtyLabX.AutoDiff.state import PtychographyState
 
 
 def build_optimizer(
