@@ -40,7 +40,6 @@ class StaticConfig(NamedTuple):
     These values are treated as compile-time or static arguments by JAX and
     are never differentiated through.
 
-
     Attributes
     ----------
     positions : jnp.ndarray
