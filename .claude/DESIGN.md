@@ -22,6 +22,8 @@ Incremental feature plan, each building on the previous:
 
 The first 5 steps would result in the standard PtyLab array shape `(nlambda, nosm, npsm, nslice, No, No)`. However, right now OPR and mixed probe is important. Maybe we can copy some implementations as a differentiable variant into the AutoDiff module. 
 
+Each step must be implemented such that the original module is not heavily refactored atleast from the point of view of API.
+
 
 ## Design Principles
 
