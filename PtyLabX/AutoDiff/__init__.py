@@ -28,13 +28,13 @@ from collections.abc import Callable
 
 import jax.numpy as jnp
 
-from PtyLabX.AutoDiff._state import PtychographyState as PtychographyState
-from PtyLabX.AutoDiff._state import StaticConfig as StaticConfig
-from PtyLabX.AutoDiff._state import state_from_reconstruction as state_from_reconstruction
-from PtyLabX.AutoDiff._state import state_to_reconstruction as state_to_reconstruction
-from PtyLabX.AutoDiff._state import static_from_reconstruction as static_from_reconstruction
 from PtyLabX.AutoDiff.optimizers import build_optimizer as build_optimizer
 from PtyLabX.AutoDiff.reconstructor import GradientReconstructor as GradientReconstructor
+from PtyLabX.AutoDiff.state import PtychographyState as PtychographyState
+from PtyLabX.AutoDiff.state import StaticConfig as StaticConfig
+from PtyLabX.AutoDiff.state import state_from_reconstruction as state_from_reconstruction
+from PtyLabX.AutoDiff.state import state_to_reconstruction as state_to_reconstruction
+from PtyLabX.AutoDiff.state import static_from_reconstruction as static_from_reconstruction
 
 
 def build_loss(
