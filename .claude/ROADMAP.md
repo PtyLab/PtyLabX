@@ -276,7 +276,7 @@ Current `e3PIE` implements basic multislice. Enhancements:
 - **Bandwidth limiting between slices**: Prevent aliasing in inter-slice Fresnel propagation (Phaser)
 - **Gaussian depth blur in real space** (ptyRAD): Avoids periodic boundary/wrap-around artifacts from k-space filtering
 - **Differentiable slice thickness Δz**: Treat Δz as a learnable scalar (ptyRAD)
-- **Position-dependent local tilts in propagator**: Each position j gets tilt θⱼ = (θⱼ,ₓ, θⱼ,ᵧ) in the inter-slice Fresnel propagator — crucial for twisted 2D materials, bent crystals
+- **Position-dependent local tilts in propagator**: Each position j gets tilt θⱼ = (θⱼ,ₓ, θⱼ,ᵧ) in the inter-slice Fresnel propagator — crucial for twisted 2D materials, bent crystals (not too relevant for us right now)
 - **Axial Fourier filter (kz)**: Arctangent-based depth frequency cutoff
 
 ---
