@@ -40,20 +40,17 @@ PtyLabX/AutoDiff/
 ├── _propagators.py          Pure propagation (reuses Operators internals)
 ├── reconstructor.py         GradientReconstructor (JIT-compiled optimization loop)
 ├── optimizers.py            build_optimizer() — per-parameter LR via optax
+├── losses.py                amplitude_loss, poisson_loss, mad_loss (all ~2 lines each)
+├── regularizers.py          object_tv (differentiable TV on object)
 ├── forward_models/
 │   ├── __init__.py
 │   └── single_slice.py      Standard CPM: patch × probe → propagate → |·|²
-├── losses/
-│   ├── __init__.py
-│   ├── gaussian.py          ||√I_meas - √I_pred||²
-│   └── poisson.py           I_pred - I_meas·log(I_pred)
-└── regularizers/
-    ├── __init__.py
-    └── tv.py                Differentiable TV on object
 
 PtyLabX/Engines/
 └── GradientEngine.py        BaseEngine adapter for easyInitialize() compatibility
 ```
+
+> **Why flat files for losses/regularizers?** Each loss is 1-2 lines of math. A subdirectory with separate files per loss adds navigation overhead for no benefit. If either file ever grows beyond ~200 lines, split then.
 
 ## Data Flow
 
@@ -118,7 +115,7 @@ from PtyLabX.AutoDiff import build_loss, GradientReconstructor
 from PtyLabX.AutoDiff.forward_models import single_slice_forward
 from PtyLabX.AutoDiff.losses import poisson_loss
 from PtyLabX.AutoDiff.regularizers import object_tv
-from PtyLabX.AutoDiff.optimizers import build_optimizer
+from PtyLabX.AutoDiff import build_optimizer
 
 loss_fn = build_loss(
     forward_model=single_slice_forward,
@@ -134,11 +131,17 @@ reconstructor.reconstruct(num_iterations=200)
 
 **New forward model** → Create `PtyLabX/AutoDiff/forward_models/my_model.py`, write a function matching the signature. Use with `build_loss(forward_model=my_func)`.
 
-**New loss** → Create `PtyLabX/AutoDiff/losses/my_loss.py`, write `(I_meas, I_pred) -> scalar`. Use with `build_loss(data_loss=my_func)`.
+**New loss** → Add a function to `PtyLabX/AutoDiff/losses.py` with signature `(I_meas, I_pred) -> scalar`. Use with `build_loss(data_loss=my_func)`.
 
-**New regularizer** → Create `PtyLabX/AutoDiff/regularizers/my_reg.py`, write `(state, static) -> scalar`. Add to regularizers list.
+**New regularizer** → Add a function to `PtyLabX/AutoDiff/regularizers.py` with signature `(state, static) -> scalar`. Add to regularizers list.
 
 **New optimizable parameter** → Add field to `PtychographyState`, update `state_from_reconstruction`/`state_to_reconstruction`, add LR to `build_optimizer`.
+
+## More corrections (Future Extension)
+
+- Not as important, but possible correction (equivalent to pcPIE) and distance correction (equivalent to zPIE) would be good.
+- Tilt correction (aPIE-like) potentially useful for multi-angle imaging.
+- Hyperparameter optimization like `PtyRAD` and `phaser`. 
 
 ## Learned Priors & Plug-and-Play (Future Extension)
 
