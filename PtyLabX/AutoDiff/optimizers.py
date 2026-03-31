@@ -12,6 +12,8 @@ correct treatment for Wirtinger-gradient-based optimisation.
 
 from __future__ import annotations
 
+from dataclasses import fields
+
 import optax
 
 from PtyLabX.AutoDiff._state import PtychographyState
@@ -54,6 +56,6 @@ def build_optimizer(
 
     def _label_fn(state: PtychographyState) -> PtychographyState:
         """Map each PtychographyState field to its optimizer label."""
-        return PtychographyState(**{field: label_map[field] for field in PtychographyState._fields})
+        return PtychographyState(**{f.name: label_map[f.name] for f in fields(state)})
 
     return optax.multi_transform(transforms, _label_fn)
