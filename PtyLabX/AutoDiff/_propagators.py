@@ -4,6 +4,7 @@ These wrap the existing ``fft2c`` / ``ifft2c`` utilities as thin, JIT-friendly
 functions that take only array + scalar arguments (no mutable Reconstruction or
 Params objects), making them safe for ``jax.grad`` and ``jax.vmap``.
 """
+# TODO: Add other propagators here if required and expose as options in GradientEngine.
 
 from __future__ import annotations
 
