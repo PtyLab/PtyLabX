@@ -1,13 +1,12 @@
 """Differentiable state containers for AD-based ptychographic reconstruction.
 
-PtychographyState holds the optimizable parameters as a NamedTuple (automatic JAX pytree).
+PtychographyState holds the optimizable parameters as an ``equinox.Module`` (automatic JAX pytree).
 StaticConfig holds non-differentiable metadata (wavelength, pixel sizes, propagator type, etc.).
 """
 
 from __future__ import annotations
 
-from typing import NamedTuple
-
+import equinox as eqx
 import jax.numpy as jnp
 
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
@@ -15,8 +14,8 @@ from PtyLabX.Params.Params import Params
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 
 
-class PtychographyState(NamedTuple):
-    """Differentiable reconstruction state — a JAX pytree by virtue of being a NamedTuple.
+class PtychographyState(eqx.Module):
+    """Differentiable reconstruction state — a JAX pytree via ``equinox.Module``.
 
     All fields are JAX arrays that ``jax.grad`` can differentiate through.
     Set a field to ``None`` to freeze it (the optimizer will skip it).
@@ -34,11 +33,12 @@ class PtychographyState(NamedTuple):
     probe: jnp.ndarray | None = None
 
 
-class StaticConfig(NamedTuple):
+class StaticConfig(eqx.Module):
     """Non-differentiable metadata passed to forward models as constants.
 
-    These values are treated as compile-time or static arguments by JAX and
-    are never differentiated through.
+    Scalar fields are marked ``static=True`` so they become compile-time
+    constants under ``jax.jit``.  Array fields (``positions``, ``ptychogram``)
+    remain dynamic to avoid recompilation across datasets.
 
     Attributes
     ----------
@@ -66,14 +66,14 @@ class StaticConfig(NamedTuple):
 
     positions: jnp.ndarray
     ptychogram: jnp.ndarray
-    wavelength: float
-    zo: float
-    dxp: float
-    dxd: float
-    Np: int
-    No: int
-    fftshift_switch: bool
-    propagator_type: str
+    wavelength: float = eqx.field(static=True)
+    zo: float = eqx.field(static=True)
+    dxp: float = eqx.field(static=True)
+    dxd: float = eqx.field(static=True)
+    Np: int = eqx.field(static=True)
+    No: int = eqx.field(static=True)
+    fftshift_switch: bool = eqx.field(static=True)
+    propagator_type: str = eqx.field(static=True)
 
 
 def state_from_reconstruction(
