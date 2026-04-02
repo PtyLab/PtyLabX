@@ -1,11 +1,15 @@
 import warnings
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from PtyLabX.utils.visualisation import setColorMap
 
 from .Plots import DiffractionDataPlot, ObjectProbeErrorPlot, is_inline
+
+if TYPE_CHECKING:
+    from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 
 
 class AbstractMonitor(object):
@@ -16,6 +20,15 @@ class AbstractMonitor(object):
     will not take time to run.
 
     """
+
+    # Common attributes used by engines
+    objectZoom: str | None = None
+    probeZoom: float = 1
+    objectROI: list | None = None
+    probeROI: list | None = None
+    figureUpdateFrequency: int = 1
+    verboseLevel: str = "low"
+    reconstruction: "Reconstruction | None" = None
 
     def initializeMonitors(self):
         """
@@ -96,7 +109,7 @@ class AbstractMonitor(object):
 
     def updateObjectProbeErrorMonitor(
         self,
-        error: float,
+        error: float | list[float],
         object_estimate: np.ndarray,
         probe_estimate: np.ndarray,
         zo=None,
@@ -150,6 +163,14 @@ class Monitor(AbstractMonitor):
     Monitor contains two submonitors: ObjectProbeErrorPlot (object,probe,error) and DiffractionDataPlot (diffraction
     intensity estimate and measurement)
     """
+
+    reconstruction: "Reconstruction | None"
+    defaultMonitor: ObjectProbeErrorPlot | None
+    diffractionDataMonitor: DiffractionDataPlot | None
+    objectROI: list[slice]
+    probeROI: list[slice]
+    objectZoom: int | float | str | None
+    probeZoom: int | float | str | None
 
     def __init__(self):
         # settings for visualization
@@ -220,6 +241,8 @@ class Monitor(AbstractMonitor):
         :param object_estimate:
         :return:
         """
+        assert self.defaultMonitor is not None
+        assert self.reconstruction is not None
         self.defaultMonitor.updateError(error)  # self.reconstruction.error)
         # print(f"Object plot: {self.objectPlot}")
         self.defaultMonitor.updateObject(
@@ -246,18 +269,18 @@ class Monitor(AbstractMonitor):
     def describe_parameters(self, *args, **kwargs):
         pass
 
-    def updateDiffractionDataMonitor(self, Iestimated, Imeasured):
+    def updateDiffractionDataMonitor(self, Iestimated: np.ndarray, Imeasured: np.ndarray):
         """
         update the diffraction plots
         """
-
-        self.diffractionDataMonitor.update_view(Iestimated, Imeasured, cmap=self.cmapDiffraction)
+        assert self.diffractionDataMonitor is not None
+        self.diffractionDataMonitor.update_view(Iestimated, Imeasured, cmap=str(self.cmapDiffraction.name))
         # self.diffractionDataMonitor.updateIestimated(Iestimated, cmap=self.cmapDiffraction)
         # self.diffractionDataMonitor.updateImeasured(Imeasured, cmap=self.cmapDiffraction)
         self.diffractionDataMonitor.drawNow()
 
 
-class DummyMonitor(object):
+class DummyMonitor(AbstractMonitor):
     """Monitor without any visualisation so it won't consume any time"""
 
     objectZoom = 1
@@ -272,7 +295,7 @@ class DummyMonitor(object):
     def updateBeamWidth(self, *args, **kwargs):
         pass
 
-    def updatePlot(self, object_estimate, probe_estimate):
+    def updatePlot(self, object_estimate, probe_estimate, *args, **kwargs):
         pass
 
     def getOverlap(self, ind1, ind2, probePixelsize):

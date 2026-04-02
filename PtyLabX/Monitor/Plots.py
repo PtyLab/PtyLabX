@@ -100,7 +100,7 @@ class ObjectProbeErrorPlot(object):
 
         if self.firstrun:
             if objectPlot == "complex":
-                self.im_object = complexPlot(OE, ax=self.ax_object, **kwargs)
+                self.im_object = complexPlot(OE, ax=self.ax_object, **kwargs)  # ty: ignore[invalid-argument-type]
             else:
                 self.im_object = self.ax_object.imshow(OE, interpolation=None)
                 divider = make_axes_locatable(self.ax_object)
@@ -108,8 +108,8 @@ class ObjectProbeErrorPlot(object):
                 self.objectCbar = plt.colorbar(self.im_object, ax=self.ax_object, cax=cax)
         else:
             self.im_object.set_data(OE)
-            if optimizable.nosm > 1:
-                self.txt_purityObject.set_text("Object estimate\nPurity: %i" % (100 * optimizable.purityObject) + "%")
+            if optimizable.nosm > 1:  # ty: ignore[unresolved-attribute]
+                self.txt_purityObject.set_text("Object estimate\nPurity: %i" % (100 * optimizable.purityObject) + "%")  # ty: ignore[unresolved-attribute]
 
         self.im_object.autoscale()
 
@@ -126,13 +126,13 @@ class ObjectProbeErrorPlot(object):
         )
 
         if self.firstrun:
-            self.im_probe = complexPlot(PE, ax=self.ax_probe, **kwargs)
+            self.im_probe = complexPlot(PE, ax=self.ax_probe, **kwargs)  # ty: ignore[invalid-argument-type]
             # self.im_probe_ff = complexPlot(PE_ff, self.ax_probe_ff, **kwargs)
         else:
             self.im_probe.set_data(PE)
             # self.im_probe_ff.set_data(PE_ff)
-            if optimizable.npsm > 1 and optimizable.purityProbe == optimizable.purityProbe:
-                self.txt_purityProbe.set_text("Probe estimate\nPurity: %.2f" % (100 * optimizable.purityProbe) + "%")
+            if optimizable.npsm > 1 and optimizable.purityProbe == optimizable.purityProbe:  # ty: ignore[unresolved-attribute]
+                self.txt_purityProbe.set_text("Probe estimate\nPurity: %.2f" % (100 * optimizable.purityProbe) + "%")  # ty: ignore[unresolved-attribute]
         self.im_probe.autoscale()
 
     def updateError(self, error_estimate: np.ndarray) -> None:
@@ -173,6 +173,7 @@ class ObjectProbeErrorPlot(object):
             self.firstrun = False
         else:
             clear_output(wait=True)
+            assert self.display_id is not None
             self.display_id = display(self.figure, display_id=self.display_id.display_id)
         self.canvas.draw_idle()
         self.canvas.flush_events()
@@ -277,6 +278,7 @@ class DiffractionDataPlot(object):
             self.firstrun = False
         else:
             clear_output(wait=True)
+            assert self.display_id is not None
             self.display_id = display(self.figure, display_id=self.display_id.display_id)
         self.canvas.draw_idle()
         self.canvas.flush_events()
