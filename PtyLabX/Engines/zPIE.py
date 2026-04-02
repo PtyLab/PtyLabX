@@ -53,6 +53,7 @@ class zPIE(BaseEngine):
 
         z = np.linspace(-1, 1, N_points) * scanrange_times_dof * self.reconstruction.DoF
         reconstruction = self.reconstruction
+        assert reconstruction.wavelength is not None
         defocii = np.abs(
             np.array(
                 [
@@ -97,9 +98,12 @@ class zPIE(BaseEngine):
             self.setPositionOrder()
             imProps = []
 
+            assert self.reconstruction.zo is not None
+            assert self.reconstruction.wavelength is not None
+
             # get positions
             if loop == 1:
-                zNew = self.reconstruction.zo.copy()
+                zNew = self.reconstruction.zo
             else:
                 d = 10
 
@@ -132,6 +136,7 @@ class zPIE(BaseEngine):
                             )
                         else:
                             nlambda = self.reconstruction.nlambda // 2
+                            assert self.reconstruction.spectralDensity is not None
                             imProp, _ = aspw(
                                 jnp.squeeze(self.reconstruction.probe[nlambda, ..., :, :]),
                                 dz[k],
@@ -172,6 +177,7 @@ class zPIE(BaseEngine):
             self.reconstruction.zo = zNew
 
             # re-sample is automatically done by using @property
+            assert self.reconstruction.zo is not None
             if self.params.propagatorType != "ASP":
                 self.reconstruction.dxp = (
                     self.reconstruction.wavelength * self.reconstruction.zo / self.reconstruction.Ld

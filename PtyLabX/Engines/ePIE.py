@@ -38,7 +38,7 @@ class ePIE(BaseEngine):
         self.betaObject = 0.25
         self.numIterations = 50
 
-    def reconstruct(self, experimentalData: ExperimentalData | None = None) -> None:
+    def reconstruct(self, experimentalData: ExperimentalData | None = None):
         if experimentalData is not None:
             self.reconstruction.data = experimentalData
             self.experimentalData = experimentalData

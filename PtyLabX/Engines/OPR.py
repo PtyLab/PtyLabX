@@ -1,3 +1,6 @@
+from typing import Callable, cast
+
+import jax
 import numpy as np
 import jax.numpy as jnp
 
@@ -161,7 +164,7 @@ class OPR(BaseEngine):
         return (arr + arr_end + arr_start) / divider
 
     def svd(self, P):
-        return jnp.linalg.svd(P, full_matrices=False)
+        return jnp.linalg.svd(P, full_matrices=False)  # ty: ignore[unknown-argument]
 
     def rsvd(self, P, n_dim):
         return rsvd(P, n_dim)
@@ -184,9 +187,12 @@ class OPR(BaseEngine):
             if self.params.OPR_tsvd_type == "randomized":
                 U, s, Vh = self.rsvd(probe_stack[:, :, i, :, :, :].reshape(n * n, nFrames), n_dim)
             elif self.params.OPR_tsvd_type == "numpy":
-                U, s, Vh = jnp.linalg.svd(
-                    probe_stack[:, :, i, :, :, :].reshape(n * n, nFrames),
-                    full_matrices=False,
+                U, s, Vh = cast(
+                    tuple[jax.Array, jax.Array, jax.Array],
+                    jnp.linalg.svd(
+                        probe_stack[:, :, i, :, :, :].reshape(n * n, nFrames),
+                        full_matrices=False,  # ty: ignore[unknown-argument]
+                    ),
                 )
                 s = s.at[n_dim:].set(0)
 

@@ -53,14 +53,14 @@ class aPIE(BaseEngine):
         self.numIterations = 50
 
         if not hasattr(self.reconstruction, "thetaMomentum"):
-            self.reconstruction.thetaMomentum = 0
+            self.reconstruction.thetaMomentum = 0.0
         if not hasattr(self.reconstruction, "thetaHistory"):
-            self.reconstruction.thetaHistory = np.array([])
+            self.reconstruction.thetaHistory = jnp.array([])
 
         self.thetaSearchRadiusMin = 0.01
         self.thetaSearchRadiusMax = 0.1
         self.ptychogramUntransformed = self.experimentalData.ptychogram.copy()
-        self.experimentalData.W = np.ones((int(self.reconstruction.Nd), int(self.reconstruction.Nd)))
+        self.experimentalData.W = jnp.ones((int(self.reconstruction.Nd), int(self.reconstruction.Nd)))
 
         if self.reconstruction.theta is None:
             raise ValueError("theta value is not given")
@@ -74,9 +74,9 @@ class aPIE(BaseEngine):
         self.pbar = trange(self.numIterations, desc="aPIE", leave=True)
         for loop in self.pbar:
             # save theta search history
-            self.reconstruction.thetaHistory = np.append(
+            self.reconstruction.thetaHistory = jnp.append(
                 self.reconstruction.thetaHistory,
-                np.asarray(self.reconstruction.theta),
+                jnp.asarray(self.reconstruction.theta),
             )
 
             # select two angles (todo check if three angles behave better)
@@ -123,7 +123,7 @@ class aPIE(BaseEngine):
                         kind="linear",
                         fill_value=0,
                     )
-                    temp2 = abs(f(Xq[0], self.reconstruction.xd))
+                    temp2 = abs(f(Xq[0], self.reconstruction.xd))  # ty: ignore[call-non-callable]
                     temp2 = np.nan_to_num(temp2)
                     temp2[temp2 < 0] = 0
                     self.experimentalData.ptychogram[li] = temp2
@@ -135,17 +135,17 @@ class aPIE(BaseEngine):
                     * np.linalg.norm(self.ptychogramUntransformed)
                 )
 
-                self.experimentalData.W = np.ones((int(self.reconstruction.Nd), int(self.reconstruction.Nd)))
+                self.experimentalData.W = jnp.ones((int(self.reconstruction.Nd), int(self.reconstruction.Nd)))
                 fw = interp2d(
                     self.reconstruction.xd,
                     self.reconstruction.xd,
-                    self.experimentalData.W,
+                    np.asarray(self.experimentalData.W),
                     kind="linear",
                     fill_value=0,
                 )
-                self.experimentalData.W = abs(fw(Xq[0], self.reconstruction.xd))
-                self.experimentalData.W = np.nan_to_num(self.experimentalData.W)
-                self.experimentalData.W[self.experimentalData.W == 0] = 1e-3
+                W_np = np.nan_to_num(abs(fw(Xq[0], self.reconstruction.xd)))  # ty: ignore[call-non-callable]
+                W_np[W_np == 0] = 1e-3
+                self.experimentalData.W = jnp.array(W_np)
 
                 # todo check if it is right
                 if self.params.fftshiftSwitch:
@@ -187,7 +187,7 @@ class aPIE(BaseEngine):
                 self.getErrorMetrics()
                 # remove error from error history
                 errorTemp[k] = self.reconstruction.error[-1]
-                self.reconstruction.error = np.delete(self.reconstruction.error, -1)
+                self.reconstruction.error.pop()
 
                 # apply Constraints
                 self.applyConstraints(loop)
@@ -200,13 +200,13 @@ class aPIE(BaseEngine):
                 self.reconstruction.theta = theta[1]
                 self.reconstruction.probe = probeBuffer[1]
                 self.reconstruction.object = objectBuffer[1]
-                self.reconstruction.error = np.append(self.reconstruction.error, errorTemp[1])
+                self.reconstruction.error.append(float(errorTemp[1]))
             else:
                 dtheta = 0
                 self.reconstruction.theta = theta[0]
                 self.reconstruction.probe = probeBuffer[0]
                 self.reconstruction.object = objectBuffer[0]
-                self.reconstruction.error = np.append(self.reconstruction.error, errorTemp[0])
+                self.reconstruction.error.append(float(errorTemp[0]))
 
             self.reconstruction.thetaMomentum = (
                 self.feedback * dtheta + self.aPIEfriction * self.reconstruction.thetaMomentum

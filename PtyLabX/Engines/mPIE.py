@@ -155,7 +155,7 @@ class mPIE(BaseEngine):
                 recon.wavelength,
                 recon.Lp,
                 recon.nlambda,
-                tuple(recon.spectralDensity),
+                tuple(recon.spectralDensity),  # ty: ignore[invalid-argument-type]
             )
             tf_fwd = tf
             tf_inv = tf.conj()
@@ -181,7 +181,7 @@ class mPIE(BaseEngine):
                 recon.npsm,
                 recon.zo,
                 recon.Np,
-                tuple(recon.spectralDensity),
+                tuple(recon.spectralDensity),  # ty: ignore[invalid-argument-type]
                 recon.dxo,
                 recon.dxd,
             )
@@ -358,8 +358,8 @@ class mPIE(BaseEngine):
 
     def reconstruct(
         self,
-        experimentalData: ExperimentalData = None,
-        reconstruction: Reconstruction = None,
+        experimentalData: ExperimentalData | None = None,
+        reconstruction: Reconstruction | None = None,
         probe_update_switch: bool = True,
         vis_after_each_iteration=None,
     ):

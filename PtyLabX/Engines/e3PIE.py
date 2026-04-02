@@ -17,6 +17,10 @@ from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 
 
 class e3PIE(BaseEngine):
+    betaProbe: float
+    betaObject: float
+    numIterations: int
+
     def __init__(
         self,
         reconstruction: Reconstruction,
@@ -42,6 +46,7 @@ class e3PIE(BaseEngine):
         self.params.betaProbe = 0.25
         self.params.betaObject = 0.25
         self.numIterations = 50
+        self.betaProbe = 0.25
 
         if False:
             # preallocate transfer function
@@ -57,10 +62,16 @@ class e3PIE(BaseEngine):
 
         if True:
             # preallocate transfer function
+            dz = self.reconstruction.dz
+            wavelength = self.reconstruction.wavelength
+            refrIndex = self.reconstruction.refrIndex
+            assert dz is not None
+            assert wavelength is not None
+            assert refrIndex is not None
             self.reconstruction.H = aspw(
                 jnp.squeeze(self.reconstruction.probe[0, 0, 0, 0, ...]),
-                self.reconstruction.dz,
-                self.reconstruction.wavelength / self.reconstruction.refrIndex,
+                float(dz),
+                wavelength / refrIndex,
                 self.reconstruction.Lp,
             )[1]
             # shift transfer function to avoid fftshifts for FFTS
