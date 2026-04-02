@@ -5,6 +5,8 @@ Randomized SVD. See Halko, Martinsson, Tropp's 2011 SIAM paper:
 approximate matrix decompositions"
 ============================================================================="""
 
+from typing import Any, cast
+
 import functools
 
 import jax
@@ -35,7 +37,7 @@ def rsvd(A, rank, n_oversamples=None, n_subspace_iters=None, return_range=False,
 
     # Stage B.
     B = Q.T.conj() @ A
-    U_tilde, S, Vt = jnp.linalg.svd(B, full_matrices=False)
+    U_tilde, S, Vt = jnp.linalg.svd(B, full_matrices=False)  # ty: ignore[unknown-argument,not-iterable]
     U = Q @ U_tilde
 
     # Truncate.
@@ -72,7 +74,7 @@ def find_range(A, n_samples, n_subspace_iters=None, rng_key=None):
     Y = A @ omega
 
     if n_subspace_iters:
-        return subspace_iter(A, Y, n_subspace_iters)
+        return cast(tuple[jax.Array, ...], subspace_iter(A, Y, n_subspace_iters))  # ty: ignore[too-many-positional-arguments]
     else:
         return ortho_basis(Y)
 

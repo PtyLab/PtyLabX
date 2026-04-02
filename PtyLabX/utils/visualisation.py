@@ -105,7 +105,7 @@ def complexPlot(rgb: np.ndarray, ax: Axes | None = None, pixelSize: float = 1, a
         fig, ax = plt.subplots()
     unitRatio = {"pixel": 1, "m": 1, "cm": 1e2, "mm": 1e3, "um": 1e6}
     pixelSize = pixelSize * unitRatio[axisUnit]
-    extent = [0, pixelSize * rgb.shape[1], pixelSize * rgb.shape[0], 0]
+    extent = (0, pixelSize * rgb.shape[1], pixelSize * rgb.shape[0], 0)
 
     im = ax.imshow(rgb, extent=extent, interpolation=None)
     ax.set_ylabel(axisUnit)
@@ -115,7 +115,7 @@ def complexPlot(rgb: np.ndarray, ax: Axes | None = None, pixelSize: float = 1, a
     cax = divider.append_axes("right", size="5%", pad=0.1)
 
     norm = Normalize(vmin=-np.pi, vmax=np.pi)
-    scalar_mappable = ScalarMappable(norm=norm, cmap=mpl.cm.hsv)
+    scalar_mappable = ScalarMappable(norm=norm, cmap=mpl.colormaps["hsv"])
     scalar_mappable.set_array([])
     cbar = plt.colorbar(scalar_mappable, ax=ax, cax=cax, ticks=[-np.pi, 0, np.pi])
     cbar.ax.set_yticklabels([r"$-\pi$", "0", r"$\pi$"])
@@ -209,7 +209,7 @@ def absplot(
         fig, ax = plt.subplots()
     unitRatio = {"pixel": 1, "m": 1, "cm": 1e2, "mm": 1e3, "um": 1e6}
     pixelSize = pixelSize * unitRatio[axisUnit]
-    extent = [0, pixelSize * U.shape[1], pixelSize * U.shape[0], 0]
+    extent = (0, pixelSize * U.shape[1], pixelSize * U.shape[0], 0)
 
     if amplitudeScalingFactor != 1:
         U[U > amplitudeScalingFactor * np.max(U)] = amplitudeScalingFactor * np.max(U)
@@ -393,7 +393,7 @@ def plot_defocus_stack(defocii: np.ndarray, z_values: np.ndarray) -> Figure:
     ax.set_title(f"z = {z_values[0] * 1e3:.3f} mm")
     ax.axis("off")
 
-    ax_slider = plt.axes([0.15, 0.04, 0.7, 0.04])
+    ax_slider = plt.axes((0.15, 0.04, 0.7, 0.04))
     slider = Slider(ax_slider, "Frame", 0, N - 1, valinit=0, valstep=1)
 
     def update(val):

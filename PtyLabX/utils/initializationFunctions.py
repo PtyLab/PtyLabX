@@ -4,7 +4,7 @@ from PtyLabX.utils.utils import circ, ifft2c
 from scipy import ndimage
 
 
-def initialProbeOrObject(shape, type_of_init, data, logger: logging.Logger = None):
+def initialProbeOrObject(shape, type_of_init, data, logger: logging.Logger | None = None):
     """
     Initialization objects are created for the reconstruction. Currently
     implemented:

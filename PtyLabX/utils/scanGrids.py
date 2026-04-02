@@ -142,7 +142,7 @@ class tsp_ga:
         self.figure.show()
 
         n = self.xy.shape[0]
-        numEl = np.sum(x for x in range(n))
+        numEl = sum(range(n))
         cities_ = np.linspace(0, n - 1, n).astype(int)
         cities = ["" for i in range(cities_.size)]
         for i in range(cities_.size):
@@ -169,8 +169,8 @@ class tsp_ga:
         self.cities = [k for k in self.hash_map.keys()]
         self.cities.remove(start)
         self.genes = []
-        self.generate_genes = vectorize(self.generate_genes)
-        self.generate_genes()
+        self.generate_genes = vectorize(self.generate_genes)  # ty: ignore[invalid-assignment]
+        self.generate_genes()  # ty: ignore[missing-argument]
 
     def generate_genes(self):
         for i in range(self.population_size):
@@ -207,7 +207,7 @@ class tsp_ga:
         # return self.genes
 
     def GA_Matlab(self):
-        globalMin = np.Inf
+        globalMin = np.inf
         distHistory = np.zeros((self.iterations, 1))
         tmpPop = []
         for i in range(4):

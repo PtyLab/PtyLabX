@@ -1,11 +1,25 @@
 import functools
+from typing import Callable, cast
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 
 
-@functools.partial(jax.jit, static_argnums=(1,))
+def _fft2c_impl(field: jax.Array, fftshiftSwitch: bool = False) -> jax.Array:
+    if fftshiftSwitch:
+        return jnp.fft.fft2(field, norm="ortho")
+    else:
+        axes = (-2, -1)
+        return jnp.fft.fftshift(jnp.fft.fft2(jnp.fft.ifftshift(field, axes=axes), norm="ortho"), axes=axes)
+
+
+_fft2c_jit: Callable[..., jax.Array] = cast(
+    Callable[..., jax.Array],
+    functools.partial(jax.jit, static_argnums=(1,))(_fft2c_impl),
+)
+
+
 def fft2c(field: jax.Array, fftshiftSwitch: bool = False) -> jax.Array:
     """
     performs 2 - dimensional unitary Fourier transformation, where energy is preserved sum( abs(g)**2 ) == sum( abs(fft2c(g))**2 )
@@ -14,14 +28,23 @@ def fft2c(field: jax.Array, fftshiftSwitch: bool = False) -> jax.Array:
     :param array:
     :return:
     """
+    return _fft2c_jit(field, fftshiftSwitch)
+
+
+def _ifft2c_impl(field: jax.Array, fftshiftSwitch: bool = False) -> jax.Array:
     if fftshiftSwitch:
-        return jnp.fft.fft2(field, norm="ortho")
+        return jnp.fft.ifft2(field, norm="ortho")
     else:
         axes = (-2, -1)
-        return jnp.fft.fftshift(jnp.fft.fft2(jnp.fft.ifftshift(field, axes=axes), norm="ortho"), axes=axes)
+        return jnp.fft.fftshift(jnp.fft.ifft2(jnp.fft.ifftshift(field, axes=axes), norm="ortho"), axes=axes)
 
 
-@functools.partial(jax.jit, static_argnums=(1,))
+_ifft2c_jit: Callable[..., jax.Array] = cast(
+    Callable[..., jax.Array],
+    functools.partial(jax.jit, static_argnums=(1,))(_ifft2c_impl),
+)
+
+
 def ifft2c(field: jax.Array, fftshiftSwitch: bool = False) -> jax.Array:
     """
     performs 2 - dimensional inverse Fourier transformation, where energy is preserved sum( abs(G)**2 ) == sum( abs(fft2c(g))**2 )
@@ -30,11 +53,7 @@ def ifft2c(field: jax.Array, fftshiftSwitch: bool = False) -> jax.Array:
     :param array:
     :return:
     """
-    if fftshiftSwitch:
-        return jnp.fft.ifft2(field, norm="ortho")
-    else:
-        axes = (-2, -1)
-        return jnp.fft.fftshift(jnp.fft.ifft2(jnp.fft.ifftshift(field, axes=axes), norm="ortho"), axes=axes)
+    return _ifft2c_jit(field, fftshiftSwitch)
 
 
 @jax.jit
@@ -118,8 +137,7 @@ def gaussian2D(n: int, std: float) -> np.ndarray:
     return h
 
 
-@functools.partial(jax.jit, static_argnames=("method",))
-def orthogonalizeModes(p: jax.Array, method: str | None = None) -> tuple[jax.Array, jax.Array, jax.Array]:
+def _orthogonalizeModes_impl(p: jax.Array, method: str | None = None) -> tuple[jax.Array, jax.Array, jax.Array]:
     """
     Imposes orthogonality through singular value decomposition
     :return:
@@ -142,11 +160,28 @@ def orthogonalizeModes(p: jax.Array, method: str | None = None) -> tuple[jax.Arr
         return p, normalizedEigenvalues, V
 
     else:
-        U, s, V = jnp.linalg.svd(p.reshape(p.shape[0], p.shape[1] * p.shape[2]), full_matrices=False)
+        U, s, V = cast(
+            tuple[jax.Array, jax.Array, jax.Array],
+            jnp.linalg.svd(p.reshape(p.shape[0], p.shape[1] * p.shape[2]), False),  # ty: ignore[too-many-positional-arguments,invalid-argument-type]
+        )
         p = jnp.dot(jnp.diag(s), V).reshape(p.shape[0], p.shape[1], p.shape[2])
         normalizedEigenvalues = s**2 / jnp.sum(s**2)
 
         return p, normalizedEigenvalues, U.T.conj()
+
+
+_orthogonalizeModes_jit: Callable[..., tuple[jax.Array, jax.Array, jax.Array]] = cast(
+    Callable[..., tuple[jax.Array, jax.Array, jax.Array]],
+    functools.partial(jax.jit, static_argnames=("method",))(_orthogonalizeModes_impl),
+)
+
+
+def orthogonalizeModes(p: jax.Array, method: str | None = None) -> tuple[jax.Array, jax.Array, jax.Array]:
+    """
+    Imposes orthogonality through singular value decomposition
+    :return:
+    """
+    return _orthogonalizeModes_jit(p, method)
 
 
 def zernikeAberrations(Xp: np.ndarray, Yp: np.ndarray, D: float, z_coeff: np.ndarray) -> np.ndarray:
@@ -220,7 +255,7 @@ def zernikeAberrations(Xp: np.ndarray, Yp: np.ndarray, D: float, z_coeff: np.nda
     return aperture * np.exp(1j * np.sum(list(Z.values())))
 
 
-def p2bin(im: np.ndarray, binningFactor: int) -> tuple[np.ndarray, range, range]:
+def p2bin(im: np.ndarray, binningFactor: int) -> tuple[np.ndarray, np.ndarray | range, range]:
     """
     perform binning at a factor of power of 2, return binned image and the indices for before and after binning.
     :Params im: input image for binning
