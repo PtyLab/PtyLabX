@@ -147,15 +147,26 @@ class TestJITCompilation:
 
     def test_all_kernels_are_jit_wrapped(self):
         """All exported kernels should be JIT-wrapped functions."""
+        from PtyLabX.Engines._jit_kernels import (
+            _epie_object_update_jit,
+            _epie_probe_update_jit,
+            _mpie_object_update_jit,
+            _mpie_probe_update_jit,
+            _momentum_step_jit,
+            _qnewton_object_update_jit,
+            _qnewton_probe_update_jit,
+            _epie_object_update_tv_jit,
+        )
+
         kernels = [
-            epie_object_update,
-            epie_probe_update,
-            mpie_object_update,
-            mpie_probe_update,
-            qnewton_object_update,
-            qnewton_probe_update,
-            momentum_step,
-            epie_object_update_tv,
+            _epie_object_update_jit,
+            _epie_probe_update_jit,
+            _mpie_object_update_jit,
+            _mpie_probe_update_jit,
+            _qnewton_object_update_jit,
+            _qnewton_probe_update_jit,
+            _momentum_step_jit,
+            _epie_object_update_tv_jit,
         ]
         for kernel in kernels:
             # JIT-wrapped functions are instances of jax stages

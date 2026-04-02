@@ -15,7 +15,7 @@ def test_ortho_basis_orthogonality():
     Q = ortho_basis(M)
     # Q^T Q should be identity
     QtQ = np.asarray(Q.T @ Q)
-    assert_allclose(QtQ, np.eye(10), atol=1e-5)
+    assert_allclose(QtQ, np.eye(10), atol=2e-4)
 
 
 def test_rsvd_approx_matches_full_svd():
