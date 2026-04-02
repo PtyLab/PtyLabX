@@ -4,6 +4,7 @@ import logging
 import time
 from copy import copy
 from pathlib import Path
+from typing import Any
 
 import h5py
 import jax
@@ -76,8 +77,8 @@ class Reconstruction(object):
     # --- 6D shapes ---
     shape_O: tuple[int, int, int, int, int, int]
     shape_P: tuple[int, int, int, int, int, int]
-    initialGuessObject: np.ndarray
-    initialGuessProbe: np.ndarray
+    initialGuessObject: jax.Array
+    initialGuessProbe: jax.Array | None
     # --- JAX arrays (set by initializeObjectProbe) ---
     object: ObjectArray      # shape: (nlambda, nosm, 1, nslice, No, No)
     probe: Probe             # shape: (nlambda, 1, npsm, nslice, Np, Np)
@@ -90,11 +91,33 @@ class Reconstruction(object):
     objectBuffer: ObjectArray
     probeBuffer: Probe
     errorAtPos: jax.Array
-    detectorError: jax.Array | float
+    detectorError: jax.Array
     beamWidthX: float
     beamWidthY: float
     linearOverlap: float
-    areaOverlap: float
+    areaOverlap: float | jax.Array
+    # --- Engine-set working arrays ---
+    Iestimated: jax.Array      # estimated detector intensity
+    Imeasured: jax.Array       # measured detector intensity
+    background: jax.Array      # background additive term (backgroundModeSwitch)
+    reference: jax.Array       # reference field (used by pcPIE/zPIE)
+    intensity_mask: jax.Array  # custom intensity masking
+    probe_stack: jax.Array     # OPR per-position probe stack (set by OPR engine)
+    probe_storage: Any         # OPRP probe storage (set by OPRP engine)
+    thetaHistory: jax.Array    # illumination angle history (set by aPIE)
+    initialProbe_filename: str # path to probe/object init file
+    # --- Engine-specific optional state ---
+    thetaMomentum: float       # aPIE illumination momentum
+    zHistory: list[float]      # zPIE z-distance history
+    TV_history: list[float]    # zPIE TV metric history
+    merit: np.ndarray          # zPIE merit function value
+    dz: np.ndarray             # e3PIE/zPIE slice thickness
+    refrIndex: float           # e3PIE refractive index
+    H: jax.Array               # e3PIE propagation kernel
+    objectProd: jax.Array      # e3PIE intermediate product
+    objectMomentum_v: jax.Array   # qNewton object momentum
+    probeMomentum_v: jax.Array    # qNewton probe momentum
+    probeWindow: np.ndarray | jax.Array  # absorbing boundary window (also stored on BaseEngine)
     # --- Error metric ---
     error: list[float]
     # --- Logger ---
@@ -188,6 +211,7 @@ class Reconstruction(object):
         self._zo = new_value
         if self.data.operationMode == "CPM":
             self.logger.debug(f"Changing sample-detector distance to {new_value}")
+            assert self.wavelength is not None
             self.dxp = self.wavelength * self._zo / self.Ld
         elif self.data.operationMode == "FPM":
             self.logger.debug(f"Changing illumination-to-sample distance to {new_value}")
@@ -208,18 +232,24 @@ class Reconstruction(object):
             if isinstance(self.spectralDensity, type(None)):
                 # this is a confusing name, it should be the wavelengths, not the intensity of the different
                 # wavelengths
-                self.spectralDensity = np.atleast_1d(self.wavelength)
+                assert self.wavelength is not None
+                self.spectralDensity = np.atleast_1d(float(self.wavelength))
 
         elif self.data.operationMode == "FPM":
             # FPM dxp (different from CPM due to lens-based systems)
+            assert self.dxd is not None
+            assert self.data.magnification is not None
             self.dxp = self.dxd / self.data.magnification
             # the propagation distance that is meaningful in this context is the
             # illumination to sample distance for LED array based microscopes
-            self.zo = self.zled
+            assert self.zled is not None
+            self.zo = float(self.zled)
             # if NA is not provided in the hdf5 file, set Fourier pupil entrance diameter it to be half of the Fourier space FoV.
             # then estimate the NA from the pupil diameter in the Fourier plane
+            assert self.wavelength is not None
             if isinstance(self.NA, type(None)):
                 self.data.entrancePupilDiameter = self.Lp / 2
+                assert self.data.entrancePupilDiameter is not None
                 self.NA = self.data.entrancePupilDiameter * self.wavelength / (2 * self.dxp**2 * self.Np)
             else:
                 # compute the pupil radius in the Fourier plane
@@ -309,10 +339,10 @@ class Reconstruction(object):
         )
         if self.initialObject == "recon":
             # Load the object from an existing reconstruction
-            self.initialGuessObject = self.loadResults(self.initialProbe_filename, datatype="object")
+            self.initialGuessObject = jnp.array(self.loadResults(self.initialProbe_filename, datatype="object"), dtype=jnp.complex64)
         else:
-            self.initialGuessObject = initialProbeOrObject(self.shape_O, self.initialObject, self, self.logger).astype(
-                np.complex64
+            self.initialGuessObject = jnp.array(
+                initialProbeOrObject(self.shape_O, self.initialObject, self, self.logger), dtype=jnp.complex64
             )
 
         # self.initialGuessObject *= 1e-2
@@ -342,19 +372,20 @@ class Reconstruction(object):
         )
 
         if self.initialProbe == "recon":
-            self.initialGuessProbe = self.loadResults(self.initialProbe_filename, datatype="probe")
+            self.initialGuessProbe = jnp.array(self.loadResults(self.initialProbe_filename, datatype="probe"), dtype=jnp.complex64)
         else:
             if force:
                 self.initialGuessProbe = None
             # if force:
             #     self.initialProbe = "circ"
-            self.initialGuessProbe = initialProbeOrObject(self.shape_P, self.initialProbe, self).astype(np.complex64)
+            self.initialGuessProbe = jnp.array(initialProbeOrObject(self.shape_P, self.initialProbe, self), dtype=jnp.complex64)
 
     # initialize momentum, called in specific engines with momentum accelaration
     def initializeObjectMomentum(self) -> None:
         self.objectMomentum = jnp.zeros(self.initialGuessObject.shape, dtype=jnp.complex64)
 
     def initializeProbeMomentum(self) -> None:
+        assert self.initialGuessProbe is not None
         self.probeMomentum = jnp.zeros(self.initialGuessProbe.shape, dtype=jnp.complex64)
 
     def load_object(self, filename: str | Path) -> None:
@@ -433,14 +464,14 @@ class Reconstruction(object):
         with h5py.File(filename, "r") as archive:
             self.probe = jnp.array(archive["probe"])
             self.object = jnp.array(archive["object"])
-            self.error = np.array(archive["error"])
-            self.wavelength = np.array(archive["wavelength"])
-            self.dxp = np.array(archive["dxp"])
-            self.purityProbe = np.array(archive["purityProbe"])
-            self.purityObject = np.array(archive["purityObject"])
-            self.zo = np.array(archive["zo"])
+            self.error = [float(x) for x in np.asarray(archive["error"])]
+            self.wavelength = float(np.array(archive["wavelength"]))
+            self.dxp = float(np.array(archive["dxp"]))
+            self.purityProbe = float(np.array(archive["purityProbe"]))
+            self.purityObject = float(np.array(archive["purityObject"]))
+            self.zo = float(np.array(archive["zo"]))
             if "theta" in archive.keys():
-                self.theta = np.array(archive["theta"])
+                self.theta = float(np.array(archive["theta"]))
 
     def saveResults(self, fileName: str | Path = "recent", type: str = "all", squeeze: bool = False) -> None:
         """
@@ -502,7 +533,7 @@ class Reconstruction(object):
             with h5py.File(fileName, "w") as hf:
                 hf.create_dataset("object", data=squeezefun(self.object), dtype="complex64")
         elif type == "probe_stack":
-            hf = h5py.File(fileName + "_probe_stack.hdf5", "w")
+            hf = h5py.File(str(fileName) + "_probe_stack.hdf5", "w")
             hf.create_dataset("probe_stack", data=np.asarray(self.probe_stack), dtype="complex64")
         print("The reconstruction results (%s) have been saved" % type)
 
@@ -514,6 +545,7 @@ class Reconstruction(object):
     @property
     def xd(self) -> np.ndarray:
         """Detector coordinates 1D"""
+        assert self.dxd is not None
         return np.linspace(-self.Nd / 2, self.Nd / 2, int(self.Nd)) * self.dxd
 
     @property
@@ -529,6 +561,7 @@ class Reconstruction(object):
     @property
     def Ld(self) -> float:
         """Detector size in SI units."""
+        assert self.dxd is not None
         return self.Nd * self.dxd
 
     # probe coordinates
@@ -607,7 +640,10 @@ class Reconstruction(object):
         in the spectrogram is updates a patch which has pixel coordinates
         [3,4] in the high-resolution Fourier transform
         """
+        assert self.encoder_corrected is not None
         if self.data.operationMode == "FPM":
+            assert self.wavelength is not None
+            assert self.zled is not None
             conv = -(1 / self.wavelength) * self.dxo * self.Np
             positions = np.round(
                 conv
@@ -630,22 +666,22 @@ class Reconstruction(object):
     @property
     def NAd(self) -> float:
         """Detection NA"""
+        assert self.zo is not None
         NAd = self.Ld / (2 * self.zo)
         return NAd
 
     @property
     def DoF(self) -> float:
         """expected Depth of field"""
+        assert self.wavelength is not None
         DoF = self.wavelength / self.NAd**2
         # self.Dof2 = 5.2 *self.dxp**2 /self.wavelength
         return DoF
 
     def describe_reconstruction(self) -> str:
         minmax_tv = ""
-        try:
+        if self.params.TV_autofocus_min_z is not None and self.params.TV_autofocus_max_z is not None:
             minmax_tv = f"(min: {self.params.TV_autofocus_min_z * 1e3}, max: {self.params.TV_autofocus_max_z * 1e3}.)"
-        except TypeError:  # one of them is none
-            pass
         info = f"""
         Experimental data:
         - Number of ptychograms: {self.data.ptychogram.shape}
@@ -659,7 +695,7 @@ class Reconstruction(object):
         - Pixel pitch: {self.dxo * 1e6} um
         - Field of view: {self.Lo * 1e3} mm
         - Scan size in pixels: {self.positions.max(axis=0) - self.positions.min(axis=0)}
-        - Propagation distance: {self.zo * 1e3} mm {minmax_tv}
+        - Propagation distance: {self.zo * 1e3 if self.zo is not None else 'N/A'} mm {minmax_tv}
         - Probe FoV: {self.Lp * 1e3} mm
         
         Derived parameters:
@@ -736,6 +772,7 @@ class Reconstruction(object):
         else:
             sy, sx = ss, ss
 
+        assert self.wavelength is not None
         merit, OEs = metric_at(
             field,
             dz,
@@ -765,7 +802,7 @@ class Reconstruction(object):
         self.logger.info(
             f"TV autofocus took {end_time - start_time} seconds, and moved focus by {-delta_z * 1e6} micron"
         )
-        indices = [nplanes // 2, np.argmax(merit)]
+        indices = np.array([nplanes // 2, np.argmax(merit)])
         OEs = OEs[indices]
         phexp = OEs.sum((-2, -1), keepdims=True).conj()
         phexp = phexp / abs(phexp)

@@ -46,7 +46,7 @@ class OPRP_storage:
         probe_power = jnp.mean(jnp.abs(probes**2), axis=-1, keepdims=True)
         probes = probes * jnp.mean(average_power / (probe_power + 1e-6))
 
-        A, s, At = jnp.linalg.svd(probes, full_matrices=False)
+        A, s, At = jnp.linalg.svd(probes, full_matrices=False)  # ty: ignore[unknown-argument,invalid-argument-type,not-iterable]
         N = self.N_probes
         # calculate effective rank
         pk = s / jnp.linalg.norm(s.flatten(), ord=1)

@@ -37,6 +37,7 @@ class LinearProbe:
         return self.probe
 
     def roll(self, dy, dx):
+        assert self.probe_temp is not None
         self.probe = self.probe_temp.copy()
         self.probe = jnp.roll(self.probe, (-dy, -dx), axis=(-2, -1))
         self.probe_temp = self.probe.copy()
@@ -52,7 +53,7 @@ class SHGProbe(LinearProbe):
     def clear(self):
         pass
 
-    def push(self, new_probe_nonlinear, index, N_positions):
+    def push(self, new_probe_nonlinear, index, N_positions):  # ty: ignore[invalid-method-override]
         """Gets the update of the nonlinear part"""
         if self.probe is not None:
             new_probe_nonlinear = jnp.array(new_probe_nonlinear)
@@ -83,6 +84,8 @@ class SHGProbe(LinearProbe):
             print(jnp.linalg.norm(self.get(None) - new_probe))
 
     def get(self, index):
+        assert self.probe is not None
+        assert self.nonlinearity is not None
         return self.probe**self.nonlinearity
 
     def get_fundamental(self):

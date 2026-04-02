@@ -35,7 +35,11 @@ class IlluminationCalibration:
         self.img_size = reconstructor.Np
         # # inverse calculation of the NA since we don't have the values provided by the user at the moment
         # self.reconstructor.NA = reconstructor.entrancePupilDiameter/2 * reconstructor.wavelength / (reconstructor.dxp**2 * reconstructor.Np)
-        self.apertRadiusPixel = self.dxp * self.img_size * self.reconstructor.NA / self.wavelength
+        NA = self.reconstructor.NA
+        assert NA is not None
+        wavelength = self.wavelength
+        assert wavelength is not None
+        self.apertRadiusPixel = self.dxp * self.img_size * NA / wavelength
         self.apertRadiusPixel_init = self.apertRadiusPixel
 
         lens_range = np.linspace(-self.img_size / 2, self.img_size / 2, self.img_size)
@@ -281,7 +285,7 @@ class IlluminationCalibration:
             ) <= self.apertRadiusPixel**2
             pupil[pupil_coords] = 1
             # generate a low-pass filtered image with a shifted filter
-            estimated_img = np.abs(ifft2c(pupil * fft_raw))
+            estimated_img = np.abs(ifft2c(np.array(pupil * fft_raw)))  # ty: ignore[invalid-argument-type]
 
             # see if the shifted positions minimize the error
             error = low_pass_img - estimated_img
@@ -697,7 +701,9 @@ class IlluminationCalibration:
 
         """
         # convert translation from pixels to SI units and update the encoder
-        conv = -(1 / self.reconstructor.wavelength) * self.reconstructor.dxo * self.reconstructor.Np
+        wavelength = self.reconstructor.wavelength
+        assert wavelength is not None
+        conv = -(1 / wavelength) * self.reconstructor.dxo * self.reconstructor.Np
         z = self.reconstructor.zled
 
         # convert caibration matrix values into encoder units
@@ -763,7 +769,9 @@ class IlluminationCalibration:
             print("Calibrated NA is {}".format(self.reconstructor.NA))
             self.apertRadiusPixel = newRadius
         else:
-            self.reconstructor.NA = self.apertRadiusPixel / self.dxp * self.wavelength / self.img_size
+            wavelength = self.wavelength
+            assert wavelength is not None
+            self.reconstructor.NA = self.apertRadiusPixel / self.dxp * wavelength / self.img_size
 
         # find the calibration matrix between the initial positions and the ones
         # found based on circle fitting

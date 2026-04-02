@@ -1,7 +1,7 @@
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
 from PtyLabX.Reconstruction.Reconstruction import Reconstruction
 from PtyLabX.Reconstruction.CalibrationFPM import IlluminationCalibration
-from PtyLabX.Monitor.Monitor import Monitor, DummyMonitor
+from PtyLabX.Monitor.Monitor import Monitor, DummyMonitor, AbstractMonitor
 from PtyLabX.Params.Params import Params
 from PtyLabX import Engines
 from pathlib import Path
@@ -12,7 +12,7 @@ def easyInitialize(
     engine: type[Engines.BaseEngine] = Engines.ePIE,
     operationMode: str = "CPM",
     dummyMonitor: bool = False,
-) -> tuple[ExperimentalData, Reconstruction, Params, Monitor, Engines.BaseEngine]:
+) -> tuple[ExperimentalData, Reconstruction, Params, AbstractMonitor, Engines.BaseEngine]:
     """Do a 'standard' initialization, and return the items you need with some sensible defaults."""
     if operationMode == "CPM":
         return _easyInitializeCPM(filename, engine, operationMode, dummyMonitor)
@@ -22,13 +22,13 @@ def easyInitialize(
         raise NotImplementedError()
 
 
-def _easyInitializeCPM(filename: Path, engine_function: type[Engines.BaseEngine], operationMode: str, dummy_monitor: bool = False) -> tuple[ExperimentalData, Reconstruction, Params, Monitor, Engines.BaseEngine]:
+def _easyInitializeCPM(filename: Path, engine_function: type[Engines.BaseEngine], operationMode: str, dummy_monitor: bool = False) -> tuple[ExperimentalData, Reconstruction, Params, AbstractMonitor, Engines.BaseEngine]:
     experimentalData = ExperimentalData(filename, operationMode)
     params = Params()
     if dummy_monitor:
-        monitor = DummyMonitor()
+        monitor: AbstractMonitor = DummyMonitor()
     else:
-        monitor = Monitor()
+        monitor: AbstractMonitor = Monitor()
     reconstruction = Reconstruction(experimentalData, params)
 
     reconstruction.initializeObjectProbe()
@@ -40,9 +40,9 @@ def _easyInitializeCPM(filename: Path, engine_function: type[Engines.BaseEngine]
 def _easyInitializeFPM(filename: Path, engine_function: type[Engines.BaseEngine], operationMode: str, dummy_monitor: bool = False):
     experimentalData = ExperimentalData(filename, operationMode)
     if dummy_monitor:
-        monitor = DummyMonitor()
+        monitor: AbstractMonitor = DummyMonitor()
     else:
-        monitor = Monitor()
+        monitor: AbstractMonitor = Monitor()
 
     params = Params()
     reconstruction = Reconstruction(experimentalData, params)
