@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 
+import jax
 import numpy as np
 
 from PtyLabX.io import readHdf5
@@ -14,7 +15,7 @@ class ExperimentalData:
     """
 
     # --- Fields loaded from HDF5 (required for CPM and FPM) ---
-    ptychogram: np.ndarray  # 3D image stack of diffraction patterns
+    ptychogram: np.ndarray | jax.Array  # 3D image stack of diffraction patterns (numpy at load, JAX after GPU transfer)
     wavelength: float  # illumination wavelength (meters)
     encoder: np.ndarray  # scan positions
 
@@ -24,7 +25,7 @@ class ExperimentalData:
     entrancePupilDiameter: float | None  # probe aperture diameter (meters)
     spectralDensity: np.ndarray | None  # wavelength spectrum for polychromatic ptychography
     theta: float | None  # tilt angle for reflection geometry (radians)
-    emptyBeam: np.ndarray | None  # reference image of the probe beam
+    emptyBeam: np.ndarray | jax.Array | None  # reference image of the probe beam
 
     # --- FPM-specific fields ---
     zled: float | None  # LED-to-sample distance (meters)
@@ -38,8 +39,14 @@ class ExperimentalData:
     Yd: np.ndarray  # 2D detector Y coordinates (meters)
     Ld: float  # detector physical size (meters)
     numFrames: int  # number of diffraction patterns
-    energyAtPos: np.ndarray  # integrated intensity at each scan position
+    energyAtPos: np.ndarray | jax.Array  # integrated intensity at each scan position (numpy at load, JAX after GPU transfer)
     maxProbePower: float  # maximum probe power across all positions
+    # --- Engine-set computed arrays ---
+    filename: Path  # resolved path to loaded HDF5 file
+    W: jax.Array | None  # weighting mask (set by aPIE engine)
+    ptychogramDownsampled: jax.Array | None  # downsampled ptychogram (CPSC engine)
+    spectralPower: jax.Array | None  # spectral power (polychromatic engines)
+    PSD: jax.Array | None  # power spectral density
 
     def __init__(self, filename: str | Path | None = None, operationMode: str = "CPM") -> None:
         self.logger = logging.getLogger("ExperimentalData")
@@ -87,8 +94,13 @@ class ExperimentalData:
             ]
         else:
             raise ValueError('operationMode is not properly set, choose "CPM" or "FPM"')
+        # Engine-set computed arrays (initialized to None; set during reconstruction)
+        self.W = None
+        self.ptychogramDownsampled = None
+        self.spectralPower = None
+        self.PSD = None
 
-    def loadData(self, filename: str | Path | None = None) -> None:
+    def loadData(self, filename: str | Path) -> None:
         """
         Load data specified in filename.
         :type filename: str or Path
@@ -104,12 +116,11 @@ class ExperimentalData:
         import os
 
         if not os.path.exists(filename) and str(filename).startswith("example:"):
-            self.filename = filename
             from PtyLabX.io.readExample import examplePath
 
-            self.filename = examplePath(filename)  # readExample(filename, python_order=True)
+            self.filename = Path(examplePath(str(filename)))
         else:
-            self.filename = filename
+            self.filename = Path(filename)
 
         # 1. check if the dataset contains what we need before loading
         readHdf5.checkDataFields(self.filename, self.requiredFields)
