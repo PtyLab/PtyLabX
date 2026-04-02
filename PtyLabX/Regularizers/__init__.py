@@ -1,5 +1,6 @@
 import functools
 from collections.abc import Callable
+from typing import Any, cast
 
 import jax
 import jax.numpy as jnp
@@ -22,12 +23,11 @@ def std(field: jax.Array, aleph: float = 1e-2) -> float:
     Returns
     -------
     standard deviation of field as implemented in numpy
-
     """
-    return np.asarray(jnp.std(field))
+    return float(np.asarray(jnp.std(field)))
 
 
-def min_std(*args: object, **kwargs: object) -> float:
+def min_std(*args: Any, **kwargs: Any) -> float:
     """
     Return minus the standard deviation of a field. See ``Ptylab.Regularizers.std''  for more info
 
@@ -123,14 +123,17 @@ def metric_at(
     -------
 
     """
-    possible_metrics = {"TV": TV, "STD": std, "MIN_STD": min_std}
-    if not isinstance(type(metric), type(callable)):
+    possible_metrics: dict[str, Callable[..., float]] = {"TV": TV, "STD": std, "MIN_STD": min_std}
+    metric_fn: Callable[..., float]
+    if isinstance(metric, str):
         try:
-            metric = possible_metrics[metric.upper()]
+            metric_fn = possible_metrics[metric.upper()]
         except KeyError:
             raise KeyError(
                 f"Could not map {metric} to a metric. Allowed keywords are: {[k for k in possible_metrics.keys()]}"
             )
+    else:
+        metric_fn = metric
 
     if savemem:
         # sy and sx are extracting after propagation, sy1 and sx1 are extracting before
@@ -170,7 +173,7 @@ def metric_at(
         elif average_by_power and intensity_only:
             OE = OE / OE.mean()
 
-        score = metric(OE)
+        score = metric_fn(OE)
         OEs.append(np.asarray(OE))
         scores.append(score)
     if return_propagated:
@@ -179,10 +182,20 @@ def metric_at(
         return np.array(scores)
 
 
-@functools.partial(jax.jit, static_argnums=(1,))
-def _finite_diff_gradient(f: jax.Array, axis: int) -> jax.Array:
+def _finite_diff_gradient_impl(f: jax.Array, axis: int) -> jax.Array:
     """Central finite difference approximation of gradient along a single axis."""
     return (jnp.roll(f, -1, axis=axis) - jnp.roll(f, 1, axis=axis)) / 2
+
+
+_finite_diff_gradient_jit: Callable[..., jax.Array] = cast(
+    Callable[..., jax.Array],
+    functools.partial(jax.jit, static_argnums=(1,))(_finite_diff_gradient_impl),
+)
+
+
+def _finite_diff_gradient(f: jax.Array, axis: int) -> jax.Array:
+    """Central finite difference approximation of gradient along a single axis."""
+    return _finite_diff_gradient_jit(f, axis)
 
 
 def divergence(f: jax.Array) -> jax.Array:
@@ -197,20 +210,20 @@ def divergence(f: jax.Array) -> jax.Array:
     -------
 
     """
-    return _finite_diff_gradient(f[0], axis=4) + _finite_diff_gradient(f[1], axis=5)
+    return _finite_diff_gradient(f[0], 4) + _finite_diff_gradient(f[1], 5)
 
 
 @jax.jit
 def divergence_new(f: jax.Array) -> jax.Array:
-    grad_y = _finite_diff_gradient(f[0], axis=-2)
-    grad_x = _finite_diff_gradient(f[1], axis=-1)
+    grad_y = _finite_diff_gradient(f[0], -2)
+    grad_x = _finite_diff_gradient(f[1], -1)
     return grad_y + grad_x
 
 
 @jax.jit
 def grad_TV(field: jax.Array, epsilon: float = 1e-2) -> jax.Array:
-    gradient_y = _finite_diff_gradient(field, axis=-2)
-    gradient_x = _finite_diff_gradient(field, axis=-1)
+    gradient_y = _finite_diff_gradient(field, -2)
+    gradient_x = _finite_diff_gradient(field, -1)
     gradient = jnp.array([gradient_y, gradient_x])
     norm = jnp.sqrt(jnp.sum(gradient, axis=0) ** 2 + epsilon)
     gradient = gradient / norm
