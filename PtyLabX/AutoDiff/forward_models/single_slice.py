@@ -51,6 +51,7 @@ def single_slice_forward(
 
     def _single_position(pos_idx: jax.Array) -> jax.Array:
         """Forward model for one scan position."""
+        assert probe is not None
         row, col = static.positions[pos_idx, 0], static.positions[pos_idx, 1]
         # Extract object patch — dynamic_slice is vmap/grad compatible
         object_patch = jax.lax.dynamic_slice(state.object, (0, 0, 0, 0, row, col), (*state.object.shape[:4], Np, Np))

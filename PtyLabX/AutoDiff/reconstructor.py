@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Generator
+from typing import Any
 
 import jax
 import jax.numpy as jnp
@@ -48,6 +49,19 @@ class GradientReconstructor:
         Preconditioning regularisation: ``eps = factor * max(|probe|^2)``.
     """
 
+    loss_fn: Callable
+    optimizer: optax.GradientTransformation
+    state: PtychographyState
+    static: StaticConfig
+    known_probe: jax.Array | None
+    batch_size: int
+    preconditioning: bool
+    precond_eps_factor: float
+    opt_state: Any
+    num_frames: int
+    error: list[float]
+    _grad_fn: Callable
+
     def __init__(
         self,
         loss_fn: Callable,
@@ -69,7 +83,7 @@ class GradientReconstructor:
         self.preconditioning = preconditioning
         self.precond_eps_factor = precond_eps_factor
 
-        self.opt_state = optimizer.init(state)
+        self.opt_state = optimizer.init(state)  # ty: ignore[invalid-argument-type]
         self.num_frames = static.positions.shape[0]
         self.error: list[float] = []
 
@@ -112,11 +126,11 @@ class GradientReconstructor:
 
         _val_grad = jax.value_and_grad(_single_pos_loss, argnums=0)
 
-        def _batched_step(obj, probe, rows, cols, batch_I_meas, positions, ptychogram, known_probe):
+        def _batched_step(obj, probe, rows, cols, batch_I_meas, _positions, ptychogram, known_probe):
             """Compute loss + object gradients for an entire batch via vmap."""
 
             def _per_pos(row, col, I_meas):
-                return _val_grad(obj, probe, row, col, I_meas, positions, ptychogram, known_probe)
+                return _val_grad(obj, probe, row, col, I_meas, _positions, ptychogram, known_probe)
 
             losses, grads = jax.vmap(_per_pos)(rows, cols, batch_I_meas)
             return losses, grads
@@ -130,6 +144,7 @@ class GradientReconstructor:
         regions with strong illumination from dominating the update.
         """
         probe = self.state.probe if self.state.probe is not None else self.known_probe
+        assert probe is not None
         probe_int = jnp.sum(jnp.abs(probe) ** 2, axis=(0, 1, 2, 3))  # (Np, Np)
         eps = self.precond_eps_factor * jnp.max(probe_int)
         # Pad probe_int to object shape for broadcasting: (1,1,1,1,Np,Np) won't
@@ -204,8 +219,8 @@ class GradientReconstructor:
                 grad_state = PtychographyState(object=grad_obj, probe=None)
 
                 # Optax update
-                updates, self.opt_state = self.optimizer.update(grad_state, self.opt_state, self.state)
-                self.state = optax.apply_updates(self.state, updates)
+                updates, self.opt_state = self.optimizer.update(grad_state, self.opt_state, self.state)  # ty: ignore[invalid-argument-type]
+                self.state = optax.apply_updates(self.state, updates)  # ty: ignore[invalid-argument-type, invalid-assignment]
 
                 epoch_loss += float(batch_losses.sum())
 

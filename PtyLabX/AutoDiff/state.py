@@ -121,6 +121,10 @@ def static_from_reconstruction(
     -------
     StaticConfig
     """
+    assert reconstruction.wavelength is not None
+    assert reconstruction.zo is not None
+    assert reconstruction.dxp is not None
+    assert reconstruction.dxd is not None
     return StaticConfig(
         positions=jnp.array(reconstruction.positions, dtype=jnp.int32),
         ptychogram=jnp.array(experimentalData.ptychogram, dtype=jnp.float32),

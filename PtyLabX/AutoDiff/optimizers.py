@@ -56,6 +56,6 @@ def build_optimizer(
 
     def _label_fn(state: PtychographyState) -> PtychographyState:
         """Map each PtychographyState field to its optimizer label."""
-        return PtychographyState(**{f.name: label_map[f.name] for f in fields(state)})
+        return PtychographyState(**{f.name: label_map[f.name] for f in fields(state)})  # ty: ignore[invalid-argument-type]
 
-    return optax.multi_transform(transforms, _label_fn)
+    return optax.multi_transform(transforms, _label_fn)  # ty: ignore[invalid-argument-type]
