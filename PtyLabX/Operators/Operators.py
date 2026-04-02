@@ -2,7 +2,7 @@ import functools
 import logging
 from collections.abc import Callable
 from functools import lru_cache
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import jax
 import jax.numpy as jnp
@@ -24,10 +24,20 @@ from PtyLabX.Operators.propagator_utils import complexexp
 from PtyLabX.utils.utils import circ, fft2c, ifft2c
 
 
-@functools.partial(jax.jit, static_argnums=(2,))
+def _asp_propagate_impl(u: jax.Array, transfer_function: jax.Array, fftshiftSwitch: bool) -> jax.Array:
+    """Core of ASP propagation: FFT, multiply by transfer function, IFFT."""
+    return ifft2c(fft2c(u, fftshiftSwitch=fftshiftSwitch) * transfer_function, fftshiftSwitch=fftshiftSwitch)
+
+
+_asp_propagate_jit: Callable[..., jax.Array] = cast(
+    Callable[..., jax.Array],
+    functools.partial(jax.jit, static_argnums=(2,))(_asp_propagate_impl),
+)
+
+
 def _asp_propagate(u: jax.Array, transfer_function: jax.Array, fftshiftSwitch: bool) -> jax.Array:
     """JIT-compiled core of ASP propagation: FFT, multiply by transfer function, IFFT."""
-    return ifft2c(fft2c(u, fftshiftSwitch=fftshiftSwitch) * transfer_function, fftshiftSwitch=fftshiftSwitch)
+    return _asp_propagate_jit(u, transfer_function, fftshiftSwitch)
 
 
 # how many kernels are kept in memory for every type of propagator? Higher can be faster but comes
@@ -219,20 +229,15 @@ def propagate_ASP(
     return reconstruction.esw, result
 
 
-def propagate_ASP_inv(*args: object, **kwargs: object) -> PropagatorReturn:
-    """
-    See propagate_ASP
-
-    Parameters
-    ----------
-    args
-    kwargs
-
-    Returns
-    -------
-
-    """
-    return propagate_ASP(*args, **kwargs, inverse=True)
+def propagate_ASP_inv(
+    fields: jax.Array,
+    params: Params,
+    reconstruction: Reconstruction,
+    z: float | None = None,
+    fftflag: bool = True,
+) -> PropagatorReturn:
+    """Inverse ASP propagation. See propagate_ASP."""
+    return propagate_ASP(fields, params, reconstruction, z=z, fftflag=fftflag, inverse=True)
 
 
 def propagate_twoStepPolychrome(
@@ -265,6 +270,7 @@ def propagate_twoStepPolychrome(
     """
     if z is None:
         z = reconstruction.zo
+    assert reconstruction.spectralDensity is not None
     transfer_function, quadratic_phase = _make_cache_twoStepPolychrome(
         params.fftshiftSwitch,
         reconstruction.nlambda,
@@ -274,7 +280,7 @@ def propagate_twoStepPolychrome(
         z,
         # this has to be cast to a tuple to
         # make sure it is reused
-        tuple(reconstruction.spectralDensity),
+        tuple(reconstruction.spectralDensity),  # spectralDensity is asserted non-None before this call
         reconstruction.Lp,
         reconstruction.dxp,
     )
@@ -408,6 +414,7 @@ def propagate_scaledPolychromeASP(
     """
     if z is None:
         z = reconstruction.zo
+    assert reconstruction.spectralDensity is not None
     Q1, Q2 = _make_transferfunction_scaledPolychromeASP(
         params.fftshiftSwitch,
         reconstruction.nlambda,
@@ -415,7 +422,7 @@ def propagate_scaledPolychromeASP(
         reconstruction.npsm,
         z,
         reconstruction.Np,
-        tuple(reconstruction.spectralDensity),
+        tuple(reconstruction.spectralDensity),  # spectralDensity is asserted non-None before this call
         reconstruction.dxo,
         reconstruction.dxd,
     )
@@ -488,6 +495,7 @@ def propagate_polychromeASP(
     """
     if z is None:
         z = reconstruction.zo
+    assert reconstruction.spectralDensity is not None
     transfer_function = _make_transferfunction_polychrome_ASP(
         params.propagatorType,
         params.fftshiftSwitch,
@@ -498,7 +506,7 @@ def propagate_polychromeASP(
         reconstruction.wavelength,
         reconstruction.Lp,
         reconstruction.nlambda,
-        tuple(reconstruction.spectralDensity),
+        tuple(reconstruction.spectralDensity),  # spectralDensity is asserted non-None before this call
     )
 
     if inverse:
@@ -631,11 +639,21 @@ def aspw(
     return u_prop, phase_exp
 
 
-@functools.partial(jax.jit, static_argnums=(2,))
-def _aspw_propagate_core(u: jax.Array, phase_exp: jax.Array, is_FT: bool) -> jax.Array:
-    """JIT-compiled core of aspw: FFT (if needed), multiply, IFFT."""
+def _aspw_propagate_core_impl(u: jax.Array, phase_exp: jax.Array, is_FT: bool) -> jax.Array:
+    """Core of aspw: FFT (if needed), multiply, IFFT."""
     U = u if is_FT else fft2c(u)
     return ifft2c(U * phase_exp)
+
+
+_aspw_propagate_core_jit: Callable[..., jax.Array] = cast(
+    Callable[..., jax.Array],
+    functools.partial(jax.jit, static_argnums=(2,))(_aspw_propagate_core_impl),
+)
+
+
+def _aspw_propagate_core(u: jax.Array, phase_exp: jax.Array, is_FT: bool) -> jax.Array:
+    """JIT-compiled core of aspw: FFT (if needed), multiply, IFFT."""
+    return _aspw_propagate_core_jit(u, phase_exp, is_FT)
 
 
 def scaledASP(
@@ -914,7 +932,10 @@ def _make_transferfunction_scaledASP(
     _Q2 = jnp.ones_like(dummy)
     for i_nosm in range(nosm):
         for i_npsm in range(npsm):
-            _, q1, q2 = scaledASP(dummy[0, i_nosm, i_npsm, 0, :, :], zo, wavelength, dxo, dxd)
+            _, q1, q2 = cast(
+                tuple[jax.Array, jax.Array, jax.Array],
+                scaledASP(dummy[0, i_nosm, i_npsm, 0, :, :], zo, wavelength, dxo, dxd),
+            )
             _Q1 = _Q1.at[0, i_nosm, i_npsm, 0, ...].set(q1)
             _Q2 = _Q2.at[0, i_nosm, i_npsm, 0, ...].set(q2)
 

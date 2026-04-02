@@ -215,18 +215,18 @@ def _interface_sas(
     fields,
     params: Params,
     reconstruction: Reconstruction,
-    z: float = None,
+    z: float | None = None,
     with_quad_phase_Q2: bool = False,
 ):
     """Just an interface for the actual forward and backward off-axis sas propagator"""
 
     # ideally pad factor of 2 is supported as per the SAS publication, however can be modified by user.
     pad_factor = reconstruction.pad_factor if hasattr(reconstruction, "pad_factor") else 2
-    fields_padded = _pad_field(fields, pad_factor)
+    fields_padded = _pad_field(fields, pad_factor)  # ty: ignore[invalid-argument-type]
 
     # modified Np and Lp with the pad factor
     wavelength = reconstruction.wavelength
-    Np = reconstruction.Np * pad_factor
+    Np = reconstruction.Np * pad_factor  # ty: ignore[unsupported-operator]
     Lp = Np * reconstruction.dxp
 
     # specifying z1 (aspw) and z2 (Fresnel) virtual distance for relaxing
@@ -244,14 +244,14 @@ def _interface_sas(
     )
 
     # z2 virtual distance (Fresnel) for relaxing sampling requirements
-    z2 = float(prefactor_z * z1)
+    z2 = float(prefactor_z * z1)  # ty: ignore[unsupported-operator]
 
     # modify real-space resolution if required, however preferably kept at 1.0 (diffraction-limited)
     prefactor_dxp = reconstruction.prefactor_dxp if hasattr(reconstruction, "prefactor_dxp") else 1.0
 
     # probe FOV adjusted with the pad factor
-    Ld = reconstruction.Ld * pad_factor
-    reconstruction.dxp = float(prefactor_dxp * wavelength * z2 / Ld)
+    Ld = reconstruction.Ld * pad_factor  # ty: ignore[unsupported-operator]
+    reconstruction.dxp = float(prefactor_dxp * wavelength * z2 / Ld)  # ty: ignore[unsupported-operator]
 
     # quadratic phase Q2 (currently zo, but this can be z2 and z1 separated)
     dxp = float(reconstruction.dxp)
@@ -263,12 +263,12 @@ def _interface_sas(
 
     if with_quad_phase_Q2:
         # quadratic phase Q2 (mostly okay to ignore it!)
-        dxq = wavelength * z1 / Lp
-        k = 2 * jnp.pi / wavelength
+        dxq = wavelength * z1 / Lp  # ty: ignore[unsupported-operator]
+        k = 2 * jnp.pi / wavelength  # ty: ignore[unsupported-operator]
         x_q = jnp.linspace(-Np / 2, Np / 2, int(Np)) * dxq
         Xq, Yq = x_q.reshape(1, -1), x_q.reshape(-1, 1)
 
-        quad_phase_Q2 = jnp.exp(1j * k * z1) * jnp.exp(1.0j * k / (2 * z1) * (Xq**2 + Yq**2))
+        quad_phase_Q2 = jnp.exp(1j * k * z1) * jnp.exp(1.0j * k / (2 * z1) * (Xq**2 + Yq**2))  # ty: ignore[unsupported-operator]
 
     return_dict = {
         "fields_padded": fields_padded,
@@ -285,7 +285,7 @@ def propagate_sas(
     fields,
     params: Params,
     reconstruction: Reconstruction,
-    z: float = None,
+    z: float | None = None,
     with_quad_phase_Q2: bool = False,
 ):
     """
@@ -339,7 +339,7 @@ def propagate_sas_inv(
     fields,
     params: Params,
     reconstruction: Reconstruction,
-    z: float = None,
+    z: float | None = None,
     with_quad_phase_Q2: bool = False,
 ):
     """
