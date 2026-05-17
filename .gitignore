@@ -9,3 +9,4 @@
 .DS_Store
 site/
 *.json
+.claude
