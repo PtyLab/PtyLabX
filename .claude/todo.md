@@ -1,1 +1,0 @@
-- [ ] *2026-03-16.* The main reconstruction loops in the engines aren't JIT-compiled. Each iteration re-enters Python, which means JAX dispatch overhead per iteration. This is expected for the outer loop (due to Python-side logic), but inner array ops that are called repeatedly could be extracted into @jax.jit functions if they aren't already.
