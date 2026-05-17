@@ -7,17 +7,11 @@
 > [!WARNING]
 > This project is under active development. The documentation is incomplete and does not cover all use cases. Some existing features might either be slow/unstable until everything is thoroughly tested. API could change mainly around making some interface immutable to allow gradient flow.
 
-PtyLabX is an experimental JAX-based ptychographic reconstruction toolbox, forked from [PtyLab.py](https://github.com/PtyLab/PtyLab.py). It performs iterative phase retrieval for **Conventional Ptychographic Microscopy (CPM)** and **Fourier Ptychographic Microscopy (FPM)** in a unified framework. See the [original publication](https://opg.optica.org/oe/fulltext.cfm?uri=oe-31-9-13763&id=529026) for more details. 
-
-
 [**Installation**](#installation) | [**Development and Contribution**](#development-and-contribution) | [**Getting Started**](#getting-started) | [**PtyLabX Documentation**](#documentation)
 
-The computational backend is [JAX](https://github.com/jax-ml/jax), enabling not just GPU acceleration, but also features such as JIT, XLA (amongst others) to speed-up existing PtyLab engines and flexibility of adding newer models to use AD and enable gradient-based optimization.
+PtyLabX is an experimental JAX-based ptychographic reconstruction toolbox, forked from [PtyLab.py](https://github.com/PtyLab/PtyLab.py) (see the [original publication](https://opg.optica.org/oe/fulltext.cfm?uri=oe-31-9-13763&id=529026)).
 
-
-## Getting started
-
-To explore use cases of PtyLab, check the [example_scripts](example_scripts) and [jupyter_tutorials](jupyter_tutorials) directories. However, please install the package first as described in the below sections.
+The [JAX](https://github.com/jax-ml/jax) backend brings GPU acceleration, JIT, and XLA, aiming to accelerate existing algorithms and enable new models with automatic differentiation and gradient-based optimization.
 
 ## Installation
 
