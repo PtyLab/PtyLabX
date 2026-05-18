@@ -21,7 +21,9 @@ def scalify(val: np.ndarray) -> np.ndarray | float | int:
         return val
 
 
-def loadInputData(filename: Path, requiredFields: list[str], optionalFields: list[str]) -> dict[str, np.ndarray | float | int | None]:
+def loadInputData(
+    filename: Path, requiredFields: list[str], optionalFields: list[str]
+) -> dict[str, np.ndarray | float | int | None]:
     """
     Load all values from an hdf5 file into a dictionary, but only with the required fields
     :param filename: the .hdf5 file that has to be loaded. If it's a .mat file it will attempt to load it

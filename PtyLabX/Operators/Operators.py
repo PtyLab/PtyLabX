@@ -24,9 +24,7 @@ from PtyLabX.Operators.propagator_utils import complexexp
 from PtyLabX.utils.utils import circ, fft2c, ifft2c
 
 
-def _asp_propagate_impl(
-    u: jax.Array, transfer_function: jax.Array, fftshiftSwitch: bool
-) -> jax.Array:
+def _asp_propagate_impl(u: jax.Array, transfer_function: jax.Array, fftshiftSwitch: bool) -> jax.Array:
     """Core of ASP propagation: FFT, multiply by transfer function, IFFT."""
     return ifft2c(
         fft2c(u, fftshiftSwitch=fftshiftSwitch) * transfer_function,
@@ -40,9 +38,7 @@ _asp_propagate_jit: Callable[..., jax.Array] = cast(
 )
 
 
-def _asp_propagate(
-    u: jax.Array, transfer_function: jax.Array, fftshiftSwitch: bool
-) -> jax.Array:
+def _asp_propagate(u: jax.Array, transfer_function: jax.Array, fftshiftSwitch: bool) -> jax.Array:
     """JIT-compiled core of ASP propagation: FFT, multiply by transfer function, IFFT."""
     return _asp_propagate_jit(u, transfer_function, fftshiftSwitch)
 
@@ -256,9 +252,7 @@ def propagate_ASP_inv(
     fftflag: bool = True,
 ) -> PropagatorReturn:
     """Inverse ASP propagation. See propagate_ASP."""
-    return propagate_ASP(
-        fields, params, reconstruction, z=z, fftflag=fftflag, inverse=True
-    )
+    return propagate_ASP(fields, params, reconstruction, z=z, fftflag=fftflag, inverse=True)
 
 
 def propagate_twoStepPolychrome(
@@ -301,16 +295,12 @@ def propagate_twoStepPolychrome(
         z,
         # this has to be cast to a tuple to
         # make sure it is reused
-        tuple(
-            reconstruction.spectralDensity
-        ),  # spectralDensity is asserted non-None before this call
+        tuple(reconstruction.spectralDensity),  # spectralDensity is asserted non-None before this call
         reconstruction.Lp,
         reconstruction.dxp,
     )
     if inverse:
-        result = ifft2c(
-            fft2c(fields * quadratic_phase.conj()) * transfer_function.conj()
-        )
+        result = ifft2c(fft2c(fields * quadratic_phase.conj()) * transfer_function.conj())
         return reconstruction.esw, result
     else:
         result = ifft2c(fft2c(fields) * transfer_function) * quadratic_phase
@@ -338,12 +328,10 @@ def propagate_twoStepPolychrome_inv(
     -------
 
     """
-    F = propagate_twoStepPolychrome(fields, params, reconstruction, inverse=True, z=z)[
+    F = propagate_twoStepPolychrome(fields, params, reconstruction, inverse=True, z=z)[1]
+    G = propagate_twoStepPolychrome(reconstruction.ESW, params, reconstruction, inverse=True, z=z)[
         1
-    ]
-    G = propagate_twoStepPolychrome(
-        reconstruction.ESW, params, reconstruction, inverse=True, z=z
-    )[1]  # tODO: What is G here? Why are we not returning reconstruction.esw?
+    ]  # tODO: What is G here? Why are we not returning reconstruction.esw?
     return G, F
 
 
@@ -455,9 +443,7 @@ def propagate_scaledPolychromeASP(
         reconstruction.npsm,
         z,
         reconstruction.Np,
-        tuple(
-            reconstruction.spectralDensity
-        ),  # spectralDensity is asserted non-None before this call
+        tuple(reconstruction.spectralDensity),  # spectralDensity is asserted non-None before this call
         reconstruction.dxo,
         reconstruction.dxd,
     )
@@ -497,9 +483,7 @@ def propagate_scaledPolychromeASP_inv(
     -------
 
     """
-    return propagate_scaledPolychromeASP(
-        fields, params, reconstruction, inverse=True, z=z
-    )
+    return propagate_scaledPolychromeASP(fields, params, reconstruction, inverse=True, z=z)
 
 
 def propagate_polychromeASP(
@@ -546,9 +530,7 @@ def propagate_polychromeASP(
         reconstruction.wavelength,
         reconstruction.Lp,
         reconstruction.nlambda,
-        tuple(
-            reconstruction.spectralDensity
-        ),  # spectralDensity is asserted non-None before this call
+        tuple(reconstruction.spectralDensity),  # spectralDensity is asserted non-None before this call
     )
 
     if inverse:
@@ -582,9 +564,7 @@ def propagate_identity(
     -------
 
     """
-    transfer_function = _make_quad_phase(
-        1e-3, 532e-9, reconstruction.Np, reconstruction.dxp
-    )
+    transfer_function = _make_quad_phase(1e-3, 532e-9, reconstruction.Np, reconstruction.dxp)
     transfer_function = transfer_function * 0 + 1
     return reconstruction.esw, fields * transfer_function
 
@@ -619,9 +599,7 @@ def propagate_polychromeASP_inv(
     return propagate_polychromeASP(fields, params, reconstruction, inverse=True, z=z)
 
 
-def detector2object(
-    fields: jax.Array | None, params: Params, reconstruction: Reconstruction
-) -> PropagatorReturn:
+def detector2object(fields: jax.Array | None, params: Params, reconstruction: Reconstruction) -> PropagatorReturn:
     """
     Implements detector2object.m. Returns a propagated version of the field.
 
@@ -634,9 +612,7 @@ def detector2object(
     return method(fields, params, reconstruction)
 
 
-def object2detector(
-    fields: jax.Array | None, params: Params, reconstruction: Reconstruction
-) -> PropagatorReturn:
+def object2detector(fields: jax.Array | None, params: Params, reconstruction: Reconstruction) -> PropagatorReturn:
     """Propagate a field from the object to the detector. Return the new object, do not update in-place."""
 
     method: PropagatorFn = forward_lookup_dictionary[params.propagatorType.lower()]
@@ -691,9 +667,7 @@ def aspw(
     return u_prop, phase_exp
 
 
-def _aspw_propagate_core_impl(
-    u: jax.Array, phase_exp: jax.Array, is_FT: bool
-) -> jax.Array:
+def _aspw_propagate_core_impl(u: jax.Array, phase_exp: jax.Array, is_FT: bool) -> jax.Array:
     """Core of aspw: FFT (if needed), multiply, IFFT."""
     U = u if is_FT else fft2c(u)
     return ifft2c(U * phase_exp)
@@ -718,10 +692,7 @@ def scaledASP(
     dq: float,
     bandlimit: bool = True,
     exactSolution: bool = False,
-) -> (
-    tuple[jax.Array, jax.Array, jax.Array]
-    | tuple[jax.Array, jax.Array, jax.Array, jax.Array]
-):
+) -> tuple[jax.Array, jax.Array, jax.Array] | tuple[jax.Array, jax.Array, jax.Array, jax.Array]:
     """
     Angular spectrum propagation with customized grid spacing dq (within Fresnel(or paraxial) approximation)
     :param u: a 2D square input field
@@ -777,9 +748,7 @@ def scaledASP(
         return Uout, Q1, Q2
 
 
-def scaledASPinv(
-    u: jax.Array, z: float, wavelength: float, dx: float, dq: float
-) -> jax.Array:
+def scaledASPinv(u: jax.Array, z: float, wavelength: float, dx: float, dq: float) -> jax.Array:
     """
     :param u:  a 2D square input field
     :param z:   propagation distance
@@ -845,9 +814,7 @@ def fresnelPropagator(
     Qx, Qy = q.reshape(1, -1), q.reshape(-1, 1)
 
     # quadratic phase terms
-    Q1 = jnp.exp(
-        1j * k / (2 * z) * (X**2 + Y**2)
-    )  # quadratic phase inside the integral
+    Q1 = jnp.exp(1j * k / (2 * z) * (X**2 + Y**2))  # quadratic phase inside the integral
     Q2 = jnp.exp(1j * k / (2 * z) * (Qx**2 + Qy**2))
 
     # pre-factor
@@ -859,9 +826,7 @@ def fresnelPropagator(
 
 
 @lru_cache(cache_size)
-def _aspw_transfer_function(
-    z: float, wavelength: float, N: int, L: float, bandlimit: bool = True
-) -> jax.Array:
+def _aspw_transfer_function(z: float, wavelength: float, N: int, L: float, bandlimit: bool = True) -> jax.Array:
     """
     Angular spectrum optical transfer function. You likely don't need to use this directly.
 
@@ -923,20 +888,12 @@ def _make_transferfunction_ASP(
     if fftshiftSwitch:
         raise ValueError("ASP propagatorType works only with fftshiftSwitch = False!")
     if nlambda > 1:
-        raise ValueError(
-            "For multi-wavelength, polychromeASP needs to be used instead of ASP"
-        )
+        raise ValueError("For multi-wavelength, polychromeASP needs to be used instead of ASP")
 
     _transferFunction = jnp.array(
         [
             [
-                [
-                    [
-                        _aspw_transfer_function(zo, wavelength, Np, Lp)
-                        for nslice in range(1)
-                    ]
-                    for npsm in range(npsm)
-                ]
+                [[_aspw_transfer_function(zo, wavelength, Np, Lp) for nslice in range(1)] for npsm in range(npsm)]
                 for nosm in range(nosm)
             ]
             for nlambda in range(nlambda)
@@ -1008,13 +965,9 @@ def _make_transferfunction_scaledASP(
     dxd: float,
 ) -> tuple[jax.Array, jax.Array]:
     if fftshiftSwitch:
-        raise ValueError(
-            "scaledASP propagatorType works only with fftshiftSwitch = False!"
-        )
+        raise ValueError("scaledASP propagatorType works only with fftshiftSwitch = False!")
     if nlambda > 1:
-        raise ValueError(
-            "For multi-wavelength, scaledPolychromeASP needs to be used instead of scaledASP"
-        )
+        raise ValueError("For multi-wavelength, scaledPolychromeASP needs to be used instead of scaledASP")
     dummy = jnp.ones((1, nosm, npsm, 1, Np, Np), dtype=jnp.complex64)
     _Q1 = jnp.ones_like(dummy)
     _Q2 = jnp.ones_like(dummy)
@@ -1044,9 +997,7 @@ def _make_transferfunction_scaledPolychromeASP(
 ) -> tuple[jax.Array, jax.Array]:
     spectralDensity = np.array(spectralDensity_as_tuple)
     if fftshiftSwitch:
-        raise ValueError(
-            "scaledPolychromeASP propagatorType works only with fftshiftSwitch = False!"
-        )
+        raise ValueError("scaledPolychromeASP propagatorType works only with fftshiftSwitch = False!")
     dummy = jnp.ones((nlambda, nosm, npsm, 1, Np, Np), dtype="complex64")
     Q1 = jnp.ones_like(dummy)
     Q2 = jnp.ones_like(dummy)
@@ -1082,9 +1033,7 @@ def _make_cache_twoStepPolychrome(
 ) -> tuple[jax.Array, jax.Array]:
     spectralDensity = np.array(spectralDensity_as_tuple)
     if fftshiftSwitch:
-        raise ValueError(
-            "twoStepPolychrome propagatorType works only with fftshiftSwitch = False!"
-        )
+        raise ValueError("twoStepPolychrome propagatorType works only with fftshiftSwitch = False!")
     transferFunction = jnp.array(
         [
             [

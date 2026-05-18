@@ -96,9 +96,9 @@ class Params(object):
     TV_autofocus_nplanes: int
     map_position_to_z_change: bool
     # --- Engine-specific params ---
-    betaProbe: float   # e3PIE probe step size
+    betaProbe: float  # e3PIE probe step size
     betaObject: float  # e3PIE object step size
-    TV_lam: float      # mPIE_tv TV regularization strength
+    TV_lam: float  # mPIE_tv TV regularization strength
     # --- OPR parameters ---
     OPR_modes: np.ndarray
     OPR_subspace: int

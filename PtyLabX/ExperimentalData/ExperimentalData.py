@@ -39,7 +39,9 @@ class ExperimentalData:
     Yd: np.ndarray  # 2D detector Y coordinates (meters)
     Ld: float  # detector physical size (meters)
     numFrames: int  # number of diffraction patterns
-    energyAtPos: np.ndarray | jax.Array  # integrated intensity at each scan position (numpy at load, JAX after GPU transfer)
+    energyAtPos: (
+        np.ndarray | jax.Array
+    )  # integrated intensity at each scan position (numpy at load, JAX after GPU transfer)
     maxProbePower: float  # maximum probe power across all positions
     # --- Engine-set computed arrays ---
     filename: Path  # resolved path to loaded HDF5 file

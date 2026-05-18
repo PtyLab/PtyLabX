@@ -41,9 +41,7 @@ def _epie_probe_update_impl(probe: Probe, objectPatch: ObjectPatch, DELTA: ExitW
     return probe + betaProbe * jnp.sum(frac * DELTA, axis=(0, 1, 3), keepdims=True)
 
 
-_epie_probe_update_jit: Callable[..., Probe] = cast(
-    Callable[..., Probe], jax.jit(_epie_probe_update_impl)
-)
+_epie_probe_update_jit: Callable[..., Probe] = cast(Callable[..., Probe], jax.jit(_epie_probe_update_impl))
 
 
 def epie_probe_update(probe: Probe, objectPatch: ObjectPatch, DELTA: ExitWave, betaProbe: float) -> Probe:
@@ -102,9 +100,7 @@ def _mpie_probe_update_impl(
     return probe + weight * betaProbe * jnp.sum(frac * DELTA, axis=1, keepdims=True)
 
 
-_mpie_probe_update_jit: Callable[..., Probe] = cast(
-    Callable[..., Probe], jax.jit(_mpie_probe_update_impl)
-)
+_mpie_probe_update_jit: Callable[..., Probe] = cast(Callable[..., Probe], jax.jit(_mpie_probe_update_impl))
 
 
 def mpie_probe_update(
@@ -149,9 +145,7 @@ def _qnewton_probe_update_impl(
     return probe + betaProbe * jnp.sum(frac * DELTA, axis=(0, 1, 3), keepdims=True)
 
 
-_qnewton_probe_update_jit: Callable[..., Probe] = cast(
-    Callable[..., Probe], jax.jit(_qnewton_probe_update_impl)
-)
+_qnewton_probe_update_jit: Callable[..., Probe] = cast(Callable[..., Probe], jax.jit(_qnewton_probe_update_impl))
 
 
 def qnewton_probe_update(

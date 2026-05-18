@@ -22,7 +22,9 @@ def easyInitialize(
         raise NotImplementedError()
 
 
-def _easyInitializeCPM(filename: Path, engine_function: type[Engines.BaseEngine], operationMode: str, dummy_monitor: bool = False) -> tuple[ExperimentalData, Reconstruction, Params, AbstractMonitor, Engines.BaseEngine]:
+def _easyInitializeCPM(
+    filename: Path, engine_function: type[Engines.BaseEngine], operationMode: str, dummy_monitor: bool = False
+) -> tuple[ExperimentalData, Reconstruction, Params, AbstractMonitor, Engines.BaseEngine]:
     experimentalData = ExperimentalData(filename, operationMode)
     params = Params()
     if dummy_monitor:
@@ -37,7 +39,9 @@ def _easyInitializeCPM(filename: Path, engine_function: type[Engines.BaseEngine]
     return experimentalData, reconstruction, params, monitor, engine
 
 
-def _easyInitializeFPM(filename: Path, engine_function: type[Engines.BaseEngine], operationMode: str, dummy_monitor: bool = False):
+def _easyInitializeFPM(
+    filename: Path, engine_function: type[Engines.BaseEngine], operationMode: str, dummy_monitor: bool = False
+):
     experimentalData = ExperimentalData(filename, operationMode)
     if dummy_monitor:
         monitor: AbstractMonitor = DummyMonitor()

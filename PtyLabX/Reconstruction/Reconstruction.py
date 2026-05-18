@@ -21,9 +21,7 @@ from PtyLabX.utils.initializationFunctions import initialProbeOrObject
 from PtyLabX.utils.visualisation import plot_alignment
 
 
-def calculate_pixel_positions(
-    encoder_corrected: np.ndarray, dxo: float, No: int, Np: int, asint: bool
-) -> np.ndarray:
+def calculate_pixel_positions(encoder_corrected: np.ndarray, dxo: float, No: int, Np: int, asint: bool) -> np.ndarray:
     """
     Calculate the pixel positions.
     """
@@ -80,14 +78,14 @@ class Reconstruction(object):
     initialGuessObject: jax.Array
     initialGuessProbe: jax.Array | None
     # --- JAX arrays (set by initializeObjectProbe) ---
-    object: ObjectArray      # shape: (nlambda, nosm, 1, nslice, No, No)
-    probe: Probe             # shape: (nlambda, 1, npsm, nslice, Np, Np)
+    object: ObjectArray  # shape: (nlambda, nosm, 1, nslice, No, No)
+    probe: Probe  # shape: (nlambda, 1, npsm, nslice, Np, Np)
     objectMomentum: ObjectArray
     probeMomentum: Probe
     # --- Engine working arrays (set during reconstruction) ---
-    esw: ExitWave            # current exit surface wave
-    ESW: ExitWave            # current detector-plane field (after forward propagation)
-    eswUpdate: ExitWave      # updated exit surface wave
+    esw: ExitWave  # current exit surface wave
+    ESW: ExitWave  # current detector-plane field (after forward propagation)
+    eswUpdate: ExitWave  # updated exit surface wave
     objectBuffer: ObjectArray
     probeBuffer: Probe
     errorAtPos: jax.Array
@@ -97,26 +95,26 @@ class Reconstruction(object):
     linearOverlap: float
     areaOverlap: float | jax.Array
     # --- Engine-set working arrays ---
-    Iestimated: jax.Array      # estimated detector intensity
-    Imeasured: jax.Array       # measured detector intensity
-    background: jax.Array      # background additive term (backgroundModeSwitch)
-    reference: jax.Array       # reference field (used by pcPIE/zPIE)
+    Iestimated: jax.Array  # estimated detector intensity
+    Imeasured: jax.Array  # measured detector intensity
+    background: jax.Array  # background additive term (backgroundModeSwitch)
+    reference: jax.Array  # reference field (used by pcPIE/zPIE)
     intensity_mask: jax.Array  # custom intensity masking
-    probe_stack: jax.Array     # OPR per-position probe stack (set by OPR engine)
-    probe_storage: Any         # OPRP probe storage (set by OPRP engine)
-    thetaHistory: jax.Array    # illumination angle history (set by aPIE)
-    initialProbe_filename: str # path to probe/object init file
+    probe_stack: jax.Array  # OPR per-position probe stack (set by OPR engine)
+    probe_storage: Any  # OPRP probe storage (set by OPRP engine)
+    thetaHistory: jax.Array  # illumination angle history (set by aPIE)
+    initialProbe_filename: str  # path to probe/object init file
     # --- Engine-specific optional state ---
-    thetaMomentum: float       # aPIE illumination momentum
-    zHistory: list[float]      # zPIE z-distance history
-    TV_history: list[float]    # zPIE TV metric history
-    merit: np.ndarray          # zPIE merit function value
-    dz: np.ndarray             # e3PIE/zPIE slice thickness
-    refrIndex: float           # e3PIE refractive index
-    H: jax.Array               # e3PIE propagation kernel
-    objectProd: jax.Array      # e3PIE intermediate product
-    objectMomentum_v: jax.Array   # qNewton object momentum
-    probeMomentum_v: jax.Array    # qNewton probe momentum
+    thetaMomentum: float  # aPIE illumination momentum
+    zHistory: list[float]  # zPIE z-distance history
+    TV_history: list[float]  # zPIE TV metric history
+    merit: np.ndarray  # zPIE merit function value
+    dz: np.ndarray  # e3PIE/zPIE slice thickness
+    refrIndex: float  # e3PIE refractive index
+    H: jax.Array  # e3PIE propagation kernel
+    objectProd: jax.Array  # e3PIE intermediate product
+    objectMomentum_v: jax.Array  # qNewton object momentum
+    probeMomentum_v: jax.Array  # qNewton probe momentum
     probeWindow: np.ndarray | jax.Array  # absorbing boundary window (also stored on BaseEngine)
     # --- Error metric ---
     error: list[float]
@@ -339,7 +337,9 @@ class Reconstruction(object):
         )
         if self.initialObject == "recon":
             # Load the object from an existing reconstruction
-            self.initialGuessObject = jnp.array(self.loadResults(self.initialProbe_filename, datatype="object"), dtype=jnp.complex64)
+            self.initialGuessObject = jnp.array(
+                self.loadResults(self.initialProbe_filename, datatype="object"), dtype=jnp.complex64
+            )
         else:
             self.initialGuessObject = jnp.array(
                 initialProbeOrObject(self.shape_O, self.initialObject, self, self.logger), dtype=jnp.complex64
@@ -372,13 +372,17 @@ class Reconstruction(object):
         )
 
         if self.initialProbe == "recon":
-            self.initialGuessProbe = jnp.array(self.loadResults(self.initialProbe_filename, datatype="probe"), dtype=jnp.complex64)
+            self.initialGuessProbe = jnp.array(
+                self.loadResults(self.initialProbe_filename, datatype="probe"), dtype=jnp.complex64
+            )
         else:
             if force:
                 self.initialGuessProbe = None
             # if force:
             #     self.initialProbe = "circ"
-            self.initialGuessProbe = jnp.array(initialProbeOrObject(self.shape_P, self.initialProbe, self), dtype=jnp.complex64)
+            self.initialGuessProbe = jnp.array(
+                initialProbeOrObject(self.shape_P, self.initialProbe, self), dtype=jnp.complex64
+            )
 
     # initialize momentum, called in specific engines with momentum accelaration
     def initializeObjectMomentum(self) -> None:
@@ -695,7 +699,7 @@ class Reconstruction(object):
         - Pixel pitch: {self.dxo * 1e6} um
         - Field of view: {self.Lo * 1e3} mm
         - Scan size in pixels: {self.positions.max(axis=0) - self.positions.min(axis=0)}
-        - Propagation distance: {self.zo * 1e3 if self.zo is not None else 'N/A'} mm {minmax_tv}
+        - Propagation distance: {self.zo * 1e3 if self.zo is not None else "N/A"} mm {minmax_tv}
         - Probe FoV: {self.Lp * 1e3} mm
         
         Derived parameters:

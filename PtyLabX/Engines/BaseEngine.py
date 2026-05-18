@@ -166,24 +166,9 @@ class BaseEngine(object):
         # pad the probe
         padNum_before = (self.params.CPSCupsamplingFactor - 1) * self.reconstruction.Np // 2
         padNum_after = (self.params.CPSCupsamplingFactor - 1) * self.reconstruction.Np - padNum_before
-        self.reconstruction.probe = jnp.array(np.pad(
-            self.reconstruction.probe,
-            (
-                (0, 0),
-                (0, 0),
-                (0, 0),
-                (0, 0),
-                (padNum_before, padNum_after),
-                (padNum_before, padNum_after),
-            ),
-        ))
-
-        # pad the momentums, buffers
-        if hasattr(self.reconstruction, "probeBuffer"):
-            self.reconstruction.probeBuffer = self.reconstruction.probe.copy()
-        if hasattr(self.reconstruction, "probeMomentum"):
-            self.reconstruction.probeMomentum = jnp.array(np.pad(
-                self.reconstruction.probeMomentum,
+        self.reconstruction.probe = jnp.array(
+            np.pad(
+                self.reconstruction.probe,
                 (
                     (0, 0),
                     (0, 0),
@@ -192,7 +177,26 @@ class BaseEngine(object):
                     (padNum_before, padNum_after),
                     (padNum_before, padNum_after),
                 ),
-            ))
+            )
+        )
+
+        # pad the momentums, buffers
+        if hasattr(self.reconstruction, "probeBuffer"):
+            self.reconstruction.probeBuffer = self.reconstruction.probe.copy()
+        if hasattr(self.reconstruction, "probeMomentum"):
+            self.reconstruction.probeMomentum = jnp.array(
+                np.pad(
+                    self.reconstruction.probeMomentum,
+                    (
+                        (0, 0),
+                        (0, 0),
+                        (0, 0),
+                        (0, 0),
+                        (padNum_before, padNum_after),
+                        (padNum_before, padNum_after),
+                    ),
+                )
+            )
 
         # update coordinates (only need to update the Nd and dxd, the rest updates automatically)
         assert self.experimentalData.ptychogramDownsampled is not None
@@ -418,7 +422,9 @@ class BaseEngine(object):
                 print("check fftshift...")
                 print("fftshift data for fast far-field update")
                 # shift detector quantities
-                self.experimentalData.ptychogram = jnp.fft.ifftshift(jnp.array(self.experimentalData.ptychogram), axes=(-1, -2))
+                self.experimentalData.ptychogram = jnp.fft.ifftshift(
+                    jnp.array(self.experimentalData.ptychogram), axes=(-1, -2)
+                )
                 if hasattr(self.experimentalData, "ptychogramDownsampled"):
                     if self.experimentalData.ptychogramDownsampled is not None:
                         self.experimentalData.ptychogramDownsampled = jnp.fft.ifftshift(
@@ -427,7 +433,9 @@ class BaseEngine(object):
                 if self.experimentalData.W is not None:
                     self.experimentalData.W = jnp.fft.ifftshift(self.experimentalData.W, axes=(-1, -2))
                 if self.experimentalData.emptyBeam is not None:
-                    self.experimentalData.emptyBeam = jnp.fft.ifftshift(jnp.array(self.experimentalData.emptyBeam), axes=(-1, -2))
+                    self.experimentalData.emptyBeam = jnp.fft.ifftshift(
+                        jnp.array(self.experimentalData.emptyBeam), axes=(-1, -2)
+                    )
                 if self.experimentalData.PSD is not None:
                     self.experimentalData.PSD = jnp.fft.ifftshift(self.experimentalData.PSD, axes=(-1, -2))
                 self.params.fftshiftFlag = 1
@@ -435,7 +443,9 @@ class BaseEngine(object):
             if self.params.fftshiftFlag == 1:
                 print("check fftshift...")
                 print("ifftshift data")
-                self.experimentalData.ptychogram = jnp.fft.fftshift(jnp.array(self.experimentalData.ptychogram), axes=(-1, -2))
+                self.experimentalData.ptychogram = jnp.fft.fftshift(
+                    jnp.array(self.experimentalData.ptychogram), axes=(-1, -2)
+                )
                 if hasattr(self.experimentalData, "ptychogramDownsampled"):
                     if self.experimentalData.ptychogramDownsampled is not None:
                         self.experimentalData.ptychogramDownsampled = jnp.fft.fftshift(
@@ -444,7 +454,9 @@ class BaseEngine(object):
                 if self.experimentalData.W is not None:
                     self.experimentalData.W = jnp.fft.fftshift(self.experimentalData.W, axes=(-1, -2))
                 if self.experimentalData.emptyBeam is not None:
-                    self.experimentalData.emptyBeam = jnp.fft.fftshift(jnp.array(self.experimentalData.emptyBeam), axes=(-1, -2))
+                    self.experimentalData.emptyBeam = jnp.fft.fftshift(
+                        jnp.array(self.experimentalData.emptyBeam), axes=(-1, -2)
+                    )
                 self.params.fftshiftFlag = 0
 
     def setPositionOrder(self) -> None:

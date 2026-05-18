@@ -113,7 +113,9 @@ class ObjectProbeErrorPlot(object):
 
         self.im_object.autoscale()
 
-    def updateProbe(self, probe_estimate: np.ndarray, optimizable: object, amplitudeScalingFactor: float = 1, **kwargs: object) -> None:
+    def updateProbe(
+        self, probe_estimate: np.ndarray, optimizable: object, amplitudeScalingFactor: float = 1, **kwargs: object
+    ) -> None:
 
         # from PtyLabX.Operators.Operators import fft2c
         #
