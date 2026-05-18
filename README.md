@@ -5,7 +5,7 @@
 ![Ruff](https://github.com/ShantanuKodgirwar/PtyLabX/actions/workflows/formatter.yml/badge.svg)
 
 > [!WARNING]
-> This project is under active development. The documentation is incomplete and does not cover all use cases. Some existing features might either be slow/unstable until everything is thoroughly tested. API could change mainly around making some interface immutable to allow gradient flow.
+> This project is under active development. Some existing implementations could be unstable until everything is thoroughly tested. API might also change and would be around making some interface immutable to allow gradient flow/differentiable ptychography work.
 
 [**Installation**](#installation) | [**Development and Contribution**](#development-and-contribution) | [**Getting Started**](#getting-started) | [**PtyLabX Documentation**](#documentation)
 
