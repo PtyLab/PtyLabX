@@ -1,0 +1,202 @@
+# AutoDiff Module Architecture — PtyLabX
+
+## Overview
+
+A new `PtyLabX/AutoDiff/` subpackage for automatic differentiation (AD) based ptychographic reconstruction, designed to coexist with the existing iterative engines (ePIE, mPIE, etc.) without refactoring them.
+
+**Inspired by:** Phaser (JAX), PtyRAD (PyTorch), chromatix (JAX wave optics), and the original PtyLab paper.
+
+## Development Roadmap
+
+Incremental feature plan, each building on the previous:
+
+| Phase | Feature | What Changes |
+|-------|---------|--------------|
+| **1** | Object-only reconstruction (known probe) | `single_slice.py` forward model + `probe_lr=0.0` |
+| **2** | Blind reconstruction (object + probe) | Same code, both LRs > 0 |
+| **3** | Multislice | New `forward_models/multi_slice.py` — loop over `nslice` with inter-slice propagation |
+| **4** | Mixed states (object & probe modes) | Forward model sums over `nosm`/`npsm` dims (already in 6D array convention) |
+| **5** | Multiwavelength | This is the multiwavelength part|
+| **6** | OPR (Orthogonal Probe Relaxation) | New forward model with per-position probe decomposition |
+| **7** | Future extensions | New forward models, losses, regularizers, state fields as research evolves |
+
+The first 5 steps would result in the standard PtyLab array shape `(nlambda, nosm, npsm, nslice, No, No)`. However, right now OPR and mixed probe is important. Maybe we can copy some implementations as a differentiable variant into the AutoDiff module. 
+
+Each step must be implemented such that the original module is not heavily refactored atleast from the point of view of API.
+
+
+## Design Principles
+
+1. **Pure functions over classes** — Forward models, losses, regularizers are plain callables. No inheritance needed. Compose with `functools.partial` for configuration.
+2. **Explicit state pytree** — `PtychographyState` (NamedTuple) holds only differentiable parameters. Static metadata in `StaticConfig`. Clean separation for `jax.grad`.
+3. **Composable** — `build_loss(forward_model, data_loss, regularizers)` assembles a single differentiable objective.
+4. **Per-parameter optimization** — `optax.multi_transform` for independent learning rates on object, probe, positions, background.
+5. **Reuse existing infra** — Propagation via existing `fft2c`/`ifft2c` + `_make_quad_phase`. State syncs back to `Reconstruction` for monitoring/saving.
+6. **JIT-compiled inner loops** — Batch processing uses `jax.vmap` over positions and `jax.jit` for the full step. Generator yields per-epoch (not per-batch) so the inner loop is never interrupted.
+7. **CPM-first, extensible** — Initial scope is CPM single-slice. FPM/multislice added later as new forward model files with zero architectural changes.
+
+## Module Map
+
+```
+PtyLabX/AutoDiff/
+├── __init__.py              build_loss(), GradientReconstructor
+├── state.py                PtychographyState, StaticConfig, conversion fns
+├── propagators.py          Pure propagation (reuses Operators internals)
+├── reconstructor.py         GradientReconstructor (JIT-compiled optimization loop)
+├── optimizers.py            build_optimizer() — per-parameter LR via optax
+├── losses.py                amplitude_loss, poisson_loss, mad_loss (all ~2 lines each)
+├── regularizers.py          object_tv (differentiable TV on object)
+├── forward_models/
+│   ├── __init__.py
+│   └── single_slice.py      Standard CPM: patch × probe → propagate → |·|²
+
+PtyLabX/Engines/
+└── GradientEngine.py        BaseEngine adapter for easyInitialize() compatibility
+```
+
+> **Why flat files for losses/regularizers?** Each loss is 1-2 lines of math. A subdirectory with separate files per loss adds navigation overhead for no benefit. If either file ever grows beyond ~200 lines, split then.
+
+## Data Flow
+
+```
+ExperimentalData ──┐
+Reconstruction ────┼── state_from_reconstruction() ──→ PtychographyState
+Params ────────────┘                                         │
+                    static_from_reconstruction() ──→ StaticConfig
+                                                             │
+                              ┌───────────────────────────────┘
+                              ▼
+            build_loss(forward_model, data_loss, regularizers)
+                              │
+                              ▼
+                    jax.value_and_grad(loss_fn)
+                              │
+                              ▼
+                    optax.update() + apply_updates()
+                              │
+                              ▼
+                    state_to_reconstruction() ──→ Reconstruction (for Monitor/save)
+```
+
+## Key Interfaces
+
+### Forward Model
+```python
+def my_forward(state: PtychographyState, position_indices, positions_all, static: StaticConfig) -> jnp.ndarray:
+    """Returns predicted intensities: (batch_size, Nd, Nd)"""
+```
+
+### Loss Function
+```python
+def my_loss(I_measured: jnp.ndarray, I_predicted: jnp.ndarray) -> jnp.ndarray:
+    """Returns scalar loss."""
+```
+
+### Regularizer
+```python
+def my_reg(state: PtychographyState, static: StaticConfig) -> jnp.ndarray:
+    """Returns scalar penalty."""
+```
+
+## Usage
+
+### Simple (via easyInitialize)
+```python
+import PtyLabX
+from PtyLabX import Engines
+
+data, recon, params, monitor, engine = PtyLabX.easyInitialize("data.hdf5", engine=Engines.GradientEngine)
+engine.numIterations = 100
+engine.object_lr = 5e-4
+engine.probe_lr = 1e-3
+for loop, batch in engine.reconstruct():
+    pass
+```
+
+### Advanced (composable)
+```python
+from PtyLabX.AutoDiff import build_loss, GradientReconstructor
+from PtyLabX.AutoDiff.forward_models import single_slice_forward
+from PtyLabX.AutoDiff.losses import poisson_loss
+from PtyLabX.AutoDiff.regularizers import object_tv
+from PtyLabX.AutoDiff import build_optimizer
+
+loss_fn = build_loss(
+    forward_model=single_slice_forward,
+    data_loss=poisson_loss,
+    regularizers=[lambda s, c: object_tv(s, c, weight=1e-4)],
+)
+optimizer = build_optimizer(object_lr=1e-3, probe_lr=5e-4, position_lr=1e-5)
+reconstructor = GradientReconstructor(loss_fn, optimizer, recon, data, params, batch_size=64)
+reconstructor.reconstruct(num_iterations=200)
+```
+
+## Adding New Components
+
+**New forward model** → Create `PtyLabX/AutoDiff/forward_models/my_model.py`, write a function matching the signature. Use with `build_loss(forward_model=my_func)`.
+
+**New loss** → Add a function to `PtyLabX/AutoDiff/losses.py` with signature `(I_meas, I_pred) -> scalar`. Use with `build_loss(data_loss=my_func)`.
+
+**New regularizer** → Add a function to `PtyLabX/AutoDiff/regularizers.py` with signature `(state, static) -> scalar`. Add to regularizers list.
+
+**New optimizable parameter** → Add field to `PtychographyState`, update `state_from_reconstruction`/`state_to_reconstruction`, add LR to `build_optimizer`.
+
+## Future Extension
+
+### More corrections
+
+- Not as important, but possible correction (equivalent to pcPIE) and distance correction (equivalent to zPIE) would be good.
+- Tilt correction (aPIE-like) potentially useful for multi-angle imaging.
+- Hyperparameter optimization like `PtyRAD` and `phaser`. 
+
+### Learned Priors & Plug-and-Play
+
+The architecture naturally supports learned priors (denoisers, generative models, neural network regularizers) without structural changes:
+
+#### As a frozen regularizer (pre-trained network)
+A trained denoiser/prior is just a pure function `(state, net_params) → scalar`. It plugs into the existing `regularizers` list:
+```python
+# net_params loaded from checkpoint, frozen (not in PtychographyState)
+reg = lambda state, static: learned_prior(state.object, net_params, weight=1e-3)
+loss_fn = build_loss(forward_model=..., data_loss=..., regularizers=[object_tv, reg])
+```
+The network weights live outside `PtychographyState`, so `jax.grad` only differentiates through the forward pass of the network (backprop through the prior), not its weights.
+
+#### As jointly-optimized parameters
+If fine-tuning the prior alongside reconstruction, extend the state or use a paired pytree. `optax.multi_transform` handles separate learning rates:
+```python
+optimizer = optax.multi_transform(
+    {"physics": optax.adam(1e-3), "network": optax.adam(1e-5)},
+    param_labels=label_fn,  # maps each leaf to "physics" or "network"
+)
+```
+
+### Library compatibility
+- **equinox** modules are pytrees → compose directly with `jax.grad` and `optax`
+- **flax.linen** `Module.apply()` is a pure function → same composition
+- No architecture changes needed; the network is just another function in the loss graph
+
+### Plug-and-play / unrolled optimization
+For algorithms where a network is called *inside* each iteration (PnP-ADMM, RED, unrolled networks), the forward model can accept an optional `prior_fn` kwarg:
+```python
+def single_slice_forward_pnp(state, indices, positions, static, prior_fn=None):
+    I_pred = ...  # standard forward
+    if prior_fn is not None:
+        state = state._replace(object=prior_fn(state.object))
+    return I_pred
+```
+This is a one-line signature addition when needed — no refactoring of existing forward models.
+
+### Separate project option
+If learned priors grow into a large codebase (custom architectures, training loops, datasets), consider a sibling package (e.g., `PtyLabX-Priors`) that imports `PtyLabX.AutoDiff` types. The pure-function + pytree interfaces make cross-package composition trivial.
+
+## Documentation Checklist
+
+When adding or changing AutoDiff modules, update `docs/` accordingly:
+
+- [ ] **API reference** in `docs/autodiff/` — document new forward models, losses, regularizers, optimizer options
+- [ ] **Tutorials** in `docs/tutorials/` — Jupyter notebooks showing AD reconstruction (object-only, blind, multislice, etc.)
+- [ ] **`docs/cpm/engines.md`** — add GradientEngine alongside existing engine docs
+- [ ] **`docs/getting-started/quickstart.md`** — add AD example if it becomes a recommended workflow
+
+Docs use **mkdocs** (`mkdocs.yml` + `mkdocs-material`). Keep docs in sync with code changes.
