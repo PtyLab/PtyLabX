@@ -1,4 +1,4 @@
-from collections.abc import Generator, Iterator
+from collections.abc import Generator
 
 import jax
 import jax.numpy as jnp

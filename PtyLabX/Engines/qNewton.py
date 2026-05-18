@@ -1,4 +1,3 @@
-import numpy as np
 
 # PtyLab imports
 import logging

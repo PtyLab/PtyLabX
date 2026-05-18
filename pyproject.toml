@@ -37,6 +37,11 @@ packages = ["PtyLabX"]
 [tool.ruff]
 line-length = 120
 
+[tool.ruff.lint.per-file-ignores]
+# jaxtyping uses space-separated shape strings (e.g. "nlambda 1 npsm Np Np")
+# which ruff's F722 misreads as malformed forward annotations.
+"PtyLabX/_types.py" = ["F722"]
+
 [dependency-groups]
 dev = [
     "beartype>=0.18",

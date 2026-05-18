@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 
 from PtyLabX import Operators
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
-from PtyLabX.Monitor.Monitor import Monitor, AbstractMonitor
+from PtyLabX.Monitor.Monitor import AbstractMonitor
 from PtyLabX.Params.Params import Params
 from PtyLabX.Reconstruction.Reconstruction import (
     Reconstruction,

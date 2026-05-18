@@ -9,11 +9,6 @@ import jax.numpy as jnp
 import numpy as np
 
 from PtyLabX import Params, Reconstruction
-
-# Type alias for the return type of all propagator functions
-PropagatorReturn: TypeAlias = tuple[jax.Array, jax.Array]
-# Type alias for any propagator function
-PropagatorFn: TypeAlias = Callable[..., PropagatorReturn]
 from PtyLabX.Operators._propagation_kernels import _make_quad_phase
 from PtyLabX.Operators.off_axis_sas import (
     _make_transferfunction_sas,
@@ -22,6 +17,11 @@ from PtyLabX.Operators.off_axis_sas import (
 )
 from PtyLabX.Operators.propagator_utils import complexexp
 from PtyLabX.utils.utils import circ, fft2c, ifft2c
+
+# Type alias for the return type of all propagator functions
+PropagatorReturn: TypeAlias = tuple[jax.Array, jax.Array]
+# Type alias for any propagator function
+PropagatorFn: TypeAlias = Callable[..., PropagatorReturn]
 
 
 def _asp_propagate_impl(u: jax.Array, transfer_function: jax.Array, fftshiftSwitch: bool) -> jax.Array:

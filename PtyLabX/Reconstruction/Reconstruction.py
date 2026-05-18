@@ -15,7 +15,7 @@ from PtyLabX import Params
 from PtyLabX.ExperimentalData.ExperimentalData import ExperimentalData
 
 # logging.basicConfig(level=logging.DEBUG)
-from PtyLabX._types import ExitWave, ObjectArray, ObjectPatch, Probe
+from PtyLabX._types import ExitWave, ObjectArray, Probe
 from PtyLabX.Regularizers import TV, metric_at
 from PtyLabX.utils.initializationFunctions import initialProbeOrObject
 from PtyLabX.utils.visualisation import plot_alignment

@@ -5,7 +5,7 @@ Randomized SVD. See Halko, Martinsson, Tropp's 2011 SIAM paper:
 approximate matrix decompositions"
 ============================================================================="""
 
-from typing import Any, cast
+from typing import cast
 
 import functools
 

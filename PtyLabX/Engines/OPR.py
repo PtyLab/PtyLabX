@@ -1,7 +1,6 @@
-from typing import Callable, cast
+from typing import cast
 
 import jax
-import numpy as np
 import jax.numpy as jnp
 
 
