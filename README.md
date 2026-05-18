@@ -9,9 +9,7 @@
 
 [**Installation**](#installation) | [**Development and Contribution**](#development-and-contribution) | [**Getting Started**](#getting-started) | [**PtyLabX Documentation**](#documentation)
 
-PtyLabX is an experimental JAX-based ptychographic reconstruction toolbox, forked from [PtyLab.py](https://github.com/PtyLab/PtyLab.py) (see the [original publication](https://opg.optica.org/oe/fulltext.cfm?uri=oe-31-9-13763&id=529026)).
-
-The [JAX](https://github.com/jax-ml/jax) backend brings GPU acceleration, JIT, and XLA, aiming to accelerate existing algorithms and enable new models with automatic differentiation and gradient-based optimization.
+PtyLabX is an experimental JAX-based ptychographic reconstruction toolbox, forked from [PtyLab.py](https://github.com/PtyLab/PtyLab.py) (see the [original publication](https://opg.optica.org/oe/fulltext.cfm?uri=oe-31-9-13763&id=529026)). The [JAX](https://github.com/jax-ml/jax) backend brings GPU acceleration, JIT, and XLA, aiming to accelerate existing algorithms and enable new models with automatic differentiation and gradient-based optimization.
 
 ## Installation
 
