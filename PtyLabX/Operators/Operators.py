@@ -645,7 +645,7 @@ def object2detector(
     return method(fields, params, reconstruction)
 
 
-def aspw_test(
+def aspw(
     u: jax.Array,
     z: float,
     wavelength: float,
