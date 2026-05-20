@@ -1,6 +1,6 @@
 [project]
 name = "ptylabx"
-version = "0.1.0"
+version = "0.1.0.dev0"
 description = "A cross-platform, open-source inverse modeling toolbox for conventional and Fourier ptychography"
 readme = "README.md"
 requires-python = ">=3.11"
