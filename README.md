@@ -1,8 +1,8 @@
 # PtyLabX
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-green.svg)
-![Tests](https://github.com/ShantanuKodgirwar/PtyLabX/actions/workflows/test.yml/badge.svg)
-![Ruff](https://github.com/ShantanuKodgirwar/PtyLabX/actions/workflows/formatter.yml/badge.svg)
+![Tests](https://github.com/PtyLab/PtyLabX/actions/workflows/test.yml/badge.svg)
+![Ruff](https://github.com/PtyLab/PtyLabX/actions/workflows/formatter.yml/badge.svg)
 
 > [!WARNING]
 > This project is under active development. Some existing implementations could be unstable until everything is thoroughly tested. API might also change and would be around making some interface immutable to allow gradient flow/differentiable ptychography work.
